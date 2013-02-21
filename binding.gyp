@@ -16,6 +16,8 @@
               'RuntimeLibrary': -1, 
               # this is out of range and will generate a warning and skip adding RuntimeTypeInfo property:
               'RuntimeTypeInfo': -1, 
+              'BasicRuntimeChecks': -1,
+              'ExceptionHandling': '0',
               'AdditionalOptions': [ '/clr' ] 
             }
           }
@@ -27,6 +29,8 @@
               'RuntimeLibrary': -1, 
               # this is out of range and will generate a warning and skip adding RuntimeTypeInfo property:
               'RuntimeTypeInfo': -1, 
+              'BasicRuntimeChecks': -1,
+              'ExceptionHandling': '0',
               'AdditionalOptions': [ '/clr' ] 
             }
           }
