@@ -48,6 +48,32 @@ public:
     static Handle<Value> Call(const v8::Arguments& args);
 };
 
+Handle<v8::String> convert(System::String^ text)
+{
+    HandleScope scope;
+    pin_ptr<const wchar_t> message = PtrToStringChars(text);
+    return scope.Close(v8::String::New((uint16_t*)message));  
+}
+
+Handle<String> createV8ExceptionString(System::Exception^ exception)
+{
+    HandleScope scope;
+    if (exception == nullptr)
+    {
+        return scope.Close(v8::String::New("Unrecognized exception thrown by CLR."));
+    }
+    else
+    {
+        return scope.Close(convert(exception->ToString()));
+    }
+}
+
+Handle<Value> createV8Exception(System::Exception^ exception)
+{
+    HandleScope scope;
+    return scope.Close(ThrowException(createV8ExceptionString(exception)));
+}
+
 void completeOnV8Thread(uv_async_t* handle, int status)
 {
     System::Console::WriteLine("completeOnV8Thread");
@@ -115,13 +141,6 @@ void OwinAppInvokeContext::CompleteOnCLRThread(Task^ task)
         &this->uv_owin_async->uv_async.async_req.overlapped);
 }
 
-Handle<v8::String> convert(System::String^ text)
-{
-    HandleScope scope;
-    pin_ptr<const wchar_t> message = PtrToStringChars(text);
-    return scope.Close(v8::String::New((uint16_t*)message));  
-}
-
 void OwinAppInvokeContext::CompleteOnV8Thread()
 {
     System::Console::WriteLine("CompleteOnV8Thread");
@@ -140,7 +159,7 @@ void OwinAppInvokeContext::CompleteOnV8Thread()
             break;
             case TaskStatus::Faulted:
                 if (this->task->Exception != nullptr) {
-                    argv[0] = convert(this->task->Exception->Message);
+                    argv[0] = createV8ExceptionString(this->task->Exception);
                 }
                 else {
                     argv[0] = v8::String::New("The operation has failed with an undetermined error.");
@@ -188,16 +207,23 @@ Handle<Value> OwinApp::Initialize(const v8::Arguments& args)
 {
     HandleScope scope;
     Handle<v8::Object> options = args[0]->ToObject();
-    String::Utf8Value assemblyFile(options->Get(String::NewSymbol("assemblyFile")));
-    String::Utf8Value typeName(options->Get(String::NewSymbol("typeName")));
-    Assembly^ assembly = Assembly::LoadFrom(gcnew System::String(*assemblyFile));
-    System::Type^ startupType = assembly->GetType(gcnew System::String(*typeName), false, true);
-    OwinApp^ app = gcnew OwinApp();
-    app->instance = System::Activator::CreateInstance(startupType, false);
-    app->invokeMethod = startupType->GetMethod("Invoke", BindingFlags::Instance | BindingFlags::Public);
-    OwinApp::apps->Add(app);
+    try 
+    {
+        String::Utf8Value assemblyFile(options->Get(String::NewSymbol("assemblyFile")));
+        String::Utf8Value typeName(options->Get(String::NewSymbol("typeName")));
+        Assembly^ assembly = Assembly::LoadFrom(gcnew System::String(*assemblyFile));
+        System::Type^ startupType = assembly->GetType(gcnew System::String(*typeName), true, true);
+        OwinApp^ app = gcnew OwinApp();
+        app->instance = System::Activator::CreateInstance(startupType, false);
+        app->invokeMethod = startupType->GetMethod("Invoke", BindingFlags::Instance | BindingFlags::Public);
+        OwinApp::apps->Add(app);
+    }
+    catch (System::Exception^ e)
+    {
+        return scope.Close(createV8Exception(e));
+    }
 
-    return Integer::New(OwinApp::apps->Count);
+    return scope.Close(Integer::New(OwinApp::apps->Count));
 }
 
 void owinAppCompletedOnCLRThread(Task^ task, System::Object^ state)
@@ -224,12 +250,19 @@ Handle<Value> OwinApp::Call(const Arguments& args)
         netenv->Add(netname, netvalue);
     }
 
-    OwinApp^ app = OwinApp::apps->default[appId - 1];
-    Task^ task = (Task^)app->invokeMethod->Invoke(app->instance, gcnew array<System::Object^> { netenv });
-    OwinAppInvokeContext^ context = gcnew OwinAppInvokeContext(netenv, callback);
-    task->ContinueWith(gcnew System::Action<Task^,System::Object^>(owinAppCompletedOnCLRThread), context);
+    try 
+    {
+        OwinApp^ app = OwinApp::apps->default[appId - 1];
+        Task^ task = (Task^)app->invokeMethod->Invoke(app->instance, gcnew array<System::Object^> { netenv });
+        OwinAppInvokeContext^ context = gcnew OwinAppInvokeContext(netenv, callback);
+        task->ContinueWith(gcnew System::Action<Task^,System::Object^>(owinAppCompletedOnCLRThread), context);
+    }
+    catch (System::Exception^ e)
+    {
+        return scope.Close(createV8Exception(e));
+    }
 
-    return Undefined();
+    return scope.Close(Undefined());
 }
 
 Handle<Value> initializeOwinApp(const v8::Arguments& args)
