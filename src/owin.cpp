@@ -12,6 +12,7 @@ using namespace System::Threading::Tasks;
 // Good explanation of native Buffers at 
 // http://sambro.is-super-awesome.com/2011/03/03/creating-a-proper-buffer-in-a-node-c-addon/
 Persistent<Function> bufferConstructor;
+BOOL debugMode;
 
 ref class OwinAppInvokeContext;
 
@@ -82,7 +83,9 @@ Handle<Value> createV8Exception(System::Exception^ exception)
 
 void completeOnV8Thread(uv_async_t* handle, int status)
 {
-    System::Console::WriteLine("completeOnV8Thread");
+    if (debugMode) 
+        System::Console::WriteLine("completeOnV8Thread");
+
     HandleScope handleScope;
     uv_owin_async_t* uv_owin_async = CONTAINING_RECORD(handle, uv_owin_async_t, uv_async);
     uv_owin_async->context->CompleteOnV8Thread();
@@ -100,13 +103,17 @@ OwinAppInvokeContext::OwinAppInvokeContext(Dictionary<System::String^,System::Ob
 
 OwinAppInvokeContext::~OwinAppInvokeContext()
 {
-    System::Console::WriteLine("~OwinAppInvokeContext");
+    if (debugMode)
+        System::Console::WriteLine("~OwinAppInvokeContext");
+    
     this->!OwinAppInvokeContext();
 }
 
 OwinAppInvokeContext::!OwinAppInvokeContext()
 {
-    System::Console::WriteLine("!OwinAppInvokeContext");
+    if (debugMode)
+        System::Console::WriteLine("!OwinAppInvokeContext");
+
     this->DisposeCallback();
     this->DisposeUvOwinAsync();
 }
@@ -115,7 +122,9 @@ void OwinAppInvokeContext::DisposeCallback()
 {
     if (this->callback)
     {
-        System::Console::WriteLine("Disposing callback");
+        if (debugMode)
+            System::Console::WriteLine("Disposing callback");
+
         (*(this->callback)).Dispose();
         (*(this->callback)).Clear();
         delete this->callback;
@@ -127,7 +136,9 @@ void OwinAppInvokeContext::DisposeUvOwinAsync()
 {
     if (this->uv_owin_async)
     {
-        System::Console::WriteLine("Disposing uv_owin_async");
+        if (debugMode)
+            System::Console::WriteLine("Disposing uv_owin_async");
+
         uv_unref((uv_handle_t*)&this->uv_owin_async->uv_async);
         delete this->uv_owin_async;
         this->uv_owin_async = NULL;
@@ -136,7 +147,9 @@ void OwinAppInvokeContext::DisposeUvOwinAsync()
 
 void OwinAppInvokeContext::CompleteOnCLRThread(Task^ task)
 {
-    System::Console::WriteLine("CompleteOnCLRThread");
+    if (debugMode)
+        System::Console::WriteLine("CompleteOnCLRThread");
+
     // TODO: what prevents GC collection of "this" during the thread switch? 
     // Does the gcroot in uv_owin_async->context ensure that?
     this->task = task;
@@ -210,7 +223,9 @@ Handle<v8::Object> OwinAppInvokeContext::CreateResultObject()
 
 void OwinAppInvokeContext::CompleteOnV8Thread()
 {
-    System::Console::WriteLine("CompleteOnV8Thread");
+    if (debugMode)
+        System::Console::WriteLine("CompleteOnV8Thread");
+
     HandleScope handleScope;
 
     this->DisposeUvOwinAsync();
@@ -365,6 +380,7 @@ void init(Handle<Object> target)
 {
     bufferConstructor = Persistent<Function>::New(Handle<Function>::Cast(
         Context::GetCurrent()->Global()->Get(String::New("Buffer")))); 
+    debugMode = (0 < GetEnvironmentVariable("OWIN_DEBUG", NULL, 0));
     NODE_SET_METHOD(target, "initializeOwinApp", initializeOwinApp);
     NODE_SET_METHOD(target, "callOwinApp", callOwinApp);
 }
