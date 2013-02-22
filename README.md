@@ -35,12 +35,12 @@ namespace OwinHelloWorld
     {
         public Task Invoke(IDictionary<string, object> env)
         {
-            var responseHeaders = new Dictionary<string, string[]>();
-            responseHeaders["Content-Type"] = new string[] { "text/html" };
-            env["owin.ResponseHeaders"] = responseHeaders;
-            env["owin.ResponseBody"] = new MemoryStream(
-                Encoding.UTF8.GetBytes("Hello, from C#. Time on server is " + DateTime.Now.ToString()));
             env["owin.ResponseStatusCode"] = 200;
+            ((IDictionary<string, string[]>)env["owin.ResponseHeaders"]).Add(
+                "Content-Type", new string[] { "text/html" });
+            StreamWriter w = new StreamWriter((Stream)env["owin.ResponseBody"]);
+            w.Write("Hello, from C#. Time on server is " + DateTime.Now.ToString());
+            w.Flush();
 
             return Task.FromResult<object>(null);
         }
