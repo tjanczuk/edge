@@ -1,4 +1,5 @@
 #include <node.h>
+#include <node_buffer.h>
 #include <v8.h>
 #include <uv.h>
 #include <vcclr.h>
@@ -7,6 +8,10 @@ using namespace v8;
 using namespace System::Collections::Generic;
 using namespace System::Reflection;
 using namespace System::Threading::Tasks;
+
+// Good explanation of native Buffers at 
+// http://sambro.is-super-awesome.com/2011/03/03/creating-a-proper-buffer-in-a-node-c-addon/
+Persistent<Function> bufferConstructor;
 
 ref class OwinAppInvokeContext;
 
@@ -24,6 +29,7 @@ private:
 
     void DisposeCallback();
     void DisposeUvOwinAsync();
+    Handle<v8::Object> CreateResultObject();
 
 public:
     OwinAppInvokeContext(Dictionary<System::String^,System::Object^>^ netenv, Handle<Function> callback);
@@ -141,6 +147,67 @@ void OwinAppInvokeContext::CompleteOnCLRThread(Task^ task)
         &this->uv_owin_async->uv_async.async_req.overlapped);
 }
 
+Handle<v8::Object> OwinAppInvokeContext::CreateResultObject()
+{
+    HandleScope scope;
+    Handle<v8::Object> result = v8::Object::New();
+    for each (KeyValuePair<System::String^,System::Object^>^ entry in this->netenv) {
+        if (entry->Value->GetType() == System::String::typeid) 
+        {
+            result->Set(
+                convert(entry->Key),
+                convert((System::String^)entry->Value));
+        }
+        else if (entry->Value->GetType() == System::Int32::typeid) 
+        {
+            result->Set(
+                convert(entry->Key),
+                v8::Integer::New((int)entry->Value));            
+        }
+        else if (entry->Key == "owin.ResponseHeaders") 
+        {
+            Handle<v8::Object> headers = v8::Object::New();
+            for each (KeyValuePair<System::String^,array<System::String^>^>^ netheader in 
+                (Dictionary<System::String^,array<System::String^>^>^)entry->Value) 
+            {
+                // TODO: support for multiple value of a single HTTP header
+                headers->Set(
+                    convert(netheader->Key),
+                    convert(netheader->Value[0]));
+            }
+
+            result->Set(
+                convert(entry->Key),
+                headers);            
+        }
+        else if (entry->Key == "owin.ResponseBody")
+        {
+            // TODO: implement async buffer copy, or perform copying on the CLR thread
+            System::IO::Stream^ stream = (System::IO::Stream^)entry->Value;
+            array<byte>^ buffer = gcnew array<byte>(1024);
+            int read;
+            Handle<v8::Array> bufferArray = v8::Array::New();
+            int i = 0;
+            while (0 < (read = stream->Read(buffer, 0, 1024)))
+            {
+                pin_ptr<unsigned char> pinnedBuffer = &buffer[0];
+                node::Buffer* slowBuffer = node::Buffer::New(read);
+                memcpy(node::Buffer::Data(slowBuffer), pinnedBuffer, read);
+                Handle<v8::Value> args[] = { slowBuffer->handle_, v8::Integer::New(read), Integer::New(0) };
+                Handle<v8::Object> fastBuffer = bufferConstructor->NewInstance(3, args);
+                bufferArray->Set(v8::Number::New(i++), fastBuffer);
+            }
+
+            stream->Close();
+            result->Set(
+                convert(entry->Key),
+                bufferArray);            
+        }
+    }
+
+    return scope.Close(result);
+}
+
 void OwinAppInvokeContext::CompleteOnV8Thread()
 {
     System::Console::WriteLine("CompleteOnV8Thread");
@@ -170,17 +237,7 @@ void OwinAppInvokeContext::CompleteOnV8Thread()
             break;
             case TaskStatus::RanToCompletion:
                 argc = 2;
-                Handle<v8::Object> result = v8::Object::New();
-                for each (KeyValuePair<System::String^,System::Object^>^ entry in this->netenv) {
-                    if (entry->Value->GetType() == System::String::typeid) {
-                        result->Set(
-                            convert(entry->Key),
-                            convert((System::String^)entry->Value)
-                        );
-                    }
-                }
-
-                argv[1] = result;
+                argv[1] = this->CreateResultObject();
             break;
         };
 
@@ -244,9 +301,38 @@ Handle<Value> OwinApp::Call(const Arguments& args)
     {
         Handle<v8::String> name = Handle<v8::String>::Cast(propertyNames->Get(i));
         String::Utf8Value utf8name(name);
-        String::Utf8Value utf8value(Handle<v8::String>::Cast(jsenv->Get(name)));
         System::String^ netname = gcnew System::String(*utf8name);
-        System::String^ netvalue = gcnew System::String(*utf8value);
+        System::Object^ netvalue;
+
+        if (netname == "owin.RequestHeaders") 
+        {
+            Handle<v8::Object> headers = Handle<v8::Object>::Cast(jsenv->Get(name));
+            Dictionary<System::String^,array<System::String^>^>^ netheaders = 
+                gcnew Dictionary<System::String^,array<System::String^>^>();
+            Handle<v8::Array> headerNames = headers->GetPropertyNames();
+            for (unsigned int j = 0; j < headerNames->Length(); j++)
+            {
+                Handle<v8::String> headerName = Handle<v8::String>::Cast(headerNames->Get(j));
+                String::Utf8Value utf8headerName(headerName);
+                String::Utf8Value utf8headerValue(Handle<v8::String>::Cast(headers->Get(headerName)));
+                System::String^ netHeaderName = gcnew System::String(*utf8headerName);
+                System::String^ netHeaderValue = gcnew System::String(*utf8headerValue);
+                netheaders->Add(netHeaderName, gcnew array<System::String^> { netHeaderValue });
+            }
+
+            netvalue = netheaders;
+        }
+        else 
+        {
+            String::Utf8Value utf8value(Handle<v8::String>::Cast(jsenv->Get(name)));
+            netvalue = gcnew System::String(*utf8value);
+            if (netname == "owin.RequestBody") 
+            {
+                netvalue = gcnew System::IO::MemoryStream(
+                    System::Text::Encoding::UTF8->GetBytes((System::String^)netvalue));
+            }
+        }
+        
         netenv->Add(netname, netvalue);
     }
 
@@ -277,6 +363,8 @@ Handle<Value> callOwinApp(const v8::Arguments& args)
 
 void init(Handle<Object> target) 
 {
+    bufferConstructor = Persistent<Function>::New(Handle<Function>::Cast(
+        Context::GetCurrent()->Global()->Get(String::New("Buffer")))); 
     NODE_SET_METHOD(target, "initializeOwinApp", initializeOwinApp);
     NODE_SET_METHOD(target, "callOwinApp", callOwinApp);
 }
