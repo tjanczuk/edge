@@ -25,6 +25,8 @@ ref class OwinAppInvokeContext {
 private:
     Dictionary<System::String^,System::Object^>^ netenv;
     Task^ task;
+    Dictionary<System::String^,array<System::String^>^>^ responseHeaders;
+    System::IO::MemoryStream^ responseBody;
     Persistent<Function>* callback;
     uv_owin_async_t* uv_owin_async;
 
@@ -93,7 +95,11 @@ void completeOnV8Thread(uv_async_t* handle, int status)
 
 OwinAppInvokeContext::OwinAppInvokeContext(Dictionary<System::String^,System::Object^>^ netenv, Handle<Function> callback)
 {
+    this->responseHeaders = gcnew Dictionary<System::String^,array<System::String^>^>();
+    this->responseBody = gcnew System::IO::MemoryStream();
     this->netenv = netenv;
+    this->netenv->Add(gcnew System::String("owin.ResponseHeaders"), this->responseHeaders);
+    this->netenv->Add(gcnew System::String("owin.ResponseBody"), this->responseBody);
     this->callback = new Persistent<Function>;
     *(this->callback) = Persistent<Function>::New(callback);
     this->uv_owin_async = new uv_owin_async_t;
@@ -167,55 +173,37 @@ Handle<v8::Object> OwinAppInvokeContext::CreateResultObject()
     for each (KeyValuePair<System::String^,System::Object^>^ entry in this->netenv) {
         if (entry->Value->GetType() == System::String::typeid) 
         {
-            result->Set(
-                convert(entry->Key),
-                convert((System::String^)entry->Value));
+            result->Set(convert(entry->Key), convert((System::String^)entry->Value));
         }
         else if (entry->Value->GetType() == System::Int32::typeid) 
         {
-            result->Set(
-                convert(entry->Key),
-                v8::Integer::New((int)entry->Value));            
+            result->Set(convert(entry->Key), v8::Integer::New((int)entry->Value));            
         }
-        else if (entry->Key == "owin.ResponseHeaders") 
-        {
-            Handle<v8::Object> headers = v8::Object::New();
-            for each (KeyValuePair<System::String^,array<System::String^>^>^ netheader in 
-                (Dictionary<System::String^,array<System::String^>^>^)entry->Value) 
-            {
-                // TODO: support for multiple value of a single HTTP header
-                headers->Set(
-                    convert(netheader->Key),
-                    convert(netheader->Value[0]));
-            }
+    }
 
-            result->Set(
-                convert(entry->Key),
-                headers);            
-        }
-        else if (entry->Key == "owin.ResponseBody")
-        {
-            // TODO: implement async buffer copy, or perform copying on the CLR thread
-            System::IO::Stream^ stream = (System::IO::Stream^)entry->Value;
-            array<byte>^ buffer = gcnew array<byte>(1024);
-            int read;
-            Handle<v8::Array> bufferArray = v8::Array::New();
-            int i = 0;
-            while (0 < (read = stream->Read(buffer, 0, 1024)))
-            {
-                pin_ptr<unsigned char> pinnedBuffer = &buffer[0];
-                node::Buffer* slowBuffer = node::Buffer::New(read);
-                memcpy(node::Buffer::Data(slowBuffer), pinnedBuffer, read);
-                Handle<v8::Value> args[] = { slowBuffer->handle_, v8::Integer::New(read), Integer::New(0) };
-                Handle<v8::Object> fastBuffer = bufferConstructor->NewInstance(3, args);
-                bufferArray->Set(v8::Number::New(i++), fastBuffer);
-            }
+    Handle<v8::Object> headers = v8::Object::New();
+    for each (KeyValuePair<System::String^,array<System::String^>^>^ netheader in 
+        (Dictionary<System::String^,array<System::String^>^>^)this->responseHeaders) 
+    {
+        // TODO: support for multiple value of a single HTTP header
+        headers->Set(convert(netheader->Key), convert(netheader->Value[0]));
+    }
 
-            stream->Close();
-            result->Set(
-                convert(entry->Key),
-                bufferArray);            
-        }
+    result->Set(v8::String::New("owin.ResponseHeaders"), headers);            
+
+    if (this->responseBody->GetBuffer()->Length > 0) 
+    {        
+        pin_ptr<unsigned char> pinnedBuffer = &this->responseBody->GetBuffer()[0];
+        node::Buffer* slowBuffer = node::Buffer::New(this->responseBody->GetBuffer()->Length);
+        memcpy(node::Buffer::Data(slowBuffer), pinnedBuffer, this->responseBody->GetBuffer()->Length);
+        Handle<v8::Value> args[] = { 
+            slowBuffer->handle_, 
+            v8::Integer::New(this->responseBody->GetBuffer()->Length), 
+            Integer::New(0) 
+        };
+        Handle<v8::Object> fastBuffer = bufferConstructor->NewInstance(3, args);
+        this->responseBody->Close();
+        result->Set(v8::String::New("owin.ResponseBody"), fastBuffer);            
     }
 
     return scope.Close(result);
@@ -354,8 +342,8 @@ Handle<Value> OwinApp::Call(const Arguments& args)
     try 
     {
         OwinApp^ app = OwinApp::apps->default[appId - 1];
+		OwinAppInvokeContext^ context = gcnew OwinAppInvokeContext(netenv, callback);
         Task^ task = (Task^)app->invokeMethod->Invoke(app->instance, gcnew array<System::Object^> { netenv });
-        OwinAppInvokeContext^ context = gcnew OwinAppInvokeContext(netenv, callback);
         task->ContinueWith(gcnew System::Action<Task^,System::Object^>(owinAppCompletedOnCLRThread), context);
     }
     catch (System::Exception^ e)
