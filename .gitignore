@@ -14,3 +14,10 @@ results
 node_modules
 npm-debug.log
 build
+
+bin/
+obj/
+*.user
+*.suo
+packages/*
+_ReSharper*
