@@ -191,14 +191,14 @@ Handle<v8::Object> OwinAppInvokeContext::CreateResultObject()
 
     result->Set(v8::String::New("owin.ResponseHeaders"), headers);            
 
-    if (this->responseBody->GetBuffer()->Length > 0) 
+    if (this->responseBody->Length > 0) 
     {        
         pin_ptr<unsigned char> pinnedBuffer = &this->responseBody->GetBuffer()[0];
-        node::Buffer* slowBuffer = node::Buffer::New(this->responseBody->GetBuffer()->Length);
-        memcpy(node::Buffer::Data(slowBuffer), pinnedBuffer, this->responseBody->GetBuffer()->Length);
+        node::Buffer* slowBuffer = node::Buffer::New(this->responseBody->Length);
+        memcpy(node::Buffer::Data(slowBuffer), pinnedBuffer, this->responseBody->Length);
         Handle<v8::Value> args[] = { 
             slowBuffer->handle_, 
-            v8::Integer::New(this->responseBody->GetBuffer()->Length), 
+            v8::Integer::New(this->responseBody->Length), 
             Integer::New(0) 
         };
         Handle<v8::Object> fastBuffer = bufferConstructor->NewInstance(3, args);
