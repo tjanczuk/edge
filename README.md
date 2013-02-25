@@ -5,15 +5,17 @@ Owin allows you to implement express.js handlers and connect middleware for node
 
 Owin is a native node.js module for Windows. It hosts [OWIN](http://owin.org/) handlers written in .NET 4.5 (think C#) in a node.js application. Owin allows integration of .NET code into express.js applications by providing a connect wrapper around OWIN .NET handlers. 
 
+Read more about the background of the project [here](http://tomasz.janczuk.org/2013/02/hosting-net-code-in-nodejs-applications.html).
+
 ## What you need
 
 * Windows x64  
 * node.js 0.8.x x64 (developed and tested with [v0.8.19](http://nodejs.org/dist/v0.8.19/))  
 * [.NET 4.5](http://www.microsoft.com/en-us/download/details.aspx?id=30653)  
 
-## Hello, world
+## How to: express.js request handler in .NET
 
-First get the owin module and express.js
+First get the owin module and express.js:
 
 ```
 npm install owin
@@ -78,7 +80,19 @@ node server.js
 
 (Make sure OwinHelloWorld.dll is in the current directory, or specify the full file path to it in the call to the `owin()` function in your server.js)
 
-Now open the web browser and navigate to `http://localhost:3000/jazz`. Welcome to .NET! Now navigate to `http://localhost:3000/rocknroll`. Hello JavaScript!
+Now open the web browser and navigate to `http://localhost:3000/jazz`. Welcome to .NET! 
+
+![jazz](https://f.cloud.github.com/assets/822369/190582/79ad0574-7efc-11e2-9d61-227ab70c37b4.PNG)
+
+Now navigate to `http://localhost:3000/rocknroll`. Hello JavaScript!
+
+![rocknroll](https://f.cloud.github.com/assets/822369/190583/8151f190-7efc-11e2-92ab-dcbfffd96f35.PNG)
+
+## How to: CPU-bound in-process worker
+
+This is how you can execute CPU-bound code written in .NET within the node.js process without blocking the node.js event loop. Read more about the scenario and goals [here](http://tomasz.janczuk.org/2013/02/cpu-bound-workers-for-nodejs.html). 
+
+
 
 ## More
 
