@@ -168,6 +168,38 @@ Node.js event loop is alive!
 
 This proves that the node.js event loop is not blocked while the CPU-bound computation runs on a CLR thread separate from the main event loop thread in node.js. 
 
+## How to: debugging
+
+You can debug the .NET code running as part of your node.js application by attaching a managed code debugger(e.g. Visual Studio) to node.exe. Since the node.exe process runs both native and managed code, make sure to select the appropriate language to target:
+
+![debug](https://f.cloud.github.com/assets/822369/190564/a41bab2c-7efb-11e2-878f-82ae2325876c.PNG)
+
+## How to: exceptions
+
+Exceptions thrown within the .NET code are propagated to the calling node.js application and re-thrown there by the owin module. For example:
+
+```
+C:\projects\owin_test>node test.js
+Starting long running operation...
+
+C:\projects\owin_test\test_worker.js:8
+                if (error) throw error;
+                                 ^
+System.AggregateException: One or more errors occurred. ---> System.Exception: Sample exception
+   at CalculateBudget.Startup.Execute(IDictionary`2 input)
+   at Owinjs.Worker.<>c__DisplayClass1.<Invoke>b__0()
+   at System.Threading.Tasks.Task.Execute()
+   --- End of inner exception stack trace ---
+---> (Inner Exception #0) System.Exception: Sample exception
+   at CalculateBudget.Startup.Execute(IDictionary`2 input)
+   at Owinjs.Worker.<>c__DisplayClass1.<Invoke>b__0()
+   at System.Threading.Tasks.Task.Execute()<---
+```
+
+In case of express request handlers written in .NET, express framework will return them back to the browser client. For example:
+
+![exception](https://f.cloud.github.com/assets/822369/190735/51f14504-7f0b-11e2-8ea1-04f81fa406ff.PNG)
+
 ## More
 
 Issues? Feedback? You [know what to do](https://github.com/tjanczuk/owin/issues/new). 
