@@ -3,7 +3,7 @@ Hosting .NET OWIN applications in node.js
 
 Owin allows you to host .NET code in a node.js application. It helps with:
 * implementing express.js handlers and connect middleware for node.js application using .NET 4.5,  
-* implementing CPU-bound computations in .NET and run them in-process with node.js application without blocking the event loop,  
+* implementing CPU-bound computations in .NET and running them in-process with node.js application without blocking the event loop,  
 * using C# and .NET instead of writing native node.js extensions in C/C++ and Win32 to access Windows specific functionality from a node.js application. 
 
 Owin is a native node.js module for Windows. It hosts [OWIN](http://owin.org/) handlers written in .NET 4.5 (think C#) in a node.js application. Owin allows integration of .NET code into express.js applications by providing a connect wrapper around OWIN .NET handlers. Owin also provides an easy way to run CPU bound computations implemented in .NET without blocking the node.js event loop. 
