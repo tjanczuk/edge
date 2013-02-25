@@ -1,11 +1,14 @@
 Hosting .NET OWIN applications in node.js
 ====
 
-Owin allows you to implement express.js handlers and connect middleware for node.js application using .NET 4.5. 
+Owin allows you to host .NET code in a node.js application. It allows you to:
+* implement express.js handlers and connect middleware for node.js application using .NET 4.5,  
+* implement CPU-bound computations in .NET and run them in-process with node.js application without blocking the event loop,  
+* use C# and .NET instead of writing native node.js extensions in C/C++ and Win32 to access Windows specific functionality from a node.js application. 
 
-Owin is a native node.js module for Windows. It hosts [OWIN](http://owin.org/) handlers written in .NET 4.5 (think C#) in a node.js application. Owin allows integration of .NET code into express.js applications by providing a connect wrapper around OWIN .NET handlers. 
+Owin is a native node.js module for Windows. It hosts [OWIN](http://owin.org/) handlers written in .NET 4.5 (think C#) in a node.js application. Owin allows integration of .NET code into express.js applications by providing a connect wrapper around OWIN .NET handlers. Owin also provides an easy way to run CPU bound computations implemented in .NET without blocking the node.js event loop. 
 
-Read more about the background of the project [here](http://tomasz.janczuk.org/2013/02/hosting-net-code-in-nodejs-applications.html).
+Read more about the background and motivations of the project [here](http://tomasz.janczuk.org/2013/02/hosting-net-code-in-nodejs-applications.html).
 
 ## What you need
 
@@ -92,7 +95,78 @@ Now navigate to `http://localhost:3000/rocknroll`. Hello JavaScript!
 
 This is how you can execute CPU-bound code written in .NET within the node.js process without blocking the node.js event loop. Read more about the scenario and goals [here](http://tomasz.janczuk.org/2013/02/cpu-bound-workers-for-nodejs.html). 
 
+First install the owin module with:
 
+```
+npm install owin
+```
+
+Then implement your CPU bound code in .NET and save it to Startup.cs:
+
+```c#
+namespace CalculateBudget
+{
+    public class Startup : Owinjs.Worker
+    {
+        protected override IDictionary<string, string> Execute(IDictionary<string, string> input)
+        {
+            int revenue = int.Parse(input["revenue"]);
+            int cost = int.Parse(input["cost"]);
+            int income = revenue - cost;
+
+            Thread.Sleep(5000); // pretend it takes a long time
+
+            return new Dictionary<string, string> { { "income", income.ToString() } };
+        }
+    }
+}
+```
+
+The `Execute` method can conatin any long-running, CPU-blocking code. You can accept a dictionary of strings as input and return another dictionary of strings as the result of the computation. 
+
+Now compile the .NET into a `CalculateBudget.dll` (the name of the assembly should by convention match the namespace name and reference the `Owinjs.dll` included with the owin module:
+
+```
+copy node_modules\owin\lib\clr\Owinjs.dll
+csc /target:library /r:Owinjs.dll /out:CalculateBudget.dll Startup.cs
+```
+
+Lastly implement your node.js application that imports the owin module and calls into the blocking .NET code from `CalculateBudget.dll`:
+
+```javascript
+var owin = require('owin')
+
+console.log('Starting long running operation...');
+owin.worker(
+    'CalculateBudget.dll',
+    { revenue: 100, cost: 80 },
+    function (error, result) {
+        if (error) throw error;
+        console.log('Result of long running operation: ', result);
+    }
+);
+
+setInterval(function () { 
+    console.log('Node.js event loop is alive!')
+}, 1000);
+```
+
+Save the file as `test.js` and run it with `node test.js`. You will see output similar to this one:
+
+```
+C:\projects\owin_test>node test.js
+Starting long running operation...
+Node.js event loop is alive!
+Node.js event loop is alive!
+Node.js event loop is alive!
+Node.js event loop is alive!
+Node.js event loop is alive!
+Result of long running operation:  { income: '20' }
+Node.js event loop is alive!
+Node.js event loop is alive!
+```
+
+This proves that the node.js event loop is not blocked while the CPU-bound computation runs on a CLR thread separate from the main event loop thread in node.js. 
 
 ## More
 
