@@ -1,14 +1,16 @@
 Hosting .NET OWIN applications in node.js
 ====
 
-Owin allows you to host .NET code in a node.js application. It helps with:
-* implementing express.js handlers and connect middleware for node.js application using .NET 4.5,  
-* implementing CPU-bound computations in .NET and running them in-process with node.js application without blocking the event loop,  
-* using C# and .NET instead of writing native node.js extensions in C/C++ and Win32 to access Windows specific functionality from a node.js application. 
+Owin allows you to host .NET code in node.js applications. It helps with:
+* implementing express.js handlers and connect middleware for node.js application using .NET 4.5 ([read more](http://tomasz.janczuk.org/2013/02/hosting-net-code-in-nodejs-applications.html)),  
+* implementing CPU-bound computations in .NET and running them in-process with node.js application without blocking the event loop ([read more](http://tomasz.janczuk.org/2013/02/cpu-bound-workers-for-nodejs.html)),  
+* using C# and .NET instead of writing native node.js extensions in C/C++ and Win32 to access Windows specific functionality from a node.js application ([read more](http://tomasz.janczuk.org/2013/02/access-ms-sql-from-nodejs-application.html)). 
 
-Owin is a native node.js module for Windows. It hosts [OWIN](http://owin.org/) handlers written in .NET 4.5 (think C#) in a node.js application. Owin allows integration of .NET code into express.js applications by providing a connect wrapper around OWIN .NET handlers. Owin also provides an easy way to run CPU bound computations implemented in .NET without blocking the node.js event loop. 
+Owin is a native node.js module for Windows. It utilizes the [OWIN](http://owin.org) interface to bridge between JavaScript, native, and CLR/.NET code (think C#). The module takes care of marshaling data between V8 and CLR heaps as well as reconciling threading models. The .NET code is running in-process either asynchronously or on CLR threads while the node.js event loop remains unblocked.
 
-Read more about the background and motivations of the project [here](http://tomasz.janczuk.org/2013/02/hosting-net-code-in-nodejs-applications.html).
+Read more about the background and motivations of the project [here](http://tomasz.janczuk.org/2013/02/hosting-net-code-in-nodejs-applications.html). 
+
+[Follow @tjanczuk](https://twitter.com/tjanczuk) for updates related to the module. 
 
 ## What you need
 
@@ -168,9 +170,74 @@ Node.js event loop is alive!
 
 This proves that the node.js event loop is not blocked while the CPU-bound computation runs on a CLR thread separate from the main event loop thread in node.js. 
 
+## How to: access MS SQL from node.js
+
+You can access a SQL database from node.js using CLR and asychronous ADO.NET running in-process, without writing a line of .NET code. 
+
+To get started, you need a SQL connection string to your database. The snippets below assume this is the [sample Northwind SQL database](http://www.microsoft.com/en-us/download/details.aspx?id=23654). Initialize the `OWIN_SQL_CONNECTION_STRING` environment variable with this connection string:
+
+```
+set OWIN_SQL_CONNECTION_STRING=Data Source=(local);Initial Catalog=Northwind;Integrated Security=True
+```
+
+Install owin:
+
+```
+npm install owin
+```
+
+Then run the SQL command from your node.js application as follows:
+
+```javascript
+var owin = require('owin');
+
+owin.sql("select * from Region", function (error, result) {
+    if (error) throw error;
+    console.log(result);
+});
+```
+
+The `owin.sql` call returns an array of arrays like this one:
+
+```
+C:\projects\owin>node test.js
+[ [ 'RegionID', 'RegionDescription' ],
+  [ 1, 'Eastern                                           ' ],
+  [ 2, 'Western                                           ' ],
+  [ 3, 'Northern                                          ' ],
+  [ 4, 'Southern                                          ' ] ]
+```
+
+The first array specifies column names, subsequent arrays contain rows of data. 
+
+Similarly to the `select` SQL statement, you can call `insert`, `update`, or `delete`:
+
+```javascript
+owin.sql("insert into Region values (5, 'Pacific Northwest')", function (error, result) { /* ... */ });
+owin.sql("update Region set RegionDescription='Pacific Northwest' where RegionID=5", function (error, result) { /* ... */ });
+owin.sql("delete Region where RegionID=5", function (error, result) { /* ... */ });
+```
+
+Upon successful execution, the callback of `insert`, `update`, and `delete` receives an integer indicating the number of affected rows in the database. 
+
+ADO.NET exceptions are propagated back to the JavaScript as the `error` parameter of the callback function. For example, adding a row with an ID that already exists in the database yields:
+
+```
+C:\projects\owin>node test.js
+C:\projects\owin\test.js:9
+        if (error) throw error;
+                         ^
+System.AggregateException: One or more errors occurred. ---> System.Data.SqlClient.SqlException: Violation of 
+PRIMARY KEY constraint 'PK_Region'. Cannot insert duplicate key in object 'dbo.Region'.
+The statement has been terminated.
+...
+```
+
+All SQL operations are using asychronous ADO.NET executing on the CLR thread pool. They block neither the node.js event loop, or tie up CLR threads. 
+
 ## How to: debugging
 
-You can debug the .NET code running as part of your node.js application by attaching a managed code debugger(e.g. Visual Studio) to node.exe. Since the node.exe process runs both native and managed code, make sure to select the appropriate language to target:
+You can debug the .NET code running as part of your node.js application by attaching a managed code debugger (e.g. Visual Studio) to node.exe. Since the node.exe process runs both native and managed code, make sure to select the appropriate language to target:
 
 ![debug](https://f.cloud.github.com/assets/822369/190564/a41bab2c-7efb-11e2-878f-82ae2325876c.PNG)
 
@@ -202,5 +269,4 @@ In case of express request handlers written in .NET, express framework will retu
 
 ## More
 
-Issues? Feedback? You [know what to do](https://github.com/tjanczuk/owin/issues/new). 
-Pull requests welcome.
+Issues? Feedback? You [know what to do](https://github.com/tjanczuk/owin/issues/new). Pull requests welcome.
