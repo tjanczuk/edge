@@ -14,6 +14,21 @@ System::String^ convertV82CLR(Handle<v8::String> text)
     return gcnew System::String(*utf8text);    
 }
 
+System::String^ v8ExceptionToCLRString(Handle<v8::Value> exception)
+{
+    HandleScope scope;
+    if (exception->IsObject())
+    {
+        Handle<Value> stack = exception->ToObject()->Get(v8::String::NewSymbol("stack"));
+        if (stack->IsString())
+        {
+            return gcnew System::String(convertV82CLR(stack->ToString()));
+        }
+    }
+
+    return gcnew System::String(convertV82CLR(Handle<v8::String>::Cast(exception)));
+}
+
 Handle<String> createV8ExceptionString(System::Exception^ exception)
 {
     HandleScope scope;
@@ -82,17 +97,16 @@ NodejsFunctionInvocationContext::!NodejsFunctionInvocationContext()
 Handle<Value> v8FuncCallback(const v8::Arguments& args)
 {
     HandleScope scope;
-    Handle<v8::External> correlator = Handle<v8::External>::Cast(args[0]);
+    Handle<v8::External> correlator = Handle<v8::External>::Cast(args.Callee()->Get(v8::String::NewSymbol("_owinContext")));
     NodejsFunctionInvocationContextWrap* wrap = (NodejsFunctionInvocationContextWrap*)(correlator->Value());
     NodejsFunctionInvocationContext^ context = wrap->context;
-    if (!args[1]->IsUndefined() && !args[1]->IsNull())
+    if (!args[0]->IsUndefined() && !args[0]->IsNull())
     {
-        context->CompleteWithError(gcnew System::Exception(
-            convertV82CLR(Handle<v8::String>::Cast(args[1]))));
+        context->CompleteWithError(gcnew System::Exception(v8ExceptionToCLRString(args[0])));
     }
     else 
     {
-        context->CompleteWithResult(args[2]);
+        context->CompleteWithResult(args[1]);
     }
 
     return scope.Close(Undefined());
@@ -113,12 +127,13 @@ void NodejsFunctionInvocationContext::CallFuncOnV8Thread()
 
         Handle<v8::FunctionTemplate> callbackTemplate = v8::FunctionTemplate::New(v8FuncCallback);
         Handle<v8::Function> callback = callbackTemplate->GetFunction();
-        Handle<v8::Value> argv[] = { v8::External::New((void*)this->wrap), jspayload, callback };
+        callback->Set(v8::String::NewSymbol("_owinContext"), v8::External::New((void*)this->wrap));
+        Handle<v8::Value> argv[] = { jspayload, callback };
         TryCatch tryCatch;
-        (*(this->functionContext->Func))->Call(v8::Context::GetCurrent()->Global(), 3, argv);
-        if (tryCatch.HasCaught()) {
-            this->CompleteWithError(gcnew System::Exception(
-                convertV82CLR(Handle<v8::String>::Cast(tryCatch.Exception()))));
+        (*(this->functionContext->Func))->Call(v8::Context::GetCurrent()->Global(), 2, argv);
+        if (tryCatch.HasCaught()) 
+        {
+            this->CompleteWithError(gcnew System::Exception(v8ExceptionToCLRString(tryCatch.Exception())));
         }
     }
     catch (System::Exception^ ex)
@@ -244,7 +259,8 @@ void OwinAppInvokeContext::RecreateUvOwinAsyncFunc()
     this->DisposeUvOwinAsyncFunc();
     this->uv_owin_async_func = new uv_owin_async_t;
     uv_async_init(uv_default_loop(), &this->uv_owin_async_func->uv_async, callFuncOnV8Thread);
-    // release one CLR thread associated with this OWIN call that waits to call a JS function 
+    // release one CLR thread associated with this call from JS to CLR 
+    // that waits to call back to an exported JS function 
     this->funcWaitHandle->Set(); 
 }
 
@@ -443,7 +459,7 @@ System::Object^ OwinApp::MarshalV8ToCLR(OwinAppInvokeContext^ context, Handle<v8
     else if (node::Buffer::HasInstance(jsdata))
     {
         Handle<v8::Object> jsbuffer = jsdata->ToObject();
-        cli::array<byte>^ netbuffer = gcnew cli::array<byte>(node::Buffer::Length(jsbuffer));
+        cli::array<byte>^ netbuffer = gcnew cli::array<byte>((int)node::Buffer::Length(jsbuffer));
         pin_ptr<byte> pinnedNetbuffer = &netbuffer[0];
         memcpy(pinnedNetbuffer, node::Buffer::Data(jsbuffer), netbuffer->Length);
 
