@@ -1,67 +1,17 @@
-#include <node.h>
-#include <node_buffer.h>
-#include <v8.h>
-#include <uv.h>
-#include <vcclr.h>
-
-using namespace v8;
-using namespace System::Collections::Generic;
-using namespace System::Reflection;
-using namespace System::Threading::Tasks;
-
-// Good explanation of native Buffers at 
-// http://sambro.is-super-awesome.com/2011/03/03/creating-a-proper-buffer-in-a-node-c-addon/
-Persistent<Function> bufferConstructor;
-BOOL debugMode;
-
-ref class OwinAppInvokeContext;
-
-typedef struct uv_owin_async_s {
-    uv_async_t uv_async;
-    gcroot<OwinAppInvokeContext^> context;
-} uv_owin_async_t;
-
-ref class OwinAppInvokeContext {
-private:
-    Dictionary<System::String^,System::Object^>^ netenv;
-    Task^ task;
-    Dictionary<System::String^,array<System::String^>^>^ responseHeaders;
-    System::IO::MemoryStream^ responseBody;
-    Persistent<Function>* callback;
-    uv_owin_async_t* uv_owin_async;
-
-    void DisposeCallback();
-    void DisposeUvOwinAsync();
-    Handle<v8::Object> CreateResultObject();
-
-public:
-    OwinAppInvokeContext(Dictionary<System::String^,System::Object^>^ netenv, Handle<Function> callback);
-    ~OwinAppInvokeContext();
-    !OwinAppInvokeContext();
-
-    void CompleteOnCLRThread(Task^ task);
-    void CompleteOnV8Thread();
-};
-
-ref class OwinApp {
-private:
-    System::Object^ instance;
-    MethodInfo^ invokeMethod;
-    static List<OwinApp^>^ apps;
-
-    OwinApp();
-
-public:
-    static OwinApp();
-    static Handle<Value> Initialize(const v8::Arguments& args);
-    static Handle<Value> Call(const v8::Arguments& args);
-};
+#include "owin.h"
 
 Handle<v8::String> convert(System::String^ text)
 {
     HandleScope scope;
     pin_ptr<const wchar_t> message = PtrToStringChars(text);
     return scope.Close(v8::String::New((uint16_t*)message));  
+}
+
+System::String^ convertV82CLR(Handle<v8::String> text)
+{
+    HandleScope scope;
+    String::Utf8Value utf8text(text);
+    return gcnew System::String(*utf8text);    
 }
 
 Handle<String> createV8ExceptionString(System::Exception^ exception)
@@ -90,7 +40,183 @@ void completeOnV8Thread(uv_async_t* handle, int status)
 
     HandleScope handleScope;
     uv_owin_async_t* uv_owin_async = CONTAINING_RECORD(handle, uv_owin_async_t, uv_async);
-    uv_owin_async->context->CompleteOnV8Thread();
+    System::Object^ context = uv_owin_async->context;
+    (dynamic_cast<OwinAppInvokeContext^>(context))->CompleteOnV8Thread();
+}
+
+void callFuncOnV8Thread(uv_async_t* handle, int status)
+{
+    if (debugMode) 
+        System::Console::WriteLine("continueOnCLRThread");
+
+    HandleScope handleScope;
+    uv_owin_async_t* uv_owin_async = CONTAINING_RECORD(handle, uv_owin_async_t, uv_async);
+    System::Object^ context = uv_owin_async->context;
+    (dynamic_cast<NodejsFunctionInvocationContext^>(context))->CallFuncOnV8Thread();
+}
+
+NodejsFunctionInvocationContext::NodejsFunctionInvocationContext(
+        NodejsFunctionContext^ functionContext, System::Object^ payload)
+{
+    this->functionContext = functionContext;
+    this->payload = payload;
+    this->TaskCompletionSource = gcnew System::Threading::Tasks::TaskCompletionSource<System::Object^>();
+    this->wrap = new NodejsFunctionInvocationContextWrap;
+    this->wrap->context = this;
+}
+
+NodejsFunctionInvocationContext::~NodejsFunctionInvocationContext()
+{
+    this->!NodejsFunctionInvocationContext();
+}
+
+NodejsFunctionInvocationContext::!NodejsFunctionInvocationContext()
+{
+    if (this->wrap)
+    {
+        delete this->wrap;
+        this->wrap = NULL;
+    }
+}
+
+Handle<Value> v8FuncCallback(const v8::Arguments& args)
+{
+    HandleScope scope;
+    Handle<v8::External> correlator = Handle<v8::External>::Cast(args[0]);
+    NodejsFunctionInvocationContextWrap* wrap = (NodejsFunctionInvocationContextWrap*)(correlator->Value());
+    NodejsFunctionInvocationContext^ context = wrap->context;
+    if (args.Length() > 1 && !args[1]->IsUndefined() && !args[1]->IsNull())
+    {
+        context->CompleteWithError(gcnew System::Exception(
+            convertV82CLR(Handle<v8::String>::Cast(args[1]))));
+    }
+    else if (args.Length() > 2)
+    {
+        context->CompleteWithResult(Handle<v8::String>::Cast(args[2]));
+    }
+    else 
+    {
+        context->CompleteEmpty();
+    }
+
+    return scope.Close(Undefined());
+}
+
+void NodejsFunctionInvocationContext::CallFuncOnV8Thread()
+{
+    HandleScope scope;
+    this->functionContext->AppInvokeContext->RecreateUvOwinAsyncFunc();
+    try 
+    {
+        JavaScriptSerializer^ serializer = gcnew JavaScriptSerializer();
+        Handle<v8::String> payload = convert(serializer->Serialize(this->payload));
+        Handle<v8::FunctionTemplate> callbackTemplate = v8::FunctionTemplate::New(v8FuncCallback);
+        Handle<v8::Function> callback = callbackTemplate->GetFunction();
+        Handle<v8::Value> argv[] = { v8::External::New((void*)this->wrap), payload, callback };
+        TryCatch tryCatch;
+        (*(this->functionContext->Func))->Call(v8::Context::GetCurrent()->Global(), 3, argv);
+        if (tryCatch.HasCaught()) {
+            this->CompleteWithError(gcnew System::Exception(
+                convertV82CLR(Handle<v8::String>::Cast(tryCatch.Exception()))));
+        }
+    }
+    catch (System::Exception^ ex)
+    {
+        this->CompleteWithError(ex);
+    }
+}
+
+void NodejsFunctionInvocationContext::Complete()
+{
+    if (this->exception != nullptr)
+    {
+        this->TaskCompletionSource->SetException(this->exception);
+    }
+    else 
+    {
+        this->TaskCompletionSource->SetResult(this->result);
+    }
+}
+
+void NodejsFunctionInvocationContext::CompleteEmpty()
+{
+    Task::Run(gcnew System::Action(this, &NodejsFunctionInvocationContext::Complete));
+}
+
+void NodejsFunctionInvocationContext::CompleteWithError(System::Exception^ exception)
+{
+    this->exception = exception;
+    Task::Run(gcnew System::Action(this, &NodejsFunctionInvocationContext::Complete));
+}
+
+void NodejsFunctionInvocationContext::CompleteWithResult(Handle<v8::String> result)
+{
+    HandleScope scope;
+    JavaScriptSerializer^ serializer = gcnew JavaScriptSerializer();
+    try 
+    {
+        this->result = serializer->DeserializeObject(convertV82CLR(result));
+    }
+    catch (System::Exception^ ex)
+    {
+        this->CompleteWithError(ex);
+    }
+
+    if (this->result != nullptr)
+    {
+        Task::Run(gcnew System::Action(this, &NodejsFunctionInvocationContext::Complete));
+    }
+}
+
+NodejsFunctionContext::NodejsFunctionContext(OwinAppInvokeContext^ appInvokeContext, Handle<Function> function)
+{
+    this->AppInvokeContext = appInvokeContext;
+    this->Func = new Persistent<Function>;
+    *(this->Func) = Persistent<Function>::New(function);
+}
+
+NodejsFunctionContext::~NodejsFunctionContext()
+{
+    if (debugMode)
+        System::Console::WriteLine("~NodejsFunctionContext");
+    
+    this->!NodejsFunctionContext();
+}
+
+NodejsFunctionContext::!NodejsFunctionContext()
+{
+    if (debugMode)
+        System::Console::WriteLine("!NodejsFunctionContext");
+
+    this->DisposeFunction();
+}
+
+void NodejsFunctionContext::DisposeFunction()
+{
+    if (this->Func)
+    {
+        if (debugMode)
+            System::Console::WriteLine("DisposeFunction");
+
+        (*(this->Func)).Dispose();
+        (*(this->Func)).Clear();
+        delete this->Func;
+        this->Func = NULL;        
+    }
+}
+
+Task<System::Object^>^ NodejsFunctionContext::FunctionWrapper(System::Object^ payload)
+{
+    uv_owin_async_t* uv_owin_async = this->AppInvokeContext->WaitForUvOwinAsyncFunc();
+    NodejsFunctionInvocationContext^ context = gcnew NodejsFunctionInvocationContext(this, payload);
+    uv_owin_async->context = context;
+    BOOL ret = PostQueuedCompletionStatus(
+        uv_default_loop()->iocp, 
+        0, 
+        (ULONG_PTR)NULL, 
+        &uv_owin_async->uv_async.async_req.overlapped);
+
+    return context->TaskCompletionSource->Task;
 }
 
 OwinAppInvokeContext::OwinAppInvokeContext(Dictionary<System::String^,System::Object^>^ netenv, Handle<Function> callback)
@@ -104,7 +230,10 @@ OwinAppInvokeContext::OwinAppInvokeContext(Dictionary<System::String^,System::Ob
     *(this->callback) = Persistent<Function>::New(callback);
     this->uv_owin_async = new uv_owin_async_t;
     this->uv_owin_async->context = this;
-    uv_async_init(uv_default_loop(), &this->uv_owin_async->uv_async, completeOnV8Thread);    
+    uv_async_init(uv_default_loop(), &this->uv_owin_async->uv_async, completeOnV8Thread);
+    this->funcWaitHandle = gcnew AutoResetEvent(false);
+    this->uv_owin_async_func = NULL;
+    this->RecreateUvOwinAsyncFunc();
 }
 
 OwinAppInvokeContext::~OwinAppInvokeContext()
@@ -122,6 +251,22 @@ OwinAppInvokeContext::!OwinAppInvokeContext()
 
     this->DisposeCallback();
     this->DisposeUvOwinAsync();
+    this->DisposeUvOwinAsyncFunc();
+}
+
+void OwinAppInvokeContext::RecreateUvOwinAsyncFunc()
+{
+    this->DisposeUvOwinAsyncFunc();
+    this->uv_owin_async_func = new uv_owin_async_t;
+    uv_async_init(uv_default_loop(), &this->uv_owin_async_func->uv_async, callFuncOnV8Thread);
+    // release one CLR thread associated with this OWIN call that waits to call a JS function 
+    this->funcWaitHandle->Set(); 
+}
+
+uv_owin_async_t* OwinAppInvokeContext::WaitForUvOwinAsyncFunc()
+{
+    this->funcWaitHandle->WaitOne();
+    return this->uv_owin_async_func;
 }
 
 void OwinAppInvokeContext::DisposeCallback()
@@ -148,6 +293,19 @@ void OwinAppInvokeContext::DisposeUvOwinAsync()
         uv_unref((uv_handle_t*)&this->uv_owin_async->uv_async);
         delete this->uv_owin_async;
         this->uv_owin_async = NULL;
+    }
+}
+
+void OwinAppInvokeContext::DisposeUvOwinAsyncFunc()
+{
+    if (this->uv_owin_async_func)
+    {
+        if (debugMode)
+            System::Console::WriteLine("Disposing uv_owin_async_func");
+
+        uv_unref((uv_handle_t*)&this->uv_owin_async_func->uv_async);
+        delete this->uv_owin_async_func;
+        this->uv_owin_async_func = NULL;
     }
 }
 
@@ -299,6 +457,7 @@ Handle<Value> OwinApp::Call(const Arguments& args)
     Handle<v8::Object> jsenv = Handle<v8::Object>::Cast(args[1]);
     Handle<v8::Function> callback = Handle<v8::Function>::Cast(args[2]);
     Dictionary<System::String^,System::Object^>^ netenv = gcnew Dictionary<System::String^,System::Object^>();
+    OwinAppInvokeContext^ context = gcnew OwinAppInvokeContext(netenv, callback);
     Handle<v8::Array> propertyNames = jsenv->GetPropertyNames();
     for (unsigned int i = 0; i < propertyNames->Length(); i++)
     {
@@ -325,6 +484,25 @@ Handle<Value> OwinApp::Call(const Arguments& args)
 
             netvalue = netheaders;
         }
+        else if (netname == "nodejs.Functions")
+        {
+            Handle<v8::Object> functions = Handle<v8::Object>::Cast(jsenv->Get(name));
+            Dictionary<System::String^,System::Func<System::Object^,Task<System::Object^>^>^>^ netfunctions = 
+                gcnew Dictionary<System::String^,System::Func<System::Object^,Task<System::Object^>^>^>();
+            Handle<v8::Array> functionNames = functions->GetPropertyNames();
+            for (unsigned int j = 0; j < functionNames->Length(); j++)
+            {
+                Handle<v8::String> functionName = Handle<v8::String>::Cast(functionNames->Get(j));
+                String::Utf8Value utf8functionName(functionName);
+                NodejsFunctionContext^ functionContext = gcnew NodejsFunctionContext(
+                    context, Handle<v8::Function>::Cast(functions->Get(functionName)));
+                System::String^ netFunctionName = gcnew System::String(*utf8functionName);
+                netfunctions->Add(netFunctionName, gcnew System::Func<System::Object^,Task<System::Object^>^>(
+                    functionContext, &NodejsFunctionContext::FunctionWrapper));
+            }
+
+            netvalue = netfunctions;
+        }
         else 
         {
             String::Utf8Value utf8value(Handle<v8::String>::Cast(jsenv->Get(name)));
@@ -342,7 +520,6 @@ Handle<Value> OwinApp::Call(const Arguments& args)
     try 
     {
         OwinApp^ app = OwinApp::apps->default[appId - 1];
-		OwinAppInvokeContext^ context = gcnew OwinAppInvokeContext(netenv, callback);
         Task^ task = (Task^)app->invokeMethod->Invoke(app->instance, gcnew array<System::Object^> { netenv });
         task->ContinueWith(gcnew System::Action<Task^,System::Object^>(owinAppCompletedOnCLRThread), context);
     }

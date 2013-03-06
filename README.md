@@ -267,6 +267,16 @@ In case of express request handlers written in .NET, express framework will retu
 
 ![exception](https://f.cloud.github.com/assets/822369/190735/51f14504-7f0b-11e2-8ea1-04f81fa406ff.PNG)
 
+## Building
+
+To build the C++\CLI native extension:
+
+```
+npm install -g node-gyp
+node-gyp configure --msvs_version=2012
+node-gyp build
+```
+
 ## More
 
 Issues? Feedback? You [know what to do](https://github.com/tjanczuk/owin/issues/new). Pull requests welcome.
