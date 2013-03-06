@@ -20,6 +20,8 @@ using namespace System::Web::Script::Serialization;
 // http://sambro.is-super-awesome.com/2011/03/03/creating-a-proper-buffer-in-a-node-c-addon/
 Persistent<Function> bufferConstructor;
 BOOL debugMode;
+Persistent<v8::Object> json;
+Persistent<Function> jsonParse;
 
 typedef struct uv_owin_async_s {
     uv_async_t uv_async;
@@ -28,10 +30,7 @@ typedef struct uv_owin_async_s {
 
 ref class OwinAppInvokeContext {
 private:
-    Dictionary<System::String^,System::Object^>^ netenv;
-    Task^ task;
-    Dictionary<System::String^,array<System::String^>^>^ responseHeaders;
-    System::IO::MemoryStream^ responseBody;
+    Task<System::Object^>^ task;
     Persistent<Function>* callback;
     uv_owin_async_t* uv_owin_async;
     uv_owin_async_t* uv_owin_async_func;
@@ -39,14 +38,16 @@ private:
 
     void DisposeCallback();
     void DisposeUvOwinAsync();
-    Handle<v8::Object> CreateResultObject();
 
 public:
-    OwinAppInvokeContext(Dictionary<System::String^,System::Object^>^ netenv, Handle<Function> callback);
+
+    property System::Object^ Payload;
+
+    OwinAppInvokeContext(Handle<Function> callback);
     ~OwinAppInvokeContext();
     !OwinAppInvokeContext();
 
-    void CompleteOnCLRThread(Task^ task);
+    void CompleteOnCLRThread(Task<System::Object^>^ task);
     void CompleteOnV8Thread();
     void DisposeUvOwinAsyncFunc();
     void RecreateUvOwinAsyncFunc();
@@ -96,8 +97,7 @@ public:
     !NodejsFunctionInvocationContext();
 
     void CompleteWithError(System::Exception^ exception);
-    void CompleteWithResult(Handle<v8::String> result);
-    void CompleteEmpty();
+    void CompleteWithResult(Handle<v8::Value> result);
     void CallFuncOnV8Thread();
 };
 
@@ -113,6 +113,8 @@ public:
     static OwinApp();
     static Handle<Value> Initialize(const v8::Arguments& args);
     static Handle<Value> Call(const v8::Arguments& args);
+    static Handle<v8::Value> MarshalCLRToV8(System::Object^ netdata);
+    static System::Object^ MarshalV8ToCLR(OwinAppInvokeContext^ context, Handle<v8::Value> jsdata);    
 };
 
 #endif

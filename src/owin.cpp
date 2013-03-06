@@ -85,18 +85,14 @@ Handle<Value> v8FuncCallback(const v8::Arguments& args)
     Handle<v8::External> correlator = Handle<v8::External>::Cast(args[0]);
     NodejsFunctionInvocationContextWrap* wrap = (NodejsFunctionInvocationContextWrap*)(correlator->Value());
     NodejsFunctionInvocationContext^ context = wrap->context;
-    if (args.Length() > 1 && !args[1]->IsUndefined() && !args[1]->IsNull())
+    if (!args[1]->IsUndefined() && !args[1]->IsNull())
     {
         context->CompleteWithError(gcnew System::Exception(
             convertV82CLR(Handle<v8::String>::Cast(args[1]))));
     }
-    else if (args.Length() > 2)
-    {
-        context->CompleteWithResult(Handle<v8::String>::Cast(args[2]));
-    }
     else 
     {
-        context->CompleteEmpty();
+        context->CompleteWithResult(args[2]);
     }
 
     return scope.Close(Undefined());
@@ -108,11 +104,16 @@ void NodejsFunctionInvocationContext::CallFuncOnV8Thread()
     this->functionContext->AppInvokeContext->RecreateUvOwinAsyncFunc();
     try 
     {
-        JavaScriptSerializer^ serializer = gcnew JavaScriptSerializer();
-        Handle<v8::String> payload = convert(serializer->Serialize(this->payload));
+        TryCatch try_catch;
+        Handle<v8::Value> jspayload = OwinApp::MarshalCLRToV8(this->payload);
+        if (try_catch.HasCaught()) 
+        {
+            throw gcnew System::Exception("Unable to convert CLR value to V8 value.");
+        }
+
         Handle<v8::FunctionTemplate> callbackTemplate = v8::FunctionTemplate::New(v8FuncCallback);
         Handle<v8::Function> callback = callbackTemplate->GetFunction();
-        Handle<v8::Value> argv[] = { v8::External::New((void*)this->wrap), payload, callback };
+        Handle<v8::Value> argv[] = { v8::External::New((void*)this->wrap), jspayload, callback };
         TryCatch tryCatch;
         (*(this->functionContext->Func))->Call(v8::Context::GetCurrent()->Global(), 3, argv);
         if (tryCatch.HasCaught()) {
@@ -138,33 +139,22 @@ void NodejsFunctionInvocationContext::Complete()
     }
 }
 
-void NodejsFunctionInvocationContext::CompleteEmpty()
-{
-    Task::Run(gcnew System::Action(this, &NodejsFunctionInvocationContext::Complete));
-}
-
 void NodejsFunctionInvocationContext::CompleteWithError(System::Exception^ exception)
 {
     this->exception = exception;
     Task::Run(gcnew System::Action(this, &NodejsFunctionInvocationContext::Complete));
 }
 
-void NodejsFunctionInvocationContext::CompleteWithResult(Handle<v8::String> result)
+void NodejsFunctionInvocationContext::CompleteWithResult(Handle<v8::Value> result)
 {
-    HandleScope scope;
-    JavaScriptSerializer^ serializer = gcnew JavaScriptSerializer();
     try 
     {
-        this->result = serializer->DeserializeObject(convertV82CLR(result));
-    }
-    catch (System::Exception^ ex)
-    {
-        this->CompleteWithError(ex);
-    }
-
-    if (this->result != nullptr)
-    {
+        this->result = OwinApp::MarshalV8ToCLR(nullptr, result);
         Task::Run(gcnew System::Action(this, &NodejsFunctionInvocationContext::Complete));
+    }
+    catch (System::Exception^ e)
+    {
+        this->CompleteWithError(e);
     }
 }
 
@@ -219,13 +209,8 @@ Task<System::Object^>^ NodejsFunctionContext::FunctionWrapper(System::Object^ pa
     return context->TaskCompletionSource->Task;
 }
 
-OwinAppInvokeContext::OwinAppInvokeContext(Dictionary<System::String^,System::Object^>^ netenv, Handle<Function> callback)
+OwinAppInvokeContext::OwinAppInvokeContext(Handle<Function> callback)
 {
-    this->responseHeaders = gcnew Dictionary<System::String^,array<System::String^>^>();
-    this->responseBody = gcnew System::IO::MemoryStream();
-    this->netenv = netenv;
-    this->netenv->Add(gcnew System::String("owin.ResponseHeaders"), this->responseHeaders);
-    this->netenv->Add(gcnew System::String("owin.ResponseBody"), this->responseBody);
     this->callback = new Persistent<Function>;
     *(this->callback) = Persistent<Function>::New(callback);
     this->uv_owin_async = new uv_owin_async_t;
@@ -309,7 +294,7 @@ void OwinAppInvokeContext::DisposeUvOwinAsyncFunc()
     }
 }
 
-void OwinAppInvokeContext::CompleteOnCLRThread(Task^ task)
+void OwinAppInvokeContext::CompleteOnCLRThread(Task<System::Object^>^ task)
 {
     if (debugMode)
         System::Console::WriteLine("CompleteOnCLRThread");
@@ -322,49 +307,6 @@ void OwinAppInvokeContext::CompleteOnCLRThread(Task^ task)
         0, 
         (ULONG_PTR)NULL, 
         &this->uv_owin_async->uv_async.async_req.overlapped);
-}
-
-Handle<v8::Object> OwinAppInvokeContext::CreateResultObject()
-{
-    HandleScope scope;
-    Handle<v8::Object> result = v8::Object::New();
-    for each (KeyValuePair<System::String^,System::Object^>^ entry in this->netenv) {
-        if (entry->Value->GetType() == System::String::typeid) 
-        {
-            result->Set(convert(entry->Key), convert((System::String^)entry->Value));
-        }
-        else if (entry->Value->GetType() == System::Int32::typeid) 
-        {
-            result->Set(convert(entry->Key), v8::Integer::New((int)entry->Value));            
-        }
-    }
-
-    Handle<v8::Object> headers = v8::Object::New();
-    for each (KeyValuePair<System::String^,array<System::String^>^>^ netheader in 
-        (Dictionary<System::String^,array<System::String^>^>^)this->responseHeaders) 
-    {
-        // TODO: support for multiple value of a single HTTP header
-        headers->Set(convert(netheader->Key), convert(netheader->Value[0]));
-    }
-
-    result->Set(v8::String::New("owin.ResponseHeaders"), headers);            
-
-    if (this->responseBody->Length > 0) 
-    {        
-        pin_ptr<unsigned char> pinnedBuffer = &this->responseBody->GetBuffer()[0];
-        node::Buffer* slowBuffer = node::Buffer::New(this->responseBody->Length);
-        memcpy(node::Buffer::Data(slowBuffer), pinnedBuffer, this->responseBody->Length);
-        Handle<v8::Value> args[] = { 
-            slowBuffer->handle_, 
-            v8::Integer::New(this->responseBody->Length), 
-            Integer::New(0) 
-        };
-        Handle<v8::Object> fastBuffer = bufferConstructor->NewInstance(3, args);
-        this->responseBody->Close();
-        result->Set(v8::String::New("owin.ResponseBody"), fastBuffer);            
-    }
-
-    return scope.Close(result);
 }
 
 void OwinAppInvokeContext::CompleteOnV8Thread()
@@ -398,14 +340,21 @@ void OwinAppInvokeContext::CompleteOnV8Thread()
             break;
             case TaskStatus::RanToCompletion:
                 argc = 2;
-                argv[1] = this->CreateResultObject();
+                TryCatch try_catch;
+                argv[1] = OwinApp::MarshalCLRToV8(this->task->Result);
+                if (try_catch.HasCaught()) 
+                {
+                    argc = 1;
+                    argv[0] = try_catch.Exception();
+                }
             break;
         };
 
         TryCatch try_catch;
         (*(this->callback))->Call(v8::Context::GetCurrent()->Global(), argc, argv);
         this->DisposeCallback();
-        if (try_catch.HasCaught()) {
+        if (try_catch.HasCaught()) 
+        {
             node::FatalException(try_catch);
         }        
     }
@@ -429,11 +378,18 @@ Handle<Value> OwinApp::Initialize(const v8::Arguments& args)
     {
         String::Utf8Value assemblyFile(options->Get(String::NewSymbol("assemblyFile")));
         String::Utf8Value typeName(options->Get(String::NewSymbol("typeName")));
+        String::Utf8Value methodName(options->Get(String::NewSymbol("methodName")));
         Assembly^ assembly = Assembly::LoadFrom(gcnew System::String(*assemblyFile));
         System::Type^ startupType = assembly->GetType(gcnew System::String(*typeName), true, true);
         OwinApp^ app = gcnew OwinApp();
         app->instance = System::Activator::CreateInstance(startupType, false);
-        app->invokeMethod = startupType->GetMethod("Invoke", BindingFlags::Instance | BindingFlags::Public);
+        app->invokeMethod = startupType->GetMethod(gcnew System::String(*methodName), 
+            BindingFlags::Instance | BindingFlags::Public);
+		if (app->invokeMethod == nullptr) 
+		{
+			throw gcnew System::InvalidOperationException("Unable to access to the CLR method to wrap through reflection. Make sure it is a public instance method.");
+		}
+
         OwinApp::apps->Add(app);
     }
     catch (System::Exception^ e)
@@ -444,84 +400,125 @@ Handle<Value> OwinApp::Initialize(const v8::Arguments& args)
     return scope.Close(Integer::New(OwinApp::apps->Count));
 }
 
-void owinAppCompletedOnCLRThread(Task^ task, System::Object^ state)
+void owinAppCompletedOnCLRThread(Task<System::Object^>^ task, System::Object^ state)
 {
     OwinAppInvokeContext^ context = (OwinAppInvokeContext^)state;
     context->CompleteOnCLRThread(task);
 }
 
-Handle<Value> OwinApp::Call(const Arguments& args) 
+Handle<v8::Value> OwinApp::MarshalCLRToV8(System::Object^ netdata)
 {
     HandleScope scope;
-    int appId = args[0]->Int32Value();
-    Handle<v8::Object> jsenv = Handle<v8::Object>::Cast(args[1]);
-    Handle<v8::Function> callback = Handle<v8::Function>::Cast(args[2]);
-    Dictionary<System::String^,System::Object^>^ netenv = gcnew Dictionary<System::String^,System::Object^>();
-    OwinAppInvokeContext^ context = gcnew OwinAppInvokeContext(netenv, callback);
-    Handle<v8::Array> propertyNames = jsenv->GetPropertyNames();
-    for (unsigned int i = 0; i < propertyNames->Length(); i++)
-    {
-        Handle<v8::String> name = Handle<v8::String>::Cast(propertyNames->Get(i));
-        String::Utf8Value utf8name(name);
-        System::String^ netname = gcnew System::String(*utf8name);
-        System::Object^ netvalue;
-
-        if (netname == "owin.RequestHeaders") 
-        {
-            Handle<v8::Object> headers = Handle<v8::Object>::Cast(jsenv->Get(name));
-            Dictionary<System::String^,array<System::String^>^>^ netheaders = 
-                gcnew Dictionary<System::String^,array<System::String^>^>();
-            Handle<v8::Array> headerNames = headers->GetPropertyNames();
-            for (unsigned int j = 0; j < headerNames->Length(); j++)
-            {
-                Handle<v8::String> headerName = Handle<v8::String>::Cast(headerNames->Get(j));
-                String::Utf8Value utf8headerName(headerName);
-                String::Utf8Value utf8headerValue(Handle<v8::String>::Cast(headers->Get(headerName)));
-                System::String^ netHeaderName = gcnew System::String(*utf8headerName);
-                System::String^ netHeaderValue = gcnew System::String(*utf8headerValue);
-                netheaders->Add(netHeaderName, gcnew array<System::String^> { netHeaderValue });
-            }
-
-            netvalue = netheaders;
-        }
-        else if (netname == "nodejs.Functions")
-        {
-            Handle<v8::Object> functions = Handle<v8::Object>::Cast(jsenv->Get(name));
-            Dictionary<System::String^,System::Func<System::Object^,Task<System::Object^>^>^>^ netfunctions = 
-                gcnew Dictionary<System::String^,System::Func<System::Object^,Task<System::Object^>^>^>();
-            Handle<v8::Array> functionNames = functions->GetPropertyNames();
-            for (unsigned int j = 0; j < functionNames->Length(); j++)
-            {
-                Handle<v8::String> functionName = Handle<v8::String>::Cast(functionNames->Get(j));
-                String::Utf8Value utf8functionName(functionName);
-                NodejsFunctionContext^ functionContext = gcnew NodejsFunctionContext(
-                    context, Handle<v8::Function>::Cast(functions->Get(functionName)));
-                System::String^ netFunctionName = gcnew System::String(*utf8functionName);
-                netfunctions->Add(netFunctionName, gcnew System::Func<System::Object^,Task<System::Object^>^>(
-                    functionContext, &NodejsFunctionContext::FunctionWrapper));
-            }
-
-            netvalue = netfunctions;
-        }
-        else 
-        {
-            String::Utf8Value utf8value(Handle<v8::String>::Cast(jsenv->Get(name)));
-            netvalue = gcnew System::String(*utf8value);
-            if (netname == "owin.RequestBody") 
-            {
-                netvalue = gcnew System::IO::MemoryStream(
-                    System::Text::Encoding::UTF8->GetBytes((System::String^)netvalue));
-            }
-        }
-        
-        netenv->Add(netname, netvalue);
-    }
+    Handle<v8::String> serialized;
 
     try 
     {
+        JavaScriptSerializer^ serializer = gcnew JavaScriptSerializer();
+        serialized = convert(serializer->Serialize(netdata));
+    }
+    catch (System::Exception^ e)
+    {
+        return scope.Close(createV8Exception(e));
+    }
+
+    Handle<v8::Value> argv[] = { serialized };
+
+    return scope.Close(jsonParse->Call(json, 1, argv));
+}
+
+System::Object^ OwinApp::MarshalV8ToCLR(OwinAppInvokeContext^ context, Handle<v8::Value> jsdata)
+{
+    HandleScope scope;
+
+    if (jsdata->IsFunction() && context != nullptr) 
+    {
+        NodejsFunctionContext^ functionContext = gcnew NodejsFunctionContext(
+            context, Handle<v8::Function>::Cast(jsdata));
+        System::Func<System::Object^,Task<System::Object^>^>^ netfunc = 
+            gcnew System::Func<System::Object^,Task<System::Object^>^>(
+                functionContext, &NodejsFunctionContext::FunctionWrapper);
+
+        return netfunc;
+    }
+    else if (node::Buffer::HasInstance(jsdata))
+    {
+        Handle<v8::Object> jsbuffer = jsdata->ToObject();
+        cli::array<byte>^ netbuffer = gcnew cli::array<byte>(node::Buffer::Length(jsbuffer));
+        pin_ptr<byte> pinnedNetbuffer = &netbuffer[0];
+        memcpy(pinnedNetbuffer, node::Buffer::Data(jsbuffer), netbuffer->Length);
+
+        return netbuffer;
+    }
+    else if (jsdata->IsObject()) 
+    {
+        Dictionary<System::String^,System::Object^>^ netobject = gcnew Dictionary<System::String^,System::Object^>();
+        Handle<v8::Object> jsobject = Handle<v8::Object>::Cast(jsdata);
+        Handle<v8::Array> propertyNames = jsobject->GetPropertyNames();
+        for (unsigned int i = 0; i < propertyNames->Length(); i++)
+        {
+            Handle<v8::String> name = Handle<v8::String>::Cast(propertyNames->Get(i));
+            String::Utf8Value utf8name(name);
+            System::String^ netname = gcnew System::String(*utf8name);
+            System::Object^ netvalue = OwinApp::MarshalV8ToCLR(context, jsobject->Get(name));
+            netobject->Add(netname, netvalue);
+        }
+
+        return netobject;
+    }
+    else if (jsdata->IsArray())
+    {
+        Handle<v8::Array> jsarray = Handle<v8::Array>::Cast(jsdata);
+        cli::array<System::Object^>^ netarray = gcnew cli::array<System::Object^>(jsarray->Length());
+        for (unsigned int i = 0; i < jsarray->Length(); i++)
+        {
+            netarray[i] = OwinApp::MarshalV8ToCLR(context, jsarray->Get(i));
+        }
+
+        return netarray;
+    }
+    else if (jsdata->IsString()) 
+    {
+        return convertV82CLR(Handle<v8::String>::Cast(jsdata));
+    }
+    else if (jsdata->IsBoolean())
+    {
+        return jsdata->BooleanValue();
+    }
+    else if (jsdata->IsInt32())
+    {
+        return jsdata->Int32Value();
+    }
+    else if (jsdata->IsUint32()) 
+    {
+        return jsdata->Uint32Value();
+    }
+    else if (jsdata->IsNumber()) 
+    {
+        return jsdata->NumberValue();
+    }
+    else if (jsdata->IsUndefined() || jsdata->IsNull())
+    {
+        return nullptr;
+    }
+    else
+    {
+        throw gcnew System::Exception("Unable to convert V8 value to CLR value.");
+    }
+}
+
+Handle<Value> OwinApp::Call(const Arguments& args) 
+{
+    HandleScope scope;
+    
+    try 
+    {
+        int appId = args[0]->Int32Value();
+        OwinAppInvokeContext^ context = gcnew OwinAppInvokeContext(Handle<v8::Function>::Cast(args[2]));
+        context->Payload = OwinApp::MarshalV8ToCLR(context, args[1]);
         OwinApp^ app = OwinApp::apps->default[appId - 1];
-        Task^ task = (Task^)app->invokeMethod->Invoke(app->instance, gcnew array<System::Object^> { netenv });
-        task->ContinueWith(gcnew System::Action<Task^,System::Object^>(owinAppCompletedOnCLRThread), context);
+        Task<System::Object^>^ task = (Task<System::Object^>^)app->invokeMethod->Invoke(
+            app->instance, gcnew array<System::Object^> { context->Payload });
+        task->ContinueWith(gcnew System::Action<Task<System::Object^>^,System::Object^>(owinAppCompletedOnCLRThread), context);
     }
     catch (System::Exception^ e)
     {
@@ -545,6 +542,8 @@ void init(Handle<Object> target)
 {
     bufferConstructor = Persistent<Function>::New(Handle<Function>::Cast(
         Context::GetCurrent()->Global()->Get(String::New("Buffer")))); 
+    json = Persistent<v8::Object>::New(Context::GetCurrent()->Global()->Get(String::New("JSON"))->ToObject());
+    jsonParse = Persistent<Function>::New(Handle<Function>::Cast(json->Get(String::New("parse"))));
     debugMode = (0 < GetEnvironmentVariable("OWIN_DEBUG", NULL, 0));
     NODE_SET_METHOD(target, "initializeOwinApp", initializeOwinApp);
     NODE_SET_METHOD(target, "callOwinApp", callOwinApp);
