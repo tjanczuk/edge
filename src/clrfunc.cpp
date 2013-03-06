@@ -1,0 +1,170 @@
+#include "owin.h"
+
+static ClrFunc::ClrFunc()
+{
+    ClrFunc::apps = gcnew List<ClrFunc^>();
+}
+
+ClrFunc::ClrFunc()
+{
+    // empty
+}
+
+Handle<Value> ClrFunc::Initialize(const v8::Arguments& args)
+{
+    HandleScope scope;
+    Handle<v8::Object> options = args[0]->ToObject();
+    try 
+    {
+        String::Utf8Value assemblyFile(options->Get(String::NewSymbol("assemblyFile")));
+        String::Utf8Value typeName(options->Get(String::NewSymbol("typeName")));
+        String::Utf8Value methodName(options->Get(String::NewSymbol("methodName")));
+        Assembly^ assembly = Assembly::LoadFrom(gcnew System::String(*assemblyFile));
+        System::Type^ startupType = assembly->GetType(gcnew System::String(*typeName), true, true);
+        ClrFunc^ app = gcnew ClrFunc();
+        app->instance = System::Activator::CreateInstance(startupType, false);
+        app->invokeMethod = startupType->GetMethod(gcnew System::String(*methodName), 
+            BindingFlags::Instance | BindingFlags::Public);
+		if (app->invokeMethod == nullptr) 
+		{
+			throw gcnew System::InvalidOperationException(
+                "Unable to access to the CLR method to wrap through reflection. Make sure it is a public instance method.");
+		}
+
+        ClrFunc::apps->Add(app);
+    }
+    catch (System::Exception^ e)
+    {
+        return scope.Close(throwV8Exception(e));
+    }
+
+    return scope.Close(Integer::New(ClrFunc::apps->Count));
+}
+
+void owinAppCompletedOnCLRThread(Task<System::Object^>^ task, System::Object^ state)
+{
+    ClrFuncInvokeContext^ context = (ClrFuncInvokeContext^)state;
+    context->CompleteOnCLRThread(task);
+}
+
+Handle<v8::Value> ClrFunc::MarshalCLRToV8(System::Object^ netdata)
+{
+    HandleScope scope;
+    Handle<v8::String> serialized;
+
+    try 
+    {
+        JavaScriptSerializer^ serializer = gcnew JavaScriptSerializer();
+        serialized = stringCLR2V8(serializer->Serialize(netdata));
+    }
+    catch (System::Exception^ e)
+    {
+        return scope.Close(throwV8Exception(e));
+    }
+
+    Handle<v8::Value> argv[] = { serialized };
+
+    return scope.Close(jsonParse->Call(json, 1, argv));
+}
+
+System::Object^ ClrFunc::MarshalV8ToCLR(ClrFuncInvokeContext^ context, Handle<v8::Value> jsdata)
+{
+    HandleScope scope;
+
+    if (jsdata->IsFunction() && context != nullptr) 
+    {
+        NodejsFunc^ functionContext = gcnew NodejsFunc(
+            context, Handle<v8::Function>::Cast(jsdata));
+        System::Func<System::Object^,Task<System::Object^>^>^ netfunc = 
+            gcnew System::Func<System::Object^,Task<System::Object^>^>(
+                functionContext, &NodejsFunc::FunctionWrapper);
+
+        return netfunc;
+    }
+    else if (node::Buffer::HasInstance(jsdata))
+    {
+        Handle<v8::Object> jsbuffer = jsdata->ToObject();
+        cli::array<byte>^ netbuffer = gcnew cli::array<byte>((int)node::Buffer::Length(jsbuffer));
+        pin_ptr<byte> pinnedNetbuffer = &netbuffer[0];
+        memcpy(pinnedNetbuffer, node::Buffer::Data(jsbuffer), netbuffer->Length);
+
+        return netbuffer;
+    }
+    else if (jsdata->IsObject()) 
+    {
+        Dictionary<System::String^,System::Object^>^ netobject = gcnew Dictionary<System::String^,System::Object^>();
+        Handle<v8::Object> jsobject = Handle<v8::Object>::Cast(jsdata);
+        Handle<v8::Array> propertyNames = jsobject->GetPropertyNames();
+        for (unsigned int i = 0; i < propertyNames->Length(); i++)
+        {
+            Handle<v8::String> name = Handle<v8::String>::Cast(propertyNames->Get(i));
+            String::Utf8Value utf8name(name);
+            System::String^ netname = gcnew System::String(*utf8name);
+            System::Object^ netvalue = ClrFunc::MarshalV8ToCLR(context, jsobject->Get(name));
+            netobject->Add(netname, netvalue);
+        }
+
+        return netobject;
+    }
+    else if (jsdata->IsArray())
+    {
+        Handle<v8::Array> jsarray = Handle<v8::Array>::Cast(jsdata);
+        cli::array<System::Object^>^ netarray = gcnew cli::array<System::Object^>(jsarray->Length());
+        for (unsigned int i = 0; i < jsarray->Length(); i++)
+        {
+            netarray[i] = ClrFunc::MarshalV8ToCLR(context, jsarray->Get(i));
+        }
+
+        return netarray;
+    }
+    else if (jsdata->IsString()) 
+    {
+        return stringV82CLR(Handle<v8::String>::Cast(jsdata));
+    }
+    else if (jsdata->IsBoolean())
+    {
+        return jsdata->BooleanValue();
+    }
+    else if (jsdata->IsInt32())
+    {
+        return jsdata->Int32Value();
+    }
+    else if (jsdata->IsUint32()) 
+    {
+        return jsdata->Uint32Value();
+    }
+    else if (jsdata->IsNumber()) 
+    {
+        return jsdata->NumberValue();
+    }
+    else if (jsdata->IsUndefined() || jsdata->IsNull())
+    {
+        return nullptr;
+    }
+    else
+    {
+        throw gcnew System::Exception("Unable to convert V8 value to CLR value.");
+    }
+}
+
+Handle<Value> ClrFunc::Call(const Arguments& args) 
+{
+    HandleScope scope;
+    
+    try 
+    {
+        int appId = args[0]->Int32Value();
+        ClrFuncInvokeContext^ context = gcnew ClrFuncInvokeContext(Handle<v8::Function>::Cast(args[2]));
+        context->Payload = ClrFunc::MarshalV8ToCLR(context, args[1]);
+        ClrFunc^ app = ClrFunc::apps->default[appId - 1];
+        Task<System::Object^>^ task = (Task<System::Object^>^)app->invokeMethod->Invoke(
+            app->instance, gcnew array<System::Object^> { context->Payload });
+        task->ContinueWith(gcnew System::Action<Task<System::Object^>^,System::Object^>(owinAppCompletedOnCLRThread), context);
+    }
+    catch (System::Exception^ e)
+    {
+        return scope.Close(throwV8Exception(e));
+    }
+
+    return scope.Close(Undefined());
+}

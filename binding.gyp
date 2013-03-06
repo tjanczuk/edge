@@ -5,7 +5,14 @@
       'sources': [ ],
       'conditions': [
       	['OS=="win"', {
-      	  'sources+': [ 'src/owin.cpp' ]
+      	  'sources+': [ 
+            'src/owin.cpp', 
+            'src/utils.cpp', 
+            'src/clrfunc.cpp',
+            'src/clrfuncinvokecontext.cpp',
+            'src/nodejsfunc.cpp',
+            'src/nodejsfuncinvokecontext.cpp'
+          ]
       	}]
       ],
       'configurations': {

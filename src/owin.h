@@ -1,9 +1,9 @@
 #ifndef __OWIN_H
 #define __OWIN_H
 
+#include <v8.h>
 #include <node.h>
 #include <node_buffer.h>
-#include <v8.h>
 #include <uv.h>
 #include <vcclr.h>
 
@@ -18,17 +18,23 @@ using namespace System::Web::Script::Serialization;
 
 // Good explanation of native Buffers at 
 // http://sambro.is-super-awesome.com/2011/03/03/creating-a-proper-buffer-in-a-node-c-addon/
-Persistent<Function> bufferConstructor;
-BOOL debugMode;
-Persistent<v8::Object> json;
-Persistent<Function> jsonParse;
+extern BOOL debugMode;
+extern Persistent<Function> bufferConstructor;
+extern Persistent<v8::Object> json;
+extern Persistent<Function> jsonParse;
+
+Handle<v8::String> stringCLR2V8(System::String^ text);
+System::String^ stringV82CLR(Handle<v8::String> text);
+System::String^ exceptionV82stringCLR(Handle<v8::Value> exception);
+Handle<String> exceptionCLR2stringV8(System::Exception^ exception);
+Handle<Value> throwV8Exception(System::Exception^ exception);
 
 typedef struct uv_owin_async_s {
     uv_async_t uv_async;
     gcroot<System::Object^> context;
 } uv_owin_async_t;
 
-ref class OwinAppInvokeContext {
+ref class ClrFuncInvokeContext {
 private:
     Task<System::Object^>^ task;
     Persistent<Function>* callback;
@@ -43,9 +49,9 @@ public:
 
     property System::Object^ Payload;
 
-    OwinAppInvokeContext(Handle<Function> callback);
-    ~OwinAppInvokeContext();
-    !OwinAppInvokeContext();
+    ClrFuncInvokeContext(Handle<Function> callback);
+    ~ClrFuncInvokeContext();
+    !ClrFuncInvokeContext();
 
     void CompleteOnCLRThread(Task<System::Object^>^ task);
     void CompleteOnV8Thread();
@@ -54,36 +60,36 @@ public:
     uv_owin_async_t* WaitForUvOwinAsyncFunc();
 };
 
-ref class NodejsFunctionContext {
+ref class NodejsFunc {
 private:
 
     void DisposeFunction();
 
 public:
 
-    property OwinAppInvokeContext^ AppInvokeContext;
+    property ClrFuncInvokeContext^ ClrInvokeContext;
     property Persistent<Function>* Func;
 
-    NodejsFunctionContext(OwinAppInvokeContext^ appInvokeContext, Handle<Function> function);
-    ~NodejsFunctionContext();
-    !NodejsFunctionContext();
+    NodejsFunc(ClrFuncInvokeContext^ appInvokeContext, Handle<Function> function);
+    ~NodejsFunc();
+    !NodejsFunc();
 
     Task<System::Object^>^ FunctionWrapper(System::Object^ payload);
 };
 
-ref class NodejsFunctionInvocationContext;
+ref class NodejsFuncInvokeContext;
 
-typedef struct nodejsFunctionInvocationContextWrap {
-    gcroot<NodejsFunctionInvocationContext^> context;
-} NodejsFunctionInvocationContextWrap;
+typedef struct nodejsFuncInvokeContextWrap {
+    gcroot<NodejsFuncInvokeContext^> context;
+} NodejsFuncInvokeContextWrap;
 
-ref class NodejsFunctionInvocationContext {
+ref class NodejsFuncInvokeContext {
 private:
-    NodejsFunctionContext^ functionContext;
+    NodejsFunc^ functionContext;
     System::Object^ payload;
     System::Exception^ exception;
     System::Object^ result;
-    NodejsFunctionInvocationContextWrap* wrap;
+    NodejsFuncInvokeContextWrap* wrap;
 
     void Complete();
 
@@ -91,30 +97,30 @@ public:
 
     property TaskCompletionSource<System::Object^>^ TaskCompletionSource;
 
-    NodejsFunctionInvocationContext(
-        NodejsFunctionContext^ functionContext, System::Object^ payload);
-    ~NodejsFunctionInvocationContext();
-    !NodejsFunctionInvocationContext();
+    NodejsFuncInvokeContext(
+        NodejsFunc^ functionContext, System::Object^ payload);
+    ~NodejsFuncInvokeContext();
+    !NodejsFuncInvokeContext();
 
     void CompleteWithError(System::Exception^ exception);
     void CompleteWithResult(Handle<v8::Value> result);
     void CallFuncOnV8Thread();
 };
 
-ref class OwinApp {
+ref class ClrFunc {
 private:
     System::Object^ instance;
     MethodInfo^ invokeMethod;
-    static List<OwinApp^>^ apps;
+    static List<ClrFunc^>^ apps;
 
-    OwinApp();
+    ClrFunc();
 
 public:
-    static OwinApp();
+    static ClrFunc();
     static Handle<Value> Initialize(const v8::Arguments& args);
     static Handle<Value> Call(const v8::Arguments& args);
     static Handle<v8::Value> MarshalCLRToV8(System::Object^ netdata);
-    static System::Object^ MarshalV8ToCLR(OwinAppInvokeContext^ context, Handle<v8::Value> jsdata);    
+    static System::Object^ MarshalV8ToCLR(ClrFuncInvokeContext^ context, Handle<v8::Value> jsdata);    
 };
 
 #endif
