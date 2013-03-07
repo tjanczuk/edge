@@ -2,6 +2,7 @@
 
 Handle<Value> v8FuncCallback(const v8::Arguments& args)
 {
+    DBG("v8FuncCallback");
     HandleScope scope;
     Handle<v8::External> correlator = Handle<v8::External>::Cast(args.Callee()->Get(v8::String::NewSymbol("_owinContext")));
     NodejsFuncInvokeContextWrap* wrap = (NodejsFuncInvokeContextWrap*)(correlator->Value());
@@ -21,6 +22,7 @@ Handle<Value> v8FuncCallback(const v8::Arguments& args)
 NodejsFuncInvokeContext::NodejsFuncInvokeContext(
         NodejsFunc^ functionContext, System::Object^ payload)
 {
+    DBG("NodejsFuncInvokeContext::NodejsFuncInvokeContext");
     this->functionContext = functionContext;
     this->payload = payload;
     this->TaskCompletionSource = gcnew System::Threading::Tasks::TaskCompletionSource<System::Object^>();
@@ -35,6 +37,7 @@ NodejsFuncInvokeContext::~NodejsFuncInvokeContext()
 
 NodejsFuncInvokeContext::!NodejsFuncInvokeContext()
 {
+    DBG("NodejsFuncInvokeContext::!NodejsFuncInvokeContext");
     if (this->wrap)
     {
         delete this->wrap;
@@ -44,6 +47,7 @@ NodejsFuncInvokeContext::!NodejsFuncInvokeContext()
 
 void NodejsFuncInvokeContext::CallFuncOnV8Thread()
 {
+    DBG("NodejsFuncInvokeContext::CallFuncOnV8Thread");
     HandleScope scope;
     this->functionContext->ClrInvokeContext->RecreateUvOwinAsyncFunc();
     try 
@@ -74,6 +78,7 @@ void NodejsFuncInvokeContext::CallFuncOnV8Thread()
 
 void NodejsFuncInvokeContext::Complete()
 {
+    DBG("NodejsFuncInvokeContext::Complete");
     if (this->exception != nullptr)
     {
         this->TaskCompletionSource->SetException(this->exception);
@@ -86,12 +91,14 @@ void NodejsFuncInvokeContext::Complete()
 
 void NodejsFuncInvokeContext::CompleteWithError(System::Exception^ exception)
 {
+    DBG("NodejsFuncInvokeContext::CompleteWithError");
     this->exception = exception;
     Task::Run(gcnew System::Action(this, &NodejsFuncInvokeContext::Complete));
 }
 
 void NodejsFuncInvokeContext::CompleteWithResult(Handle<v8::Value> result)
 {
+    DBG("NodejsFuncInvokeContext::CompleteWithResult");
     try 
     {
         this->result = ClrFunc::MarshalV8ToCLR(nullptr, result);

@@ -12,6 +12,8 @@ ClrFunc::ClrFunc()
 
 Handle<Value> ClrFunc::Initialize(const v8::Arguments& args)
 {
+    DBG("ClrFunc::Initialize");
+
     HandleScope scope;
     Handle<v8::Object> options = args[0]->ToObject();
     try 
@@ -43,6 +45,7 @@ Handle<Value> ClrFunc::Initialize(const v8::Arguments& args)
 
 void owinAppCompletedOnCLRThread(Task<System::Object^>^ task, System::Object^ state)
 {
+    DBG("owinAppCompletedOnCLRThread");
     ClrFuncInvokeContext^ context = (ClrFuncInvokeContext^)state;
     context->CompleteOnCLRThread(task);
 }
@@ -149,6 +152,7 @@ System::Object^ ClrFunc::MarshalV8ToCLR(ClrFuncInvokeContext^ context, Handle<v8
 
 Handle<Value> ClrFunc::Call(const Arguments& args) 
 {
+    DBG("ClrFunc::Call");
     HandleScope scope;
     
     try 

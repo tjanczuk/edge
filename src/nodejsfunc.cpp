@@ -2,6 +2,7 @@
 
 NodejsFunc::NodejsFunc(ClrFuncInvokeContext^ appInvokeContext, Handle<Function> function)
 {
+    DBG("NodejsFunc::NodejsFunc");
     this->ClrInvokeContext = appInvokeContext;
     this->Func = new Persistent<Function>;
     *(this->Func) = Persistent<Function>::New(function);
@@ -11,6 +12,7 @@ NodejsFunc::NodejsFunc(ClrFuncInvokeContext^ appInvokeContext, Handle<Function> 
 
 Task<System::Object^>^ NodejsFunc::FunctionWrapper(System::Object^ payload)
 {
+    DBG("NodejsFunc::FunctionWrapper");
     uv_owin_async_t* uv_owin_async = this->ClrInvokeContext->WaitForUvOwinAsyncFunc();
     NodejsFuncInvokeContext^ context = gcnew NodejsFuncInvokeContext(this, payload);
     uv_owin_async->context = context;

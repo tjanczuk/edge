@@ -2,9 +2,7 @@
 
 void completeOnV8Thread(uv_async_t* handle, int status)
 {
-    if (debugMode) 
-        System::Console::WriteLine("completeOnV8Thread");
-
+    DBG("completeOnV8Thread");
     HandleScope handleScope;
     uv_owin_async_t* uv_owin_async = CONTAINING_RECORD(handle, uv_owin_async_t, uv_async);
     System::Object^ context = uv_owin_async->context;
@@ -13,9 +11,7 @@ void completeOnV8Thread(uv_async_t* handle, int status)
 
 void callFuncOnV8Thread(uv_async_t* handle, int status)
 {
-    if (debugMode) 
-        System::Console::WriteLine("continueOnCLRThread");
-
+    DBG("continueOnCLRThread");
     HandleScope handleScope;
     uv_owin_async_t* uv_owin_async = CONTAINING_RECORD(handle, uv_owin_async_t, uv_async);
     System::Object^ context = uv_owin_async->context;
@@ -24,6 +20,7 @@ void callFuncOnV8Thread(uv_async_t* handle, int status)
 
 ClrFuncInvokeContext::ClrFuncInvokeContext(Handle<Function> callback)
 {
+    DBG("ClrFuncInvokeContext::ClrFuncInvokeContext");
     this->callback = new Persistent<Function>;
     *(this->callback) = Persistent<Function>::New(callback);
     this->uv_owin_async = new uv_owin_async_t;
@@ -37,22 +34,17 @@ ClrFuncInvokeContext::ClrFuncInvokeContext(Handle<Function> callback)
 
 void ClrFuncInvokeContext::AddPersistentHandle(Persistent<Value>* handle)
 {
-    if (debugMode)
-        System::Console::WriteLine("AddPersistentHandle");
-
+    DBG("ClrFuncInvokeContext::AddPersistentHandle");
     this->persistentHandles->Add(System::IntPtr((void*)handle));
 }
 
 void ClrFuncInvokeContext::DisposePersistentHandles()
 {
-    if (debugMode)
-        System::Console::WriteLine("DisposePersistentHandles");
+    DBG("ClrFuncInvokeContext::DisposePersistentHandles");
 
     for each (System::IntPtr wrap in this->persistentHandles)
     {
-       if (debugMode)
-            System::Console::WriteLine("DisposePersistentHandles: dispose one");
-
+        DBG("ClrFuncInvokeContext::DisposePersistentHandles: dispose one");
         Persistent<Value>* handle = (Persistent<Value>*)wrap.ToPointer();
         (*handle).Dispose();
         (*handle).Clear();
@@ -64,9 +56,7 @@ void ClrFuncInvokeContext::DisposePersistentHandles()
 
 void ClrFuncInvokeContext::RecreateUvOwinAsyncFunc()
 {
-    if (debugMode)
-        System::Console::WriteLine("RecreateUvOwinAsyncFunc");
-
+    DBG("ClrFuncInvokeContext::RecreateUvOwinAsyncFunc");
     this->DisposeUvOwinAsyncFunc();
     this->uv_owin_async_func = new uv_owin_async_t;
     uv_async_init(uv_default_loop(), &this->uv_owin_async_func->uv_async, callFuncOnV8Thread);
@@ -77,7 +67,9 @@ void ClrFuncInvokeContext::RecreateUvOwinAsyncFunc()
 
 uv_owin_async_t* ClrFuncInvokeContext::WaitForUvOwinAsyncFunc()
 {
+    DBG("ClrFuncInvokeContext::WaitForUvOwinAsyncFunc: start wait");
     this->funcWaitHandle->WaitOne();
+    DBG("ClrFuncInvokeContext::WaitForUvOwinAsyncFunc: end wait");
     return this->uv_owin_async_func;
 }
 
@@ -85,9 +77,7 @@ void ClrFuncInvokeContext::DisposeCallback()
 {
     if (this->callback)
     {
-        if (debugMode)
-            System::Console::WriteLine("DisposeCallback");
-
+        DBG("ClrFuncInvokeContext::DisposeCallback");
         (*(this->callback)).Dispose();
         (*(this->callback)).Clear();
         delete this->callback;
@@ -99,9 +89,7 @@ void ClrFuncInvokeContext::DisposeUvOwinAsync()
 {
     if (this->uv_owin_async)
     {
-        if (debugMode)
-            System::Console::WriteLine("Disposing uv_owin_async");
-
+        DBG("ClrFuncInvokeContext::DisposeUvOwinAsync");
         uv_unref((uv_handle_t*)&this->uv_owin_async->uv_async);
         delete this->uv_owin_async;
         this->uv_owin_async = NULL;
@@ -112,9 +100,7 @@ void ClrFuncInvokeContext::DisposeUvOwinAsyncFunc()
 {
     if (this->uv_owin_async_func)
     {
-        if (debugMode)
-            System::Console::WriteLine("Disposing uv_owin_async_func");
-
+        DBG("ClrFuncInvokeContext::DisposeUvOwinAsyncFunc");
         uv_unref((uv_handle_t*)&this->uv_owin_async_func->uv_async);
         delete this->uv_owin_async_func;
         this->uv_owin_async_func = NULL;
@@ -123,11 +109,7 @@ void ClrFuncInvokeContext::DisposeUvOwinAsyncFunc()
 
 void ClrFuncInvokeContext::CompleteOnCLRThread(Task<System::Object^>^ task)
 {
-    if (debugMode)
-        System::Console::WriteLine("CompleteOnCLRThread");
-
-    // TODO: what prevents GC collection of "this" during the thread switch? 
-    // Does the gcroot in uv_owin_async->context ensure that?
+    DBG("ClrFuncInvokeContext::CompleteOnCLRThread");
     this->task = task;
     BOOL ret = PostQueuedCompletionStatus(
         uv_default_loop()->iocp, 
@@ -138,11 +120,9 @@ void ClrFuncInvokeContext::CompleteOnCLRThread(Task<System::Object^>^ task)
 
 void ClrFuncInvokeContext::CompleteOnV8Thread()
 {
-    if (debugMode)
-        System::Console::WriteLine("CompleteOnV8Thread");
+    DBG("ClrFuncInvokeContext::CompleteOnV8Thread");
 
     HandleScope handleScope;
-
     this->DisposeUvOwinAsync();
     this->DisposeUvOwinAsyncFunc();
     this->DisposePersistentHandles();

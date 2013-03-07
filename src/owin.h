@@ -16,6 +16,8 @@ using namespace System::Threading::Tasks;
 using namespace System::Threading;
 using namespace System::Web::Script::Serialization;
 
+#define DBG(msg) if (debugMode) System::Console::WriteLine(msg);
+
 // Good explanation of native Buffers at 
 // http://sambro.is-super-awesome.com/2011/03/03/creating-a-proper-buffer-in-a-node-c-addon/
 extern BOOL debugMode;
