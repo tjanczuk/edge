@@ -54,20 +54,28 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(System::Object^ netdata)
 {
     HandleScope scope;
     Handle<v8::String> serialized;
+    OwinJavaScriptConverter^ converter = gcnew OwinJavaScriptConverter();
+    Handle<v8::Value> jsdata;
 
     try 
     {
         JavaScriptSerializer^ serializer = gcnew JavaScriptSerializer();
+        serializer->RegisterConverters(gcnew cli::array<JavaScriptConverter^> { converter });
         serialized = stringCLR2V8(serializer->Serialize(netdata));
+        Handle<v8::Value> argv[] = { serialized };
+        jsdata = jsonParse->Call(json, 1, argv);
+        if (converter->Buffers->Count > 0)
+        {
+            // fixup object graph to replace buffer placeholders with buffers
+            jsdata = converter->FixupBuffers(jsdata);
+        }
     }
     catch (System::Exception^ e)
     {
         return scope.Close(throwV8Exception(e));
     }
 
-    Handle<v8::Value> argv[] = { serialized };
-
-    return scope.Close(jsonParse->Call(json, 1, argv));
+    return scope.Close(jsdata);
 }
 
 System::Object^ ClrFunc::MarshalV8ToCLR(ClrFuncInvokeContext^ context, Handle<v8::Value> jsdata)

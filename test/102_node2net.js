@@ -51,6 +51,7 @@ describe('call from node.js to .net', function () {
 			assert.ok(result.d === true);
 			assert.ok(result.e === false);
 			assert.equal(typeof result.f, 'object');
+			assert.ok(Buffer.isBuffer(result.f));
 			assert.equal(result.f.length, 10);
 			assert.ok(Array.isArray(result.g));
 			assert.equal(result.g.length, 2);

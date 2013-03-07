@@ -11,7 +11,8 @@
             'src/clrfunc.cpp',
             'src/clrfuncinvokecontext.cpp',
             'src/nodejsfunc.cpp',
-            'src/nodejsfuncinvokecontext.cpp'
+            'src/nodejsfuncinvokecontext.cpp',
+            'src/owinjavascriptconverter.cpp'
           ]
       	}]
       ],
@@ -25,7 +26,10 @@
               'RuntimeTypeInfo': -1, 
               'BasicRuntimeChecks': -1,
               'ExceptionHandling': '0',
-              'AdditionalOptions': [ '/clr' ] 
+              'AdditionalOptions': [ '/clr', '/wd4506' ] 
+            },
+            'VCLinkerTool': {
+              'AdditionalOptions': [ '/ignore:4248' ]
             }
           }
         },
@@ -38,7 +42,10 @@
               'RuntimeTypeInfo': -1, 
               'BasicRuntimeChecks': -1,
               'ExceptionHandling': '0',
-              'AdditionalOptions': [ '/clr' ] 
+              'AdditionalOptions': [ '/clr', '/wd4506' ] 
+            },
+            'VCLinkerTool': {
+              'AdditionalOptions': [ '/ignore:4248' ]
             }
           }
         }

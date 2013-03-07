@@ -120,4 +120,33 @@ public:
     static System::Object^ MarshalV8ToCLR(ClrFuncInvokeContext^ context, Handle<v8::Value> jsdata);    
 };
 
+ref class OwinJavaScriptConverter: JavaScriptConverter {
+private:
+    static cli::array<System::Type^>^ supportedTypes = {  cli::array<byte>::typeid };
+
+public:
+
+    OwinJavaScriptConverter();
+
+    property List<cli::array<byte>^>^ Buffers;
+
+    property IEnumerable<System::Type^>^ SupportedTypes {
+        IEnumerable<System::Type^>^ get () override 
+        {
+            return supportedTypes; 
+        }
+    };
+
+    System::Object^ Deserialize(
+        IDictionary<System::String^, System::Object^>^ dictionary, 
+        System::Type^ type, 
+        JavaScriptSerializer^ serializer) override;
+
+    IDictionary<System::String^, System::Object^>^ Serialize(
+        System::Object^ obj, 
+        JavaScriptSerializer^ serializer) override;
+
+    Handle<v8::Value> FixupBuffers(Handle<v8::Value> data);
+};
+
 #endif
