@@ -6,7 +6,7 @@
     "twitter": "tjanczuk"
   },
   "version": "0.5.0-pre",
-  "description": "Hosting .NET OWIN applications in node.js",
+  "description": "Run .NET and node.js code in-process",
   "tags" : ["owin", "net", "clr", "c#", "managed", ".net"],
   "main": "./lib/owin.js",
   "engines": { "node": "0.8.x" },
@@ -14,7 +14,7 @@
   "dependencies": {
   },
   "devDependencies": {
-    "mocha": "1.2.0"
+    "mocha": "1.8.1"
   },
   "homepage": "https://github.com/tjanczuk/owin",
   "repository": {

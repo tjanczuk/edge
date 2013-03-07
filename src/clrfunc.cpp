@@ -30,7 +30,7 @@ Handle<Value> ClrFunc::Initialize(const v8::Arguments& args)
 		if (app->invokeMethod == nullptr) 
 		{
 			throw gcnew System::InvalidOperationException(
-                "Unable to access to the CLR method to wrap through reflection. Make sure it is a public instance method.");
+                "Unable to access the CLR method to wrap through reflection. Make sure it is a public instance method.");
 		}
 
         ClrFunc::apps->Add(app);
@@ -93,6 +93,17 @@ System::Object^ ClrFunc::MarshalV8ToCLR(ClrFuncInvokeContext^ context, Handle<v8
 
         return netbuffer;
     }
+    else if (jsdata->IsArray())
+    {
+        Handle<v8::Array> jsarray = Handle<v8::Array>::Cast(jsdata);
+        cli::array<System::Object^>^ netarray = gcnew cli::array<System::Object^>(jsarray->Length());
+        for (unsigned int i = 0; i < jsarray->Length(); i++)
+        {
+            netarray[i] = ClrFunc::MarshalV8ToCLR(context, jsarray->Get(i));
+        }
+
+        return netarray;
+    }
     else if (jsdata->IsObject()) 
     {
         Dictionary<System::String^,System::Object^>^ netobject = gcnew Dictionary<System::String^,System::Object^>();
@@ -108,17 +119,6 @@ System::Object^ ClrFunc::MarshalV8ToCLR(ClrFuncInvokeContext^ context, Handle<v8
         }
 
         return netobject;
-    }
-    else if (jsdata->IsArray())
-    {
-        Handle<v8::Array> jsarray = Handle<v8::Array>::Cast(jsdata);
-        cli::array<System::Object^>^ netarray = gcnew cli::array<System::Object^>(jsarray->Length());
-        for (unsigned int i = 0; i < jsarray->Length(); i++)
-        {
-            netarray[i] = ClrFunc::MarshalV8ToCLR(context, jsarray->Get(i));
-        }
-
-        return netarray;
     }
     else if (jsdata->IsString()) 
     {

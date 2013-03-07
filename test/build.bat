@@ -1,0 +1,1 @@
+csc /target:library /debug /out:"%~dp0\Owin.Tests.dll" "%~dp0\tests.cs" 

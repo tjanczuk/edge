@@ -21,3 +21,5 @@ obj/
 *.suo
 packages/*
 _ReSharper*
+
+Owin.Tests.*
