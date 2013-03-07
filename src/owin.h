@@ -41,6 +41,7 @@ private:
     uv_owin_async_t* uv_owin_async;
     uv_owin_async_t* uv_owin_async_func;
     AutoResetEvent^ funcWaitHandle;
+    List<System::IntPtr>^ persistentHandles;
 
     void DisposeCallback();
     void DisposeUvOwinAsync();
@@ -50,29 +51,23 @@ public:
     property System::Object^ Payload;
 
     ClrFuncInvokeContext(Handle<Function> callback);
-    ~ClrFuncInvokeContext();
-    !ClrFuncInvokeContext();
 
     void CompleteOnCLRThread(Task<System::Object^>^ task);
     void CompleteOnV8Thread();
     void DisposeUvOwinAsyncFunc();
     void RecreateUvOwinAsyncFunc();
     uv_owin_async_t* WaitForUvOwinAsyncFunc();
+    void AddPersistentHandle(Persistent<Value>* handle);
+    void DisposePersistentHandles();
 };
 
 ref class NodejsFunc {
-private:
-
-    void DisposeFunction();
-
 public:
 
     property ClrFuncInvokeContext^ ClrInvokeContext;
     property Persistent<Function>* Func;
 
     NodejsFunc(ClrFuncInvokeContext^ appInvokeContext, Handle<Function> function);
-    ~NodejsFunc();
-    !NodejsFunc();
 
     Task<System::Object^>^ FunctionWrapper(System::Object^ payload);
 };

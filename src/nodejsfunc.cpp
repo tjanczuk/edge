@@ -5,36 +5,8 @@ NodejsFunc::NodejsFunc(ClrFuncInvokeContext^ appInvokeContext, Handle<Function> 
     this->ClrInvokeContext = appInvokeContext;
     this->Func = new Persistent<Function>;
     *(this->Func) = Persistent<Function>::New(function);
-}
-
-NodejsFunc::~NodejsFunc()
-{
-    if (debugMode)
-        System::Console::WriteLine("~NodejsFunc");
-    
-    this->!NodejsFunc();
-}
-
-NodejsFunc::!NodejsFunc()
-{
-    if (debugMode)
-        System::Console::WriteLine("!NodejsFunc");
-
-    this->DisposeFunction();
-}
-
-void NodejsFunc::DisposeFunction()
-{
-    if (this->Func)
-    {
-        if (debugMode)
-            System::Console::WriteLine("DisposeFunction");
-
-        (*(this->Func)).Dispose();
-        (*(this->Func)).Clear();
-        delete this->Func;
-        this->Func = NULL;        
-    }
+    // transfer pointer ownership to appInvokeContext
+    appInvokeContext->AddPersistentHandle((Persistent<Value>*)this->Func); 
 }
 
 Task<System::Object^>^ NodejsFunc::FunctionWrapper(System::Object^ payload)

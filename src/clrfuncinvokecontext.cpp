@@ -32,28 +32,41 @@ ClrFuncInvokeContext::ClrFuncInvokeContext(Handle<Function> callback)
     this->funcWaitHandle = gcnew AutoResetEvent(false);
     this->uv_owin_async_func = NULL;
     this->RecreateUvOwinAsyncFunc();
+    this->persistentHandles = gcnew List<System::IntPtr>();
 }
 
-ClrFuncInvokeContext::~ClrFuncInvokeContext()
+void ClrFuncInvokeContext::AddPersistentHandle(Persistent<Value>* handle)
 {
     if (debugMode)
-        System::Console::WriteLine("~ClrFuncInvokeContext");
-    
-    this->!ClrFuncInvokeContext();
+        System::Console::WriteLine("AddPersistentHandle");
+
+    this->persistentHandles->Add(System::IntPtr((void*)handle));
 }
 
-ClrFuncInvokeContext::!ClrFuncInvokeContext()
+void ClrFuncInvokeContext::DisposePersistentHandles()
 {
     if (debugMode)
-        System::Console::WriteLine("!ClrFuncInvokeContext");
+        System::Console::WriteLine("DisposePersistentHandles");
 
-    this->DisposeCallback();
-    this->DisposeUvOwinAsync();
-    this->DisposeUvOwinAsyncFunc();
+    for each (System::IntPtr wrap in this->persistentHandles)
+    {
+       if (debugMode)
+            System::Console::WriteLine("DisposePersistentHandles: dispose one");
+
+        Persistent<Value>* handle = (Persistent<Value>*)wrap.ToPointer();
+        (*handle).Dispose();
+        (*handle).Clear();
+        delete handle;
+    }
+
+    this->persistentHandles->Clear();
 }
 
 void ClrFuncInvokeContext::RecreateUvOwinAsyncFunc()
 {
+    if (debugMode)
+        System::Console::WriteLine("RecreateUvOwinAsyncFunc");
+
     this->DisposeUvOwinAsyncFunc();
     this->uv_owin_async_func = new uv_owin_async_t;
     uv_async_init(uv_default_loop(), &this->uv_owin_async_func->uv_async, callFuncOnV8Thread);
@@ -73,7 +86,7 @@ void ClrFuncInvokeContext::DisposeCallback()
     if (this->callback)
     {
         if (debugMode)
-            System::Console::WriteLine("Disposing callback");
+            System::Console::WriteLine("DisposeCallback");
 
         (*(this->callback)).Dispose();
         (*(this->callback)).Clear();
@@ -131,6 +144,8 @@ void ClrFuncInvokeContext::CompleteOnV8Thread()
     HandleScope handleScope;
 
     this->DisposeUvOwinAsync();
+    this->DisposeUvOwinAsyncFunc();
+    this->DisposePersistentHandles();
 
     if (this->callback) 
     {
