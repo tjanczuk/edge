@@ -25,6 +25,7 @@
     "url" : "http://github.com/tjanczuk/owin/issues"
   },
   "scripts": {
-    "install": "node checkplatform.js"
+    "install": "node checkplatform.js",
+    "test": "test\\test.bat"
   }
 }
