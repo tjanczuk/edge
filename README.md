@@ -181,9 +181,9 @@ C:\projects\barebones>node sample.js
 
 ## How to: call node.js from .NET
 
-In addition to marahaling data, owin can marshal proxies to JavaScript functions when invoking .NET code from node.js. This allows .NET code to call back into node.js. 
+In addition to marshaling data, owin can marshal proxies to JavaScript functions when invoking .NET code from node.js. This allows .NET code to call back into node.js. 
 
-Suppose the node.js application passes an `add` function to the .NET code as a property of an object. The function receives two numbers and returns the sum of them via the provied callback:
+Suppose the node.js application passes an `add` function to the .NET code as a property of an object. The function receives two numbers and returns the sum of them via the provided callback:
 
 ```javascript
 var owin = require('owin');
@@ -203,7 +203,7 @@ multiplyBy2(payload, function (error, result) {
 });
 ```
 
-The .NET code implements the multiplyBy2 function. It generates two numbers, calls back into the `add` function exported from node.js to add them, multiples the result by 2, and returns the result back to node.js:
+The .NET code implements the multiplyBy2 function. It generates two numbers, calls back into the `add` function exported from node.js to add them, multiples the result by 2 in .NET, and returns the result back to node.js:
 
 ```c#
 using System;
@@ -245,7 +245,7 @@ The proxy to that function in .NET has the following signature:
 Func<object, Task<object>>
 ```
 
-Usin TPL in CLR to provide a proxy to an asynchronous node.js function allows the .NET code to use the convenience of the `await` keyword when invoking the node.js functionality. The example above show the use of the `await` keyword in when calling the proxy of the node.js `add` method.  
+Usin TPL in CLR to provide a proxy to an asynchronous node.js function allows the .NET code to use the convenience of the `await` keyword when invoking the node.js functionality. The example above shows the use of the `await` keyword when calling the proxy of the node.js `add` method.  
 
 ## How to: exceptions
 
@@ -285,7 +285,9 @@ tion: Sample .NET exception
    at Owin.Sample.Startup.Invoke(Object input) in c:\projects\barebones\sample.cs:line 12
 ``` 
 
-JavaScript exceptions thrown in node.js code invoked from .NET are wrapped in a CLR exception and cause the asynchronous `Task<object>` to complete with a failure. Errors passed by node.js code invoked from .NET code to the callback function's `error` parameter have the same effect. This node.js code invokes a .NET routine and exports the `aFunctionThatThrows` JavaScript function to it:
+JavaScript exceptions thrown in node.js code invoked from .NET are wrapped in a CLR exception and cause the asynchronous `Task<object>` to complete with a failure. Errors passed by node.js code invoked from .NET code to the callback function's `error` parameter have the same effect. 
+
+This node.js code invokes a .NET routine and exports the `aFunctionThatThrows` JavaScript function to it:
 
 ```javascript
 var owin = require('owin.js');
@@ -333,6 +335,39 @@ System.Exception: Error: Sample JavaScript error
    at System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task task)
    at Owin.Sample.Startup.<Invoke>d__0.MoveNext()
 ```
+
+## How to: factor your .NET code
+
+Owin allows you to create node.js proxies to .NET functions that have one of the following signatures:
+
+```c#
+public Task<object> SomeMethod(object payload);
+public async Task<object> SomeMethod(object payload);
+```
+
+The method must be implemented on a class with a parameterless constructor.
+
+In the most generic form, you can specify the assembly file name, the type name, and the method name when creating a node.js proxy to a .NET method:
+
+```javascript
+var clrMethod = owin.func({
+    assemblyFile: 'My.Owin.Samples.dll',
+    typeName: 'Samples.FooBar.MyType',
+    methodName: 'MyMethod'
+});
+```
+
+If you don't specify methodName, `Invoke` is assumed. If you don't specify typeName, a type name is constucted by assuming the class called `Startup` in the namespace equal to the assembly file name (without the `.dll`). In the example above, if typeName was not specified, it would default to `My.Owin.Samples.Startup`.
+
+The assemblyFile is relative to the working directory. If you want to locate your assembly in a fixed location relative to your node.js application, it is useful to constuct the assemblyFile using `__dirname`. 
+
+You can also create node.js proxies to .NET functions specifying just the assembly name as a parameter:
+
+```javascript
+var clrMethod = owin.func('My.Owin.Samples.dll');
+```
+
+In that case the default typeName and methodName is assumed as explained above. 
 
 ## How to: debugging
 
