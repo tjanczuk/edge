@@ -385,7 +385,7 @@ node-gyp configure --msvs_version=2012
 node-gyp build -debug
 ```
 
-The resulting `owin.node` binary must be copied to the `lib\native\win32\{x86|x64}` directory, depending on the built target. The `owin.js` expects the native library in that location. You can override this behavior by setting the OWIN_NATIVE environment variable to the fully qualified file name of the owin.node binary. It is useful during development, for example:
+The resulting `owin.node` binary must be copied to the `lib\native\win32\{ia32|x64}` directory, depending on the architecture. The `owin.js` expects the native library in that location. You can override this behavior by setting the OWIN_NATIVE environment variable to the fully qualified file name of the owin.node binary. It is useful during development, for example:
 
 ```
 set OWIN_NATIVE=C:\projects\owin\build\Debug\owin.node
