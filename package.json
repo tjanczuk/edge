@@ -5,7 +5,7 @@
     "url": "http://tomasz.janczuk.org",
     "twitter": "tjanczuk"
   },
-  "version": "0.6.0",
+  "version": "0.7.0-pre",
   "description": "Run .NET and node.js code in-process",
   "tags" : ["owin", "net", "clr", "c#", "managed", ".net"],
   "main": "./lib/owin.js",
