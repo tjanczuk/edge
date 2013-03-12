@@ -168,4 +168,28 @@ describe('csx', function () {
 			/Could not load type 'Startup' from assembly/
 		);	
 	});
+
+	it('succeeds with System.Data.dll reference', function (done) {
+		var func = owin.func({
+			csx: function () {/* 
+				//#r "System.Data.dll"
+
+				using System.Threading.Tasks;
+				using System.Data;
+
+				public class Startup 
+				{
+				    public async Task<object> Invoke(object input) 
+				    {
+				        return "Hello, " + input.ToString();
+				    }
+				}			
+			*/}
+		});
+		func("JavaScript", function (error, result) {
+			assert.ifError(error);
+			assert.equal(result, 'Hello, JavaScript');
+			done();
+		});
+	});		
 });

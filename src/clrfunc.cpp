@@ -10,7 +10,11 @@ ClrFunc::ClrFunc()
     // empty
 }
 
-BOOL ClrFunc::TryCompile(System::String^ csx, System::String^% errors, Assembly^% assembly)
+BOOL ClrFunc::TryCompile(
+    System::String^ csx, 
+    cli::array<System::Object^>^ references, 
+    System::String^% errors, 
+    Assembly^% assembly)
 {
     BOOL result = FALSE;
     assembly = nullptr;
@@ -21,6 +25,14 @@ BOOL ClrFunc::TryCompile(System::String^ csx, System::String^% errors, Assembly^
     CSharpCodeProvider^ csc = gcnew CSharpCodeProvider(options);
     CompilerParameters^ parameters = gcnew CompilerParameters();
     parameters->GenerateInMemory = true;
+    if (references != nullptr)
+    {
+        for each (System::Object^ reference in references)
+        {
+            parameters->ReferencedAssemblies->Add((System::String^)reference);
+        }
+    }
+
     CompilerResults^ results = csc->CompileAssemblyFromSource(parameters, csx);
     if (results->Errors->HasErrors) 
     {
@@ -67,10 +79,12 @@ Handle<Value> ClrFunc::Initialize(const v8::Arguments& args)
             assembly = Assembly::LoadFrom(gcnew System::String(*assemblyFile));
         }
         else {
+            cli::array<System::Object^>^ references = 
+                (cli::array<System::Object^>^)ClrFunc::MarshalV8ToCLR(nullptr, options->Get(String::NewSymbol("references")));
             String::Utf8Value nativencsx(options->Get(String::NewSymbol("csx")));
             System::String^ csx = gcnew System::String(*nativencsx);
             System::String^ errorsClass;
-            if (!ClrFunc::TryCompile(csx, errorsClass, assembly)) {
+            if (!ClrFunc::TryCompile(csx, references, errorsClass, assembly)) {
                 csx = "using System;\n"
                     + "using System.Threading.Tasks;\n"
                     + "public class Startup {\n"
@@ -80,7 +94,7 @@ Handle<Value> ClrFunc::Initialize(const v8::Arguments& args)
                     + "    }\n"
                     + "}";
                 System::String^ errorsLambda;
-                if (!ClrFunc::TryCompile(csx, errorsLambda, assembly)) {
+                if (!ClrFunc::TryCompile(csx, references, errorsLambda, assembly)) {
                     throw gcnew System::InvalidOperationException(
                         "Unable to compile C# code.\n----> Errors when compiling as a CLR library:\n"
                         + errorsClass
