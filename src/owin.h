@@ -115,7 +115,7 @@ private:
 
     ClrFunc();
 
-    static BOOL TryCompile(System::String^ csx, Assembly^% assembly);
+    static BOOL TryCompile(System::String^ csx, System::String^% errors, Assembly^% assembly);
 
 public:
     static ClrFunc();

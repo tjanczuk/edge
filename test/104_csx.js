@@ -105,4 +105,67 @@ describe('csx', function () {
 		});
 	});		
 
+	it('fails with malformed literal lambda', function () {
+		assert.throws(
+			function () { owin.func('async_foo (input) => { return "Hello, " + input.ToString(); }'); },
+			/Invalid expression term '=>'/
+		);	
+	});	
+
+	it('fails with malformed class in function', function () {
+		assert.throws(
+			function () { 
+				owin.func(function () {/* 
+					using System.Threading.Tasks;
+
+					public classes Startup 
+					{
+					    public async Task<object> Invoke(object input) 
+					    {
+					        return "Hello, " + input.ToString();
+					    }
+					}			
+				*/});
+			 },
+			/Expected class, delegate, enum, interface, or/
+		);	
+	});	
+
+	it('fails when Invoke method is missing', function () {
+		assert.throws(
+			function () { 
+				owin.func(function () {/* 
+					using System.Threading.Tasks;
+
+					public class Startup 
+					{
+					    public async Task<object> Invoke_Foo(object input) 
+					    {
+					        return "Hello, " + input.ToString();
+					    }
+					}			
+				*/});
+			 },
+			/Unable to access the CLR method to wrap through reflection/
+		);	
+	});		
+
+	it('fails when Startup class is missing', function () {
+		assert.throws(
+			function () { 
+				owin.func(function () {/* 
+					using System.Threading.Tasks;
+
+					public class Startup_Bar
+					{
+					    public async Task<object> Invoke(object input) 
+					    {
+					        return "Hello, " + input.ToString();
+					    }
+					}			
+				*/});
+			 },
+			/Could not load type 'Startup' from assembly/
+		);	
+	});
 });

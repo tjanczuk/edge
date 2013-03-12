@@ -10,10 +10,11 @@ ClrFunc::ClrFunc()
     // empty
 }
 
-BOOL ClrFunc::TryCompile(System::String^ csx, Assembly^% assembly)
+BOOL ClrFunc::TryCompile(System::String^ csx, System::String^% errors, Assembly^% assembly)
 {
     BOOL result = FALSE;
     assembly = nullptr;
+    errors = nullptr;
 
     Dictionary<System::String^, System::String^>^ options = gcnew Dictionary<System::String^, System::String^>();
     options->Add("CompilerVersion", "v4.0");
@@ -21,7 +22,22 @@ BOOL ClrFunc::TryCompile(System::String^ csx, Assembly^% assembly)
     CompilerParameters^ parameters = gcnew CompilerParameters();
     parameters->GenerateInMemory = true;
     CompilerResults^ results = csc->CompileAssemblyFromSource(parameters, csx);
-    if (!results->Errors->HasErrors) {
+    if (results->Errors->HasErrors) 
+    {
+        for (int i = 0; i < results->Errors->Count; i++)
+        {
+            if (errors == nullptr)
+            {
+                errors = results->Errors[i]->ToString();
+            }
+            else
+            {
+                errors += "\n" + results->Errors[i]->ToString();
+            }
+        }
+    }
+    else 
+    {
         assembly = results->CompiledAssembly;
         result = TRUE;
     }   
@@ -53,7 +69,8 @@ Handle<Value> ClrFunc::Initialize(const v8::Arguments& args)
         else {
             String::Utf8Value nativencsx(options->Get(String::NewSymbol("csx")));
             System::String^ csx = gcnew System::String(*nativencsx);
-            if (!ClrFunc::TryCompile(csx, assembly)) {
+            System::String^ errorsClass;
+            if (!ClrFunc::TryCompile(csx, errorsClass, assembly)) {
                 csx = "using System;\n"
                     + "using System.Threading.Tasks;\n"
                     + "public class Startup {\n"
@@ -62,9 +79,13 @@ Handle<Value> ClrFunc::Initialize(const v8::Arguments& args)
                     + "        return await func(___input);\n"
                     + "    }\n"
                     + "}";
-                if (!ClrFunc::TryCompile(csx, assembly)) {
+                System::String^ errorsLambda;
+                if (!ClrFunc::TryCompile(csx, errorsLambda, assembly)) {
                     throw gcnew System::InvalidOperationException(
-                        "Unable to compile C# code. Details to follow in subsequent release of OWIN. Pull requests welcome.");
+                        "Unable to compile C# code.\n----> Errors when compiling as a CLR library:\n"
+                        + errorsClass
+                        + "\n----> Errors when compiling as a CLR async lambda expression:\n"
+                        + errorsLambda);
                 }
             }
         }
