@@ -7,6 +7,7 @@
 #include <uv.h>
 #include <vcclr.h>
 
+#using <system.dll>
 #using <system.web.extensions.dll>
 
 using namespace v8;
@@ -15,6 +16,8 @@ using namespace System::Reflection;
 using namespace System::Threading::Tasks;
 using namespace System::Threading;
 using namespace System::Web::Script::Serialization;
+using namespace System::CodeDom::Compiler;
+using namespace Microsoft::CSharp;
 
 #define DBG(msg) if (debugMode) System::Console::WriteLine(msg);
 
@@ -111,6 +114,8 @@ private:
     static List<ClrFunc^>^ apps;
 
     ClrFunc();
+
+    static BOOL TryCompile(System::String^ csx, Assembly^% assembly);
 
 public:
     static ClrFunc();

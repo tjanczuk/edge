@@ -10,23 +10,69 @@ ClrFunc::ClrFunc()
     // empty
 }
 
+BOOL ClrFunc::TryCompile(System::String^ csx, Assembly^% assembly)
+{
+    BOOL result = FALSE;
+    assembly = nullptr;
+
+    Dictionary<System::String^, System::String^>^ options = gcnew Dictionary<System::String^, System::String^>();
+    options->Add("CompilerVersion", "v4.0");
+    CSharpCodeProvider^ csc = gcnew CSharpCodeProvider(options);
+    CompilerParameters^ parameters = gcnew CompilerParameters();
+    parameters->GenerateInMemory = true;
+    CompilerResults^ results = csc->CompileAssemblyFromSource(parameters, csx);
+    if (!results->Errors->HasErrors) {
+        assembly = results->CompiledAssembly;
+        result = TRUE;
+    }   
+
+    return result;
+}
+
 Handle<Value> ClrFunc::Initialize(const v8::Arguments& args)
 {
     DBG("ClrFunc::Initialize");
 
     HandleScope scope;
     Handle<v8::Object> options = args[0]->ToObject();
+    Assembly^ assembly;
+    System::String^ typeName;
+    System::String^ methodName;
+
     try 
     {
-        String::Utf8Value assemblyFile(options->Get(String::NewSymbol("assemblyFile")));
-        String::Utf8Value typeName(options->Get(String::NewSymbol("typeName")));
-        String::Utf8Value methodName(options->Get(String::NewSymbol("methodName")));
-        Assembly^ assembly = Assembly::LoadFrom(gcnew System::String(*assemblyFile));
-        System::Type^ startupType = assembly->GetType(gcnew System::String(*typeName), true, true);
+        Handle<v8::Value> jsassemblyFile = options->Get(String::NewSymbol("assemblyFile"));
+        String::Utf8Value assemblyFile(jsassemblyFile);
+        String::Utf8Value nativeTypeName(options->Get(String::NewSymbol("typeName")));
+        String::Utf8Value nativeMethodName(options->Get(String::NewSymbol("methodName")));  
+        typeName = gcnew System::String(*nativeTypeName);
+        methodName = gcnew System::String(*nativeMethodName);      
+        if (jsassemblyFile->IsString()) {
+            assembly = Assembly::LoadFrom(gcnew System::String(*assemblyFile));
+        }
+        else {
+            String::Utf8Value nativencsx(options->Get(String::NewSymbol("csx")));
+            System::String^ csx = gcnew System::String(*nativencsx);
+            if (!ClrFunc::TryCompile(csx, assembly)) {
+                csx = "using System;\n"
+                    + "using System.Threading.Tasks;\n"
+                    + "public class Startup {\n"
+                    + "    public async Task<object> Invoke(object ___input) {\n"
+                    + "        Func<object, Task<object>> func = " + csx + ";\n"
+                    + "        return await func(___input);\n"
+                    + "    }\n"
+                    + "}";
+                if (!ClrFunc::TryCompile(csx, assembly)) {
+                    throw gcnew System::InvalidOperationException(
+                        "Unable to compile C# code. Details to follow in subsequent release of OWIN. Pull requests welcome.");
+                }
+            }
+        }
+
+        System::Type^ startupType = assembly->GetType(typeName, true, true);
         ClrFunc^ app = gcnew ClrFunc();
         app->instance = System::Activator::CreateInstance(startupType, false);
-        app->invokeMethod = startupType->GetMethod(gcnew System::String(*methodName), 
-            BindingFlags::Instance | BindingFlags::Public);
+        app->invokeMethod = startupType->GetMethod(methodName, BindingFlags::Instance | BindingFlags::Public);
 		if (app->invokeMethod == nullptr) 
 		{
 			throw gcnew System::InvalidOperationException(
