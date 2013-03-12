@@ -1,7 +1,7 @@
 Run .NET and node.js code in-process
 ====
 
-Owin allows you to run .NET and node.js code in one process. You can call .NET functions from node.js and node.js functions from .NET. Owin takes care of marshaling data between CLR and V8. Owin also reconciles threading models of single threaded V8 and multi-threaded CLR. The .NET code does not require pre-compilation: owin compiles C# script at runtime.
+Owin allows you to run .NET and node.js code in one process. You can call .NET functions from node.js and node.js functions from .NET. Owin takes care of marshaling data between CLR and V8. Owin also reconciles threading models of single threaded V8 and multi-threaded CLR. The .NET code can be pre-compiled or specified as C# source: owin can compile C# script at runtime.
 
 ![owin](https://f.cloud.github.com/assets/822369/250668/db2a4d1a-8b50-11e2-9129-854eb5933eee.PNG)
 
@@ -115,7 +115,7 @@ var add7 = owin.func(function() {/*
 */});
 ```
 
-If your C# code grows substantially, it is useful to keep it in a separate file. You can save it any file with `*.csx` or `*.cs` extension, and then reference from your node.js application:
+If your C# code grows substantially, it is useful to keep it in a separate file. You can save it to a file with `*.csx` or `*.cs` extension, and then reference from your node.js application:
 
 ```javascript
 var add7 = owin.func(__dirname + '/add7.csx');
@@ -141,7 +141,7 @@ You can also create node.js proxies to .NET functions specifying just the assemb
 var clrMethod = owin.func('My.Owin.Samples.dll');
 ```
 
-In that case the default typeName and methodName is assumed as explained above. 
+In that case the default typeName of `My.Owin.Samples.Startup` and methodName of `Invoke` is assumed as explained above. 
 
 ## How to: specify additional CLR assembly references
 
@@ -163,8 +163,9 @@ var add7 = owin.func(function() {/*
         }
     }
 */});
+```
 
-You can also specify references outside of the C# code itself by providing options to the `owin.func` call:
+If you prefer, instead of using comments you can specify references by providing options to the `owin.func` call:
 
 ```javascript
 var add7 = owin.func({
@@ -183,6 +184,7 @@ var add7 = owin.func({
     */},
     references: [ 'System.Data.dll' ]
 );
+```
 
 ## How to: marshal data
 
