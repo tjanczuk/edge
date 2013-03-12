@@ -23,10 +23,17 @@ describe('owin.func', function () {
 		);		
 	});
 
-	it('fails with missing assemblyFile', function () {
+	it('fails with missing assemblyFile or csx', function () {
 		assert.throws(
 			function () { owin.func({}); },
-			/CLR assembly file name must be provided as a string parameter or assemblyFile options property/
+			/Provide DLL or CSX file name or C# literal as a string parmeter/
+		);		
+	});
+
+	it('fails with both assemblyFile or csx', function () {
+		assert.throws(
+			function () { owin.func({ assemblyFile: 'foo.dll', csx: 'async (input) => { return null; }'}); },
+			/Provide either an asseblyFile or csx property, but not both/
 		);		
 	});
 
