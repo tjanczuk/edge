@@ -39,7 +39,7 @@ In your server.js:
 ```javascript
 var owin = require('owin');
 
-var hello = owin.func('async (input) => { return ".NET Welcomes " + input.ToString(); }');
+var helloWorld = owin.func('async (input) => { return ".NET Welcomes " + input.ToString(); }');
 
 helloWorld('JavaScript', function (error, result) {
     if (error) throw error;
