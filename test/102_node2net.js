@@ -1,12 +1,12 @@
-var owin = require('../lib/owin.js')
+var edge = require('../lib/edge.js')
 	, assert = require('assert');
 
-var owinTestDll = __dirname + '\\Owin.Tests.dll';
+var edgeTestDll = __dirname + '\\Edge.Tests.dll';
 
 describe('call from node.js to .net', function () {
 
 	it('succeeds for hello world', function (done) {
-		var func = owin.func(owinTestDll);
+		var func = edge.func(edgeTestDll);
 		func('Node.js', function (error, result) {
 			assert.ifError(error);
 			assert.equal(result, '.NET welcomes Node.js');
@@ -15,8 +15,8 @@ describe('call from node.js to .net', function () {
 	});
 
 	it('successfuly marshals data from node.js to .net', function (done) {
-		var func = owin.func({
-			assemblyFile: owinTestDll,
+		var func = edge.func({
+			assemblyFile: edgeTestDll,
 			methodName: 'MarshalIn'
 		});
 		var payload = {
@@ -38,8 +38,8 @@ describe('call from node.js to .net', function () {
 	});
 
 	it('successfuly marshals data from .net to node.js', function (done) {
-		var func = owin.func({
-			assemblyFile: owinTestDll,
+		var func = edge.func({
+			assemblyFile: edgeTestDll,
 			methodName: 'MarshalBack'
 		});
 		func(null, function (error, result) {
@@ -65,8 +65,8 @@ describe('call from node.js to .net', function () {
 	});
 
 	it('successfuly marshals .net exception thrown on v8 thread from .net to node.js', function () {
-		var func = owin.func({
-			assemblyFile: owinTestDll,
+		var func = edge.func({
+			assemblyFile: edgeTestDll,
 			methodName: 'NetExceptionTaskStart'
 		});
 		assert.throws(
@@ -76,8 +76,8 @@ describe('call from node.js to .net', function () {
 	});
 
 	it('successfuly marshals .net exception thrown on CLR thread from .net to node.js', function (done) {
-		var func = owin.func({
-			assemblyFile: owinTestDll,
+		var func = edge.func({
+			assemblyFile: edgeTestDll,
 			methodName: 'NetExceptionCLRThread'
 		});
 		func(null, function (error, result) {

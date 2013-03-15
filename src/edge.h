@@ -1,5 +1,5 @@
-#ifndef __OWIN_H
-#define __OWIN_H
+#ifndef __EDGE_H
+#define __EDGE_H
 
 #include <v8.h>
 #include <node.h>
@@ -34,22 +34,22 @@ System::String^ exceptionV82stringCLR(Handle<v8::Value> exception);
 Handle<String> exceptionCLR2stringV8(System::Exception^ exception);
 Handle<Value> throwV8Exception(System::Exception^ exception);
 
-typedef struct uv_owin_async_s {
+typedef struct uv_edge_async_s {
     uv_async_t uv_async;
     gcroot<System::Object^> context;
-} uv_owin_async_t;
+} uv_edge_async_t;
 
 ref class ClrFuncInvokeContext {
 private:
     Task<System::Object^>^ task;
     Persistent<Function>* callback;
-    uv_owin_async_t* uv_owin_async;
-    uv_owin_async_t* uv_owin_async_func;
+    uv_edge_async_t* uv_edge_async;
+    uv_edge_async_t* uv_edge_async_func;
     AutoResetEvent^ funcWaitHandle;
     List<System::IntPtr>^ persistentHandles;
 
     void DisposeCallback();
-    void DisposeUvOwinAsync();
+    void DisposeUvEdgeAsync();
 
 public:
 
@@ -59,9 +59,9 @@ public:
 
     void CompleteOnCLRThread(Task<System::Object^>^ task);
     void CompleteOnV8Thread();
-    void DisposeUvOwinAsyncFunc();
-    void RecreateUvOwinAsyncFunc();
-    uv_owin_async_t* WaitForUvOwinAsyncFunc();
+    void DisposeUvEdgeAsyncFunc();
+    void RecreateUvEdgeAsyncFunc();
+    uv_edge_async_t* WaitForUvEdgeAsyncFunc();
     void AddPersistentHandle(Persistent<Value>* handle);
     void DisposePersistentHandles();
 };
@@ -129,13 +129,13 @@ public:
     static System::Object^ MarshalV8ToCLR(ClrFuncInvokeContext^ context, Handle<v8::Value> jsdata);    
 };
 
-ref class OwinJavaScriptConverter: JavaScriptConverter {
+ref class EdgeJavaScriptConverter: JavaScriptConverter {
 private:
     static cli::array<System::Type^>^ supportedTypes = {  cli::array<byte>::typeid };
 
 public:
 
-    OwinJavaScriptConverter();
+    EdgeJavaScriptConverter();
 
     property List<cli::array<byte>^>^ Buffers;
 

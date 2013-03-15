@@ -1,18 +1,18 @@
 {
   'targets': [
     {
-      'target_name': 'owin',
+      'target_name': 'edge',
       'sources': [ ],
       'conditions': [
       	['OS=="win"', {
       	  'sources+': [ 
-            'src/owin.cpp', 
+            'src/edge.cpp', 
             'src/utils.cpp', 
             'src/clrfunc.cpp',
             'src/clrfuncinvokecontext.cpp',
             'src/nodejsfunc.cpp',
             'src/nodejsfuncinvokecontext.cpp',
-            'src/owinjavascriptconverter.cpp'
+            'src/edgejavascriptconverter.cpp'
           ]
       	}]
       ],

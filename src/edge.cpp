@@ -1,4 +1,4 @@
-#include "owin.h"
+#include "edge.h"
 
 BOOL debugMode;
 Persistent<Function> bufferConstructor;
@@ -17,14 +17,14 @@ Handle<Value> callClrFunc(const v8::Arguments& args)
 
 void init(Handle<Object> target) 
 {
-    DBG("owin::init");
+    DBG("edge::init");
     bufferConstructor = Persistent<Function>::New(Handle<Function>::Cast(
         Context::GetCurrent()->Global()->Get(String::New("Buffer")))); 
     json = Persistent<v8::Object>::New(Context::GetCurrent()->Global()->Get(String::New("JSON"))->ToObject());
     jsonParse = Persistent<Function>::New(Handle<Function>::Cast(json->Get(String::New("parse"))));
-    debugMode = (0 < GetEnvironmentVariable("OWIN_DEBUG", NULL, 0));
+    debugMode = (0 < GetEnvironmentVariable("EDGE_DEBUG", NULL, 0));
     NODE_SET_METHOD(target, "initializeClrFunc", initializeClrFunc);
     NODE_SET_METHOD(target, "callClrFunc", callClrFunc);
 }
 
-NODE_MODULE(owin, init);
+NODE_MODULE(edge, init);

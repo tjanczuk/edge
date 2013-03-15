@@ -1,11 +1,11 @@
-#include "owin.h"
+#include "edge.h"
 
-OwinJavaScriptConverter::OwinJavaScriptConverter()
+EdgeJavaScriptConverter::EdgeJavaScriptConverter()
 {
 	this->Buffers = gcnew List<cli::array<byte>^>();
 }
 
-System::Object^ OwinJavaScriptConverter::Deserialize(
+System::Object^ EdgeJavaScriptConverter::Deserialize(
         IDictionary<System::String^, System::Object^>^ dictionary, 
         System::Type^ type, 
         JavaScriptSerializer^ serializer)
@@ -13,7 +13,7 @@ System::Object^ OwinJavaScriptConverter::Deserialize(
 	throw gcnew System::NotImplementedException();
 }
 
-IDictionary<System::String^, System::Object^>^ OwinJavaScriptConverter::Serialize(
+IDictionary<System::String^, System::Object^>^ EdgeJavaScriptConverter::Serialize(
         System::Object^ obj, 
         JavaScriptSerializer^ serializer)
 {
@@ -21,11 +21,11 @@ IDictionary<System::String^, System::Object^>^ OwinJavaScriptConverter::Serializ
 	int bufferId = this->Buffers->Count;
 	this->Buffers->Add(buffer);
 	Dictionary<System::String^,System::Object^>^ result = gcnew Dictionary<System::String^,System::Object^>();
-	result->Add("_owin_node_buffer_id", bufferId);
+	result->Add("_edge_node_buffer_id", bufferId);
 	return result;
 } 
 
-Handle<v8::Value> OwinJavaScriptConverter::FixupBuffers(Handle<v8::Value> data)
+Handle<v8::Value> EdgeJavaScriptConverter::FixupBuffers(Handle<v8::Value> data)
 {
 	HandleScope scope;
 
@@ -41,7 +41,7 @@ Handle<v8::Value> OwinJavaScriptConverter::FixupBuffers(Handle<v8::Value> data)
 	else if (data->IsObject())
 	{
 		Handle<v8::Object> jsobject = data->ToObject();
-    	Handle<v8::Value> bufferId = jsobject->Get(v8::String::NewSymbol("_owin_node_buffer_id"));
+    	Handle<v8::Value> bufferId = jsobject->Get(v8::String::NewSymbol("_edge_node_buffer_id"));
     	if (bufferId->IsInt32())
     	{
     		cli::array<byte>^ buffer = this->Buffers[bufferId->Int32Value()];

@@ -22,4 +22,4 @@ obj/
 packages/*
 _ReSharper*
 
-Owin.Tests.*
+Edge.Tests.*

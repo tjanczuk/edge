@@ -1,4 +1,4 @@
-#include "owin.h"
+#include "edge.h"
 
 static ClrFunc::ClrFunc()
 {
@@ -124,9 +124,9 @@ Handle<Value> ClrFunc::Initialize(const v8::Arguments& args)
     return scope.Close(Integer::New(ClrFunc::apps->Count));
 }
 
-void owinAppCompletedOnCLRThread(Task<System::Object^>^ task, System::Object^ state)
+void edgeAppCompletedOnCLRThread(Task<System::Object^>^ task, System::Object^ state)
 {
-    DBG("owinAppCompletedOnCLRThread");
+    DBG("edgeAppCompletedOnCLRThread");
     ClrFuncInvokeContext^ context = (ClrFuncInvokeContext^)state;
     context->CompleteOnCLRThread(task);
 }
@@ -135,7 +135,7 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(System::Object^ netdata)
 {
     HandleScope scope;
     Handle<v8::String> serialized;
-    OwinJavaScriptConverter^ converter = gcnew OwinJavaScriptConverter();
+    EdgeJavaScriptConverter^ converter = gcnew EdgeJavaScriptConverter();
     Handle<v8::Value> jsdata;
 
     try 
@@ -252,7 +252,7 @@ Handle<Value> ClrFunc::Call(const Arguments& args)
         ClrFunc^ app = ClrFunc::apps->default[appId - 1];
         Task<System::Object^>^ task = (Task<System::Object^>^)app->invokeMethod->Invoke(
             app->instance, gcnew array<System::Object^> { context->Payload });
-        task->ContinueWith(gcnew System::Action<Task<System::Object^>^,System::Object^>(owinAppCompletedOnCLRThread), context);
+        task->ContinueWith(gcnew System::Action<Task<System::Object^>^,System::Object^>(edgeAppCompletedOnCLRThread), context);
     }
     catch (System::Exception^ e)
     {

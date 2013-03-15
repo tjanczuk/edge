@@ -1,5 +1,5 @@
 try {
-	require('./lib/owin.js');
+	require('./lib/edge.js');
 }
 catch (e) {
 	console.log('***************************************');

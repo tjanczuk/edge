@@ -1,10 +1,10 @@
-#include "owin.h"
+#include "edge.h"
 
 Handle<Value> v8FuncCallback(const v8::Arguments& args)
 {
     DBG("v8FuncCallback");
     HandleScope scope;
-    Handle<v8::External> correlator = Handle<v8::External>::Cast(args.Callee()->Get(v8::String::NewSymbol("_owinContext")));
+    Handle<v8::External> correlator = Handle<v8::External>::Cast(args.Callee()->Get(v8::String::NewSymbol("_edgeContext")));
     NodejsFuncInvokeContextWrap* wrap = (NodejsFuncInvokeContextWrap*)(correlator->Value());
     NodejsFuncInvokeContext^ context = wrap->context;
     if (!args[0]->IsUndefined() && !args[0]->IsNull())
@@ -15,7 +15,6 @@ Handle<Value> v8FuncCallback(const v8::Arguments& args)
     {
         context->CompleteWithResult(args[1]);
     }
-
     return scope.Close(Undefined());
 }
 
@@ -49,7 +48,7 @@ void NodejsFuncInvokeContext::CallFuncOnV8Thread()
 {
     DBG("NodejsFuncInvokeContext::CallFuncOnV8Thread");
     HandleScope scope;
-    this->functionContext->ClrInvokeContext->RecreateUvOwinAsyncFunc();
+    this->functionContext->ClrInvokeContext->RecreateUvEdgeAsyncFunc();
     try 
     {
         TryCatch try_catch;
@@ -61,7 +60,7 @@ void NodejsFuncInvokeContext::CallFuncOnV8Thread()
 
         Handle<v8::FunctionTemplate> callbackTemplate = v8::FunctionTemplate::New(v8FuncCallback);
         Handle<v8::Function> callback = callbackTemplate->GetFunction();
-        callback->Set(v8::String::NewSymbol("_owinContext"), v8::External::New((void*)this->wrap));
+        callback->Set(v8::String::NewSymbol("_edgeContext"), v8::External::New((void*)this->wrap));
         Handle<v8::Value> argv[] = { jspayload, callback };
         TryCatch tryCatch;
         (*(this->functionContext->Func))->Call(v8::Context::GetCurrent()->Global(), 2, argv);

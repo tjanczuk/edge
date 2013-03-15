@@ -1,13 +1,13 @@
-var owin = require('../lib/owin.js')
+var edge = require('../lib/edge.js')
 	, assert = require('assert');
 
-var owinTestDll = __dirname + '\\Owin.Tests.dll';
+var edgeTestDll = __dirname + '\\Edge.Tests.dll';
 
 describe('call from .net to node.js', function () {
 
 	it('succeeds for hello world', function (done) {
-		var func = owin.func({
-			assemblyFile: owinTestDll,
+		var func = edge.func({
+			assemblyFile: edgeTestDll,
 			methodName: 'InvokeBack'
 		});
 		var payload = {
@@ -23,8 +23,8 @@ describe('call from .net to node.js', function () {
 	});
 
 	it('successfuly marshals data from .net to node.js', function (done) {
-		var func = owin.func({
-			assemblyFile: owinTestDll,
+		var func = edge.func({
+			assemblyFile: edgeTestDll,
 			methodName: 'MarshalInFromNet'
 		});
 		var payload = {
@@ -56,8 +56,8 @@ describe('call from .net to node.js', function () {
 	});	
 
 	it('successfuly marshals data from node.js to .net', function (done) {
-		var func = owin.func({
-			assemblyFile: owinTestDll,
+		var func = edge.func({
+			assemblyFile: edgeTestDll,
 			methodName: 'MarshalBackToNet'
 		});
 		var payload = {
@@ -83,8 +83,8 @@ describe('call from .net to node.js', function () {
 	});
 
 	it('successfuly marshals v8 exception on invoking thread', function (done) {
-		var func = owin.func({
-			assemblyFile: owinTestDll,
+		var func = edge.func({
+			assemblyFile: edgeTestDll,
 			methodName: 'MarshalException'
 		});
 		var payload = {
@@ -101,8 +101,8 @@ describe('call from .net to node.js', function () {
 	});			
 
 	it('successfuly marshals v8 exception in callback', function (done) {
-		var func = owin.func({
-			assemblyFile: owinTestDll,
+		var func = edge.func({
+			assemblyFile: edgeTestDll,
 			methodName: 'MarshalException'
 		});
 		var payload = {

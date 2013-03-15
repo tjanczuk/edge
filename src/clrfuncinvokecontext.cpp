@@ -1,11 +1,11 @@
-#include "owin.h"
+#include "edge.h"
 
 void completeOnV8Thread(uv_async_t* handle, int status)
 {
     DBG("completeOnV8Thread");
     HandleScope handleScope;
-    uv_owin_async_t* uv_owin_async = CONTAINING_RECORD(handle, uv_owin_async_t, uv_async);
-    System::Object^ context = uv_owin_async->context;
+    uv_edge_async_t* uv_edge_async = CONTAINING_RECORD(handle, uv_edge_async_t, uv_async);
+    System::Object^ context = uv_edge_async->context;
     (dynamic_cast<ClrFuncInvokeContext^>(context))->CompleteOnV8Thread();
 }
 
@@ -13,8 +13,8 @@ void callFuncOnV8Thread(uv_async_t* handle, int status)
 {
     DBG("continueOnCLRThread");
     HandleScope handleScope;
-    uv_owin_async_t* uv_owin_async = CONTAINING_RECORD(handle, uv_owin_async_t, uv_async);
-    System::Object^ context = uv_owin_async->context;
+    uv_edge_async_t* uv_edge_async = CONTAINING_RECORD(handle, uv_edge_async_t, uv_async);
+    System::Object^ context = uv_edge_async->context;
     (dynamic_cast<NodejsFuncInvokeContext^>(context))->CallFuncOnV8Thread();
 }
 
@@ -23,12 +23,12 @@ ClrFuncInvokeContext::ClrFuncInvokeContext(Handle<Function> callback)
     DBG("ClrFuncInvokeContext::ClrFuncInvokeContext");
     this->callback = new Persistent<Function>;
     *(this->callback) = Persistent<Function>::New(callback);
-    this->uv_owin_async = new uv_owin_async_t;
-    this->uv_owin_async->context = this;
-    uv_async_init(uv_default_loop(), &this->uv_owin_async->uv_async, completeOnV8Thread);
+    this->uv_edge_async = new uv_edge_async_t;
+    this->uv_edge_async->context = this;
+    uv_async_init(uv_default_loop(), &this->uv_edge_async->uv_async, completeOnV8Thread);
     this->funcWaitHandle = gcnew AutoResetEvent(false);
-    this->uv_owin_async_func = NULL;
-    this->RecreateUvOwinAsyncFunc();
+    this->uv_edge_async_func = NULL;
+    this->RecreateUvEdgeAsyncFunc();
     this->persistentHandles = gcnew List<System::IntPtr>();
 }
 
@@ -54,23 +54,23 @@ void ClrFuncInvokeContext::DisposePersistentHandles()
     this->persistentHandles->Clear();
 }
 
-void ClrFuncInvokeContext::RecreateUvOwinAsyncFunc()
+void ClrFuncInvokeContext::RecreateUvEdgeAsyncFunc()
 {
-    DBG("ClrFuncInvokeContext::RecreateUvOwinAsyncFunc");
-    this->DisposeUvOwinAsyncFunc();
-    this->uv_owin_async_func = new uv_owin_async_t;
-    uv_async_init(uv_default_loop(), &this->uv_owin_async_func->uv_async, callFuncOnV8Thread);
+    DBG("ClrFuncInvokeContext::RecreateUvEdgeAsyncFunc");
+    this->DisposeUvEdgeAsyncFunc();
+    this->uv_edge_async_func = new uv_edge_async_t;
+    uv_async_init(uv_default_loop(), &this->uv_edge_async_func->uv_async, callFuncOnV8Thread);
     // release one CLR thread associated with this call from JS to CLR 
     // that waits to call back to an exported JS function 
     this->funcWaitHandle->Set(); 
 }
 
-uv_owin_async_t* ClrFuncInvokeContext::WaitForUvOwinAsyncFunc()
+uv_edge_async_t* ClrFuncInvokeContext::WaitForUvEdgeAsyncFunc()
 {
-    DBG("ClrFuncInvokeContext::WaitForUvOwinAsyncFunc: start wait");
+    DBG("ClrFuncInvokeContext::WaitForUvEdgeAsyncFunc: start wait");
     this->funcWaitHandle->WaitOne();
-    DBG("ClrFuncInvokeContext::WaitForUvOwinAsyncFunc: end wait");
-    return this->uv_owin_async_func;
+    DBG("ClrFuncInvokeContext::WaitForUvEdgeAsyncFunc: end wait");
+    return this->uv_edge_async_func;
 }
 
 void ClrFuncInvokeContext::DisposeCallback()
@@ -85,25 +85,25 @@ void ClrFuncInvokeContext::DisposeCallback()
     }
 }
 
-void ClrFuncInvokeContext::DisposeUvOwinAsync()
+void ClrFuncInvokeContext::DisposeUvEdgeAsync()
 {
-    if (this->uv_owin_async)
+    if (this->uv_edge_async)
     {
-        DBG("ClrFuncInvokeContext::DisposeUvOwinAsync");
-        uv_unref((uv_handle_t*)&this->uv_owin_async->uv_async);
-        delete this->uv_owin_async;
-        this->uv_owin_async = NULL;
+        DBG("ClrFuncInvokeContext::DisposeUvEdgeAsync");
+        uv_unref((uv_handle_t*)&this->uv_edge_async->uv_async);
+        delete this->uv_edge_async;
+        this->uv_edge_async = NULL;
     }
 }
 
-void ClrFuncInvokeContext::DisposeUvOwinAsyncFunc()
+void ClrFuncInvokeContext::DisposeUvEdgeAsyncFunc()
 {
-    if (this->uv_owin_async_func)
+    if (this->uv_edge_async_func)
     {
-        DBG("ClrFuncInvokeContext::DisposeUvOwinAsyncFunc");
-        uv_unref((uv_handle_t*)&this->uv_owin_async_func->uv_async);
-        delete this->uv_owin_async_func;
-        this->uv_owin_async_func = NULL;
+        DBG("ClrFuncInvokeContext::DisposeUvEdgeAsyncFunc");
+        uv_unref((uv_handle_t*)&this->uv_edge_async_func->uv_async);
+        delete this->uv_edge_async_func;
+        this->uv_edge_async_func = NULL;
     }
 }
 
@@ -115,7 +115,7 @@ void ClrFuncInvokeContext::CompleteOnCLRThread(Task<System::Object^>^ task)
         uv_default_loop()->iocp, 
         0, 
         (ULONG_PTR)NULL, 
-        &this->uv_owin_async->uv_async.async_req.overlapped);
+        &this->uv_edge_async->uv_async.async_req.overlapped);
 }
 
 void ClrFuncInvokeContext::CompleteOnV8Thread()
@@ -123,8 +123,8 @@ void ClrFuncInvokeContext::CompleteOnV8Thread()
     DBG("ClrFuncInvokeContext::CompleteOnV8Thread");
 
     HandleScope handleScope;
-    this->DisposeUvOwinAsync();
-    this->DisposeUvOwinAsyncFunc();
+    this->DisposeUvEdgeAsync();
+    this->DisposeUvEdgeAsyncFunc();
     this->DisposePersistentHandles();
 
     if (this->callback) 
