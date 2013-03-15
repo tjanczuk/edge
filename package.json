@@ -5,8 +5,8 @@
     "url": "http://tomasz.janczuk.org",
     "twitter": "tjanczuk"
   },
-  "version": "0.7.0-pre",
-  "description": "Run .NET and node.js code in-process",
+  "version": "0.7.0",
+  "description": "Edge.js: run .NET and node.js code in-process",
   "tags" : ["owin", "edge", "net", "clr", "c#", "managed", ".net"],
   "main": "./lib/edge.js",
   "engines": { "node": "0.8.x" },
