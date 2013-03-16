@@ -1,1 +1,363 @@
-Edge.js 
+<!doctype html>
+<html lang="en">
+
+  <head>
+    <meta charset="utf-8">
+
+    <title>Edge.js</title>
+
+    <meta name="description" content="Run .NET and node.js in process">
+    <meta name="author" content="Tomasz Janczuk">
+
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <link rel="stylesheet" href="css/reveal.min.css">
+    <link rel="stylesheet" href="css/theme/default.css" id="theme">
+
+    <!-- For syntax highlighting -->
+    <link rel="stylesheet" href="lib/css/zenburn.css">
+
+    <!-- If the query includes 'print-pdf', use the PDF print sheet -->
+    <script>
+      document.write( '<link rel="stylesheet" href="css/print/' + ( window.location.search.match( /print-pdf/gi ) ? 'pdf' : 'paper' ) + '.css" type="text/css" media="print">' );
+    </script>
+
+    <!--[if lt IE 9]>
+    <script src="lib/js/html5shiv.js"></script>
+    <![endif]-->
+  </head>
+
+  <body>
+
+    <div class="reveal">
+
+      <!-- Any section element inside of this container is displayed as a slide -->
+      <div class="slides">
+
+        <section>
+          <h1>Edge.js</h1>
+          <h3>Run node.js and .NET code in-process</h3>
+          <p>&nbsp;</p>
+          <p>An edge connects two nodes</p>
+          <p>This edge connects node.js with .NET</p>
+          <p>&nbsp;</p>
+          <p>
+            <small>Created by <a href="http://tomasz.janczuk.org">Tomasz Janczuk</a> / <a href="http://twitter.com/tjanczuk">@tjanczuk</a></small>
+          </p>          
+        </section>
+
+        <section>
+            <h2>Edge.js connects</h2>
+            <p><small>24k+ npm modules with 11k+ nuget packages</small></p>
+            <p><small>JavaScript with C#</small></p>
+            <p><small>loose typing with strong typing</small></p>
+            <p><small>IO-bound single threaded with CPU-bound multi-threaded</small></p>
+            <p><small>cool with awesome</small></p>
+            <h3>in one process</h3>
+        </section>
+
+        <section>
+          <section>
+            <h2>.NET welcomes Node.js</h2>
+            <p><small>Call C# async lambda from node.js</small></p>
+            <pre><code>
+var edge = require('edge');
+
+var hello = edge.func(
+  'async (input) => { return ".NET welcomes " + input.ToString(); }'
+);
+
+hello('Node.js', function (error, result) {
+  if (error) throw error;
+  console.log(result);
+});
+            </code></pre>           
+          </section>
+          <section>
+            <pre><code>
+c:\projects\edgedemo> node sample.js
+.NET welcomes Node.js
+            </code></pre>
+          </section>
+        </section>
+        <section>
+          <h2>C# grows multi-line</h2>
+          <p><small>Embed multi-line C# in a node.js file</small></p>
+            <pre><code>
+var hello = require('edge').func(function () {/*
+    async (input) => {
+        return ".NET welcomes " + input.ToString(); 
+    }
+*/});
+
+hello('Node.js', function (error, result) { ... });
+            </code></pre>         
+        </section>
+
+        <section>
+          <h2>C# in its own file</h2>
+          <p><small>Call C# in a file from node.js</small></p>        
+          <p><small>sample.js:</small></p>    
+            <pre><code>
+var hello = require('edge').func('hello.csx');
+
+hello('Node.js', function (error, result) { ... });
+            </code></pre> 
+            <p><small>hello.csx:</small></p>
+            <pre><code>
+async (input) => { return ".NET welcomes " + input.ToString(); }
+            </code></pre>                   
+        </section>
+
+        <section>
+          <h2>Beyond async lambda</h2>
+          <p><small>Invoke a method of a C# class from node.js</small></p>
+          <pre><code>
+var add7 = require('edge').func(function () {/*
+  using System.Threading.Tasks;
+
+  public class Startup {
+    public async Task&lt;object&gt; Invoke(object input) {
+      return (int)input + 7;
+    }
+  }
+*/});
+
+add7(12, function (error, result) { ... });
+          </code></pre>
+        </section>
+
+        <section>
+          <h2>CLR class libraries</h2>
+          <p><small>Invoke a method of a C# class from a DLL</small></p>
+          <p><small>sample.js:</small></p>
+          <pre><code>
+var add7 = require('edge').func('My.Sample.dll');
+
+add7(12, function (error, result) { ... }
+          </code></pre>
+          <p><small>sample.cs:</small></p>
+          <pre><code>
+using System.Threading.Tasks;
+
+namespace My.Sample {
+  public class Startup {
+    public async Task&lt;object&gt; Invoke(object input) {
+      return (int)input + 7;
+    }
+  }
+}   
+          </code></pre>         
+        </section>
+
+        <section>
+          <h2>Data from node.js to C#</h2>
+          <p><small>Pass data from node.js to C#</small></p>
+          <pre><code>
+var hello = require('edge').func('My.Sample.dll');
+
+var payload = {
+  anInteger: 1,
+  aNumber: 3.1415,
+  aString: 'foobar',
+  aBool: true,
+  anObject: { first: 'Tomasz', last: 'Janczuk' },
+  anArray: [ 'a', 1, true ],
+  aBuffer: new Buffer(1024)
+}
+
+hello(payload, function (error, result) { ... });
+          </code></pre>         
+        </section>        
+
+        <section>
+          <h2>Data from C# to node.js</h2>
+          <p><small>Pass data from C# to node.js</small></p>
+          <pre><code>
+var getData = require('edge').func(function () {/*
+  async (input) => {
+    return new {
+      anInteger = 1,
+      aNumber = 3.1415,
+      aBool = true,
+      anObject = new { a = "b", c = 12 },
+      anArray = new object[] { "a", 1, true },
+      aPerson = new Person("Tomasz", "Janczuk"),
+      aBuffer = new byte[1024]
+    };
+  }
+*/});
+
+getData(null, function (error, result) { ... });
+          </code></pre>         
+        </section>    
+
+        <section>
+          <h2>Export node.js function to C#</h2>
+          <p><small>Node.js function is also data</small></p>
+          <pre><code>
+var addAndMultiplyBy2 = require('edge').func( ... );
+
+var payload = {
+  a: 2,
+  b: 3,
+  timesTwo: function(input, callback) {
+    callback(null, input * 2);
+  }
+};
+
+addAndMultiplyBy2(payload, function (error, result) { ... });
+          </code></pre>         
+        </section>              
+
+        <section>
+          <h2>Call node.js function from C#</h2>
+          <p><small>Node.js function is also data, continued</small></p>
+          <pre><code class="javascript">
+var addAndMultiplyBy2 = require('edge').func(function () {/*
+  using ...;
+
+  public class Startup {
+    public async Task&lt;object&gt; Invoke(IDictionary&lt;string,object&gt; data) {
+      int sum = (int)(data["a"]) + (int)(data["b"]);
+      var timesTwo = (Func&lt;object,Task&lt;object&gt;&gt;)data["timesTwo"];
+      return await timesTwo(sum);
+    }
+  }
+*/});
+          </code></pre>         
+        </section>              
+
+        <section>
+          <h2>Let's build something...</h2>
+        </section>         
+
+
+        <section>
+          <h2>Access SQL from node.js with ADO.NET</h2>
+          <pre><code class="javascript">
+var sql = require('edge').func('sql.csx');
+
+sql('select top 2 * from Products', function (error, result) {
+  if (error) throw error;
+  console.log(result);
+});            
+         </code></pre>
+        </section>     
+
+        <section>
+          <h2>Access SQL from node.js, continued</h2>
+          <p><small>sql.csx:</small></p>
+          <pre><code class="C#">
+//#r "System.Data.dll"
+//#r ...
+
+using System.Data;
+using ...
+
+public class Startup {
+  public async Task&lt;object&gt; Invoke(string command) {
+    string connectionString = ...;
+
+    using (var conn = new SqlConnection(connectionString)) {
+      using (var command = new SqlCommand(commandString, conn)) {
+        await connection.OpenAsync();
+        using (var reader = await command.ExecuteReaderAsync() {
+    ...
+         </code></pre>
+        </section>             
+
+        <section>
+          <h2>CPU-bound in a node.js process</h2>
+          <pre><code class="javascript">
+var heavyLifting = require('edge').func(function () {/*
+  async (input) => { 
+    // we are on V8 thread here
+    return await Task.Run&lt;object&gt;(async () => {
+      // we are on CLR thread pool thread here
+      await Task.Delay(5000); // simulate CPU bound  
+      return ".NET welcomes " + input.ToString();
+    });
+  }
+*/});
+
+heavyLifting('Node.js', function (error, result) { ... });
+         </code></pre>
+        </section>    
+
+        <section>
+          <h2>Express.js handler in C#</h2>
+          <pre><code class="javscript">
+var oedge = require('edge-express')
+    , express = require('express');
+
+var app = express();
+app.use(express.bodyParser());
+app.get('/net', edge('Edge.Samples.dll'))
+app.get('/node', function (req, res) {
+    res.send(200, 'Hello from JavaScript!');
+});
+
+app.listen(3000);
+         </code></pre>
+        </section>          
+
+        <section>
+          <h2>What will you build?</h2>
+        </section>         
+
+        <section>
+          <h1>Edge.js</h1>
+          <p>
+            <small>Created by <a href="http://tomasz.janczuk.org">Tomasz Janczuk</a> / <a href="http://twitter.com/tjanczuk">@tjanczuk</a></small>
+          </p>          
+          <p>
+            <small><a href="https://githu.com/tjanczuk.edge">github.com/tjanczuk/edge</a></small>
+          </p>
+
+          <p>
+            <small>npm install edge</small>
+          </p>                    
+
+        </section>
+
+      </div>
+
+    </div>
+
+    <script src="lib/js/head.min.js"></script>
+    <script src="js/reveal.min.js"></script>
+
+    <script>
+
+      // Full list of configuration options available here:
+      // https://github.com/hakimel/reveal.js#configuration
+      Reveal.initialize({
+        controls: true,
+        progress: true,
+        history: true,
+        center: true,
+
+        theme: Reveal.getQueryHash().theme, // available themes are in /css/theme
+        transition: Reveal.getQueryHash().transition || 'default', // default/cube/page/concave/zoom/linear/fade/none
+
+        // Optional libraries used to extend on reveal.js
+        dependencies: [
+          { src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+          { src: 'plugin/markdown/showdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+          { src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+          { src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+          { src: 'plugin/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } },
+          { src: 'plugin/notes/notes.js', async: true, condition: function() { return !!document.body.classList; } }
+          // { src: 'plugin/search/search.js', async: true, condition: function() { return !!document.body.classList; } }
+          // { src: 'plugin/remotes/remotes.js', async: true, condition: function() { return !!document.body.classList; } }
+        ]
+      });
+
+    </script>
+
+  </body>
+</html>
