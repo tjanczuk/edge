@@ -24,9 +24,11 @@ Read more about the background and motivations of the project [here](http://toma
 
 ## What you need
 
-* Windows x64  
-* node.js 0.8.x x64 (developed and tested with [v0.8.19](http://nodejs.org/dist/v0.8.19/))  
+* Windows
+* node.js 0.8.x (developed and tested with [v0.8.19](http://nodejs.org/dist/v0.8.19/))  
 * [.NET 4.5](http://www.microsoft.com/en-us/download/details.aspx?id=30653)  
+
+Note: later versions of node are also supported, but require edge.js native module to be rebuilt. See building instructions at the bottom.
 
 ## How to: hello, world
 
