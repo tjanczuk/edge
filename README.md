@@ -5,7 +5,7 @@ An edge connects two nodes. This edge connects node.js and .NET.
 
 Edge.js allows you to run .NET and node.js code in one process. You can call .NET functions from node.js and node.js functions from .NET. Edge.js takes care of marshaling data between CLR and V8. Edge.js also reconciles threading models of single threaded V8 and multi-threaded CLR. The .NET code can be pre-compiled or specified as C# source: edge.js can compile C# script at runtime.
 
-![edge](https://f.cloud.github.com/assets/822369/250668/db2a4d1a-8b50-11e2-9129-854eb5933eee.PNG)
+![edgejs](https://f.cloud.github.com/assets/822369/266383/e6320302-8df7-11e2-94f3-45f3eca2979f.PNG)
 
 Edge.js provides a basic, prescriptive model for interoperability between .NET and node.js in-process:
 
