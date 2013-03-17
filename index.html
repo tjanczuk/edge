@@ -269,7 +269,8 @@ public class Startup {
         </section>             
 
         <section>
-          <h2>CPU-bound in a node.js process</h2>
+          <h2>Multi-threading in node.js process</h2>
+          <p><small>Run CPU-bound background work on CLR thread pool</small></p>
           <pre><code class="javascript">
 var heavyLifting = require('edge').func(function () {/*
   async (input) => { 
@@ -288,6 +289,7 @@ heavyLifting('Node.js', function (error, result) { ... });
 
         <section>
           <h2>Express.js handler in C#</h2>
+          <p><small>Plug in .NET OWIN apps as connect middleware or express handlers</small></p>
           <pre><code class="javscript">
 var oedge = require('edge-express')
     , express = require('express');
@@ -305,6 +307,11 @@ app.listen(3000);
 
         <section>
           <h2>What will you build?</h2>
+          <p><small>Integrate with ASP.NET authentication &#9670; Public key cryptography &#9670; Get X.509 certificates from certificate store &#9670; Access camera, microphone, and speakers &#9670; Print documents &#9670; Write to Event Log &#9670; Use Event Tracing for Windows 
+            &#9670; Bridge to nuget package manager &#9670; Interact with external services using SOAP and WCF &#9670; Active Directory &#9670; Call services that require Windows authentication &#9670; Access MS SQL &#9670; Implement CPU-bound workers &#9670; Process images
+          </small></p>
+          <p><small>...
+          </small></p>          
         </section>         
 
         <section>
@@ -319,6 +326,10 @@ app.listen(3000);
           <p>
             <small>npm install edge</small>
           </p>                    
+
+          <p>
+            <small>Collaboration welcome</small>
+          </p>     
 
         </section>
 
