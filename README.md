@@ -3,15 +3,17 @@ Edge.js: run .NET and node.js code in-process
 
 An edge connects two nodes. This edge connects node.js and .NET.
 
+## Before you dive in
+
+See the [Edge.js overview](http://tjanczuk.github.com/edge).
+
+## Introduction 
+
 Edge.js allows you to run .NET and node.js code in one process. You can call .NET functions from node.js and node.js functions from .NET. Edge.js takes care of marshaling data between CLR and V8. Edge.js also reconciles threading models of single threaded V8 and multi-threaded CLR. The .NET code can be pre-compiled or specified as C# source: edge.js can compile C# script at runtime.
 
 ![edgejs](https://f.cloud.github.com/assets/822369/266383/e6320302-8df7-11e2-94f3-45f3eca2979f.PNG)
 
-Edge.js provides a basic, prescriptive model for interoperability between .NET and node.js in-process:
-
-![clr2v8-2](https://f.cloud.github.com/assets/822369/234085/b305625c-8768-11e2-8de0-e03ae98e7249.PNG)
-
-You can built upon and extended this basic mechanism to support more specific scenarios, for example:
+Edge.js provides a basic, prescriptive model and implementation for interoperability between .NET and node.js in-process. You can built upon and extended this basic mechanism to support more specific scenarios, for example:
 * implementing express.js handlers and connect middleware for node.js application using .NET 4.5 ([read more](http://tomasz.janczuk.org/2013/02/hosting-net-code-in-nodejs-applications.html)),  
 * implementing CPU-bound computations in .NET and running them in-process with node.js application without blocking the event loop ([read more](http://tomasz.janczuk.org/2013/02/cpu-bound-workers-for-nodejs.html)),  
 * using C# and .NET instead of writing native node.js extensions in C/C++ and Win32 to access Windows specific functionality from a node.js application ([read more](http://tomasz.janczuk.org/2013/02/access-ms-sql-from-nodejs-application.html)). 
