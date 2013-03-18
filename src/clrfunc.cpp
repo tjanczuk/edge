@@ -106,6 +106,7 @@ Handle<Value> ClrFunc::Initialize(const v8::Arguments& args)
 
         System::Type^ startupType = assembly->GetType(typeName, true, true);
         ClrFunc^ app = gcnew ClrFunc();
+        app->completesSynchronously = options->Get(String::NewSymbol("sync"))->BooleanValue();
         app->instance = System::Activator::CreateInstance(startupType, false);
         app->invokeMethod = startupType->GetMethod(methodName, BindingFlags::Instance | BindingFlags::Public);
 		if (app->invokeMethod == nullptr) 
@@ -252,7 +253,32 @@ Handle<Value> ClrFunc::Call(const Arguments& args)
         ClrFunc^ app = ClrFunc::apps->default[appId - 1];
         Task<System::Object^>^ task = (Task<System::Object^>^)app->invokeMethod->Invoke(
             app->instance, gcnew array<System::Object^> { context->Payload });
-        task->ContinueWith(gcnew System::Action<Task<System::Object^>^,System::Object^>(edgeAppCompletedOnCLRThread), context);
+        if (app->completesSynchronously)
+        {
+            if (task->IsCompleted)
+            {
+                context->Task = task;
+                return scope.Close(context->CompleteOnV8Thread(FALSE));
+            }
+            else
+            {
+                throw gcnew System::InvalidOperationException("The CLR function was declared as synchronous "
+                    + "but it returned without completing the Task.");
+            }
+        }
+        else 
+        {
+            if (task->IsCompleted)
+            {
+                context->Task = task;
+                context->CompleteOnV8Thread(TRUE);
+            }
+            else
+            {
+                task->ContinueWith(gcnew System::Action<Task<System::Object^>^,System::Object^>(
+                    edgeAppCompletedOnCLRThread), context);
+            }
+        }
     }
     catch (System::Exception^ e)
     {

@@ -41,7 +41,6 @@ typedef struct uv_edge_async_s {
 
 ref class ClrFuncInvokeContext {
 private:
-    Task<System::Object^>^ task;
     Persistent<Function>* callback;
     uv_edge_async_t* uv_edge_async;
     uv_edge_async_t* uv_edge_async_func;
@@ -54,11 +53,12 @@ private:
 public:
 
     property System::Object^ Payload;
+    property Task<System::Object^>^ Task;
 
     ClrFuncInvokeContext(Handle<Function> callback);
 
-    void CompleteOnCLRThread(Task<System::Object^>^ task);
-    void CompleteOnV8Thread();
+    void CompleteOnCLRThread(System::Threading::Tasks::Task<System::Object^>^ task);
+    Handle<v8::Value> CompleteOnV8Thread(BOOL invokeCallback);
     void DisposeUvEdgeAsyncFunc();
     void RecreateUvEdgeAsyncFunc();
     uv_edge_async_t* WaitForUvEdgeAsyncFunc();
@@ -111,6 +111,7 @@ ref class ClrFunc {
 private:
     System::Object^ instance;
     MethodInfo^ invokeMethod;
+    bool completesSynchronously;
     static List<ClrFunc^>^ apps;
 
     ClrFunc();

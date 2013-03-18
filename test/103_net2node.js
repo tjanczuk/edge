@@ -3,7 +3,7 @@ var edge = require('../lib/edge.js')
 
 var edgeTestDll = __dirname + '\\Edge.Tests.dll';
 
-describe('call from .net to node.js', function () {
+describe('async call from .net to node.js', function () {
 
 	it('succeeds for hello world', function (done) {
 		var func = edge.func({
