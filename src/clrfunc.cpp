@@ -33,6 +33,8 @@ BOOL ClrFunc::TryCompile(
         }
     }
 
+    parameters->ReferencedAssemblies->Add("System.dll");
+
     CompilerResults^ results = csc->CompileAssemblyFromSource(parameters, csx);
     if (results->Errors->HasErrors) 
     {
