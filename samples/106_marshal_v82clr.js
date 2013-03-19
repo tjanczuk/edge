@@ -1,6 +1,6 @@
 // Overview of edge.js: http://tjanczuk.github.com/edge
 
-var edge = require('edge');
+var edge = require('../lib/edge');
 
 var hello = edge.func(function () {/*
 	using System;
