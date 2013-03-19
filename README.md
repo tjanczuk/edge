@@ -27,10 +27,8 @@ Read more about the background and motivations of the project [here](http://toma
 ## What you need
 
 * Windows
-* node.js 0.8.x (developed and tested with [v0.8.19](http://nodejs.org/dist/v0.8.19/))  
+* node.js 0.10.x or 0.8.x (developed and tested with v0.8.22 and v0.10.0, both x32 and x64 architectures)  
 * [.NET 4.5](http://www.microsoft.com/en-us/download/details.aspx?id=30653)  
-
-Note: later versions of node are also supported, but require edge.js native module to be rebuilt. See building instructions at the bottom.
 
 ## How to: hello, world
 
@@ -461,7 +459,20 @@ You can debug the .NET code running as part of your node.js application by attac
 
 ## Building
 
-To build the C++\CLI native extension you must have Visual Studio 2012 toolset in place:
+You must have Visual Studio 2012 toolset as well as Python 2.7.x installed for building.
+
+To build one of the versions of node.js officially released by [node.js](http://nodejs.org/dist), do the following:
+
+```
+cd tools
+build.bat release 0.10.0
+cd ..
+npm install
+```
+
+Note: the node.js version number you provide must be version number corresponding to one of the subdirectories of http://nodejs.org/dist. The command will build both x32 and x63 architectures (assuming you use x64 machine). The command will also copy the edge.node executables to appropriate locations under lib\native directory where they are looked up from at runtime. The `npm install` step copies the C standard library shared DLL to the location of the edge.node for the ocmponent to be ready to go.
+
+To build the C++\CLI native extension using the version of node.js installed on your machine, issue the followig command:
 
 ```
 npm install -g node-gyp
@@ -469,7 +480,7 @@ node-gyp configure --msvs_version=2012
 node-gyp build -debug
 ```
 
-The resulting `edge.node` binary must be copied to the `lib\native\win32\{ia32|x64}` directory, depending on the architecture. The `edge.js` expects the native library in that location. You can override this behavior by setting the EDGE_NATIVE environment variable to the fully qualified file name of the edge.node binary. It is useful during development, for example:
+You can then set the EDGE_NATIVE environment variable to the fully qualified file name of the built edge.node binary. It is useful during development, for example:
 
 ```
 set EDGE_NATIVE=C:\projects\edge\build\Debug\edge.node
@@ -479,13 +490,29 @@ You can also set the `EDGE_DEBUG` environment variable to 1 to have the edge mod
 
 ## Running tests
 
-You must run tests from a place that has `csc.exe` to VS 2012 tooset on the PATH, for example the VS 2012 developer command prompt. From the root of the project:
+You must run tests from a place that has `csc.exe` to VS 2012 tooset on the PATH, for example the VS 2012 developer command prompt. To run the tests using the version node.js installed you your system:
 
 ```
 npm test
 ```
 
 This first builds a CLR assembly in C# that contains the .NET code of the tests, and then runs the tests with mocha.
+
+If you want to run tests after building against a specific version of node.js that one of the previous builds used, issue the following command:
+
+```
+cd test
+test.bat ia32 0.10.0
+```
+
+Which will run the tests using node.js x86 v0.1.0. Similarly:
+
+```
+cd test
+test.bat x64 0.8.22
+```
+
+Would run tests agsinst node.js 0.8.22 on x64 architecture.
 
 ## Contribution and derived work
 
