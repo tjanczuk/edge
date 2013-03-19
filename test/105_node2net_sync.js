@@ -6,13 +6,29 @@ var edgeTestDll = __dirname + '\\Edge.Tests.dll';
 describe('sync call from node.js to .net', function () {
 
 	it('succeeds for hello world', function () {
-		var func = edge.funcSync('async (input) => { return ".NET welcomes " + input.ToString(); }');
-		var result = func('Node.js');
+		var func = edge.func('async (input) => { return ".NET welcomes " + input.ToString(); }');
+		var result = func('Node.js', true);
 		assert.equal(result, '.NET welcomes Node.js');
 	});
 
+	it('succeeds for hello world when called sync and async', function (done) {
+		// create the func
+		var func = edge.func('async (input) => { return ".NET welcomes " + input.ToString(); }');
+
+		// call the func synchronously
+		var result = func('Node.js', true);
+		assert.equal(result, '.NET welcomes Node.js');
+
+		// call the same func asynchronously
+		func('Node.js', function (error, result) {
+			assert.ifError(error);
+			assert.equal(result, '.NET welcomes Node.js');
+			done();
+		});		
+	});	
+
 	it('successfuly marshals data from node.js to .net', function () {
-		var func = edge.funcSync({
+		var func = edge.func({
 			assemblyFile: edgeTestDll,
 			methodName: 'MarshalIn'
 		});
@@ -27,25 +43,25 @@ describe('sync call from node.js to .net', function () {
 			h: { a: 'foo', b: 12 },
 			i: function (payload, callback) { }
 		}
-		var result = func(payload);
+		var result = func(payload, true);
 		assert.equal(result, 'yes');
 	});
 
 	it('successfuly marshals .net exception thrown on v8 thread from .net to node.js', function () {
-		var func = edge.funcSync(function() {/*
+		var func = edge.func(function() {/*
 			async (input) => 
 			{
 				throw new Exception("Test .NET exception");
 			}
 		*/});
 		assert.throws(
-			func,
+			function() { func(null, true); },
 			/Test .NET exception/
 		);	
 	});
 
 	it('fails if C# method does not complete synchronously', function () {
-		var func = edge.funcSync(function() {/*
+		var func = edge.func(function() {/*
 			async (input) => 
 			{
 				await Task.Delay(1000);
@@ -53,7 +69,7 @@ describe('sync call from node.js to .net', function () {
 			}
 		*/});
 		assert.throws(
-			func,
+			function() { func(null, true) },
 			/The CLR function was declared as synchronous but it returned without completing the Task/
 		);	
 	});

@@ -6,7 +6,7 @@ void completeOnV8Thread(uv_async_t* handle, int status)
     HandleScope handleScope;
     uv_edge_async_t* uv_edge_async = CONTAINING_RECORD(handle, uv_edge_async_t, uv_async);
     System::Object^ context = uv_edge_async->context;
-    (dynamic_cast<ClrFuncInvokeContext^>(context))->CompleteOnV8Thread(TRUE);
+    (dynamic_cast<ClrFuncInvokeContext^>(context))->CompleteOnV8Thread();
 }
 
 void callFuncOnV8Thread(uv_async_t* handle, int status)
@@ -18,11 +18,20 @@ void callFuncOnV8Thread(uv_async_t* handle, int status)
     (dynamic_cast<NodejsFuncInvokeContext^>(context))->CallFuncOnV8Thread();
 }
 
-ClrFuncInvokeContext::ClrFuncInvokeContext(Handle<Function> callback)
+ClrFuncInvokeContext::ClrFuncInvokeContext(Handle<v8::Value> callbackOrSync)
 {
     DBG("ClrFuncInvokeContext::ClrFuncInvokeContext");
-    this->callback = new Persistent<Function>;
-    *(this->callback) = Persistent<Function>::New(callback);
+    if (callbackOrSync->IsFunction())
+    {
+        this->callback = new Persistent<Function>;
+        *(this->callback) = Persistent<Function>::New(Handle<Function>::Cast(callbackOrSync));
+        this->Sync = false;
+    }
+    else 
+    {
+        this->Sync = callbackOrSync->BooleanValue();
+    }
+
     this->uv_edge_async = new uv_edge_async_t;
     this->uv_edge_async->context = this;
     uv_async_init(uv_default_loop(), &this->uv_edge_async->uv_async, completeOnV8Thread);
@@ -118,7 +127,7 @@ void ClrFuncInvokeContext::CompleteOnCLRThread(System::Threading::Tasks::Task<Sy
         &this->uv_edge_async->uv_async.async_req.overlapped);
 }
 
-Handle<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread(BOOL invokeCallback)
+Handle<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread()
 {
     DBG("ClrFuncInvokeContext::CompleteOnV8Thread");
 
@@ -127,8 +136,9 @@ Handle<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread(BOOL invokeCallback)
     this->DisposeUvEdgeAsyncFunc();
     this->DisposePersistentHandles();
 
-    if (invokeCallback && !this->callback)
+    if (!this->Sync && !this->callback)
     {
+        // this was an async call without callback specified
         return handleScope.Close(Undefined());
     }
 
@@ -162,7 +172,7 @@ Handle<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread(BOOL invokeCallback)
         break;
     };
 
-    if (invokeCallback)
+    if (!this->Sync)
     {
         // complete the asynchronous call to C# by invoking a callback in JavaScript
         TryCatch try_catch;
@@ -172,6 +182,8 @@ Handle<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread(BOOL invokeCallback)
         {
             node::FatalException(try_catch);
         }        
+
+        return handleScope.Close(Undefined());
     }
     else if (1 == argc) 
     {

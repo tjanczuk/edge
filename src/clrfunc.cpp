@@ -106,7 +106,6 @@ Handle<Value> ClrFunc::Initialize(const v8::Arguments& args)
 
         System::Type^ startupType = assembly->GetType(typeName, true, true);
         ClrFunc^ app = gcnew ClrFunc();
-        app->completesSynchronously = options->Get(String::NewSymbol("sync"))->BooleanValue();
         app->instance = System::Activator::CreateInstance(startupType, false);
         app->invokeMethod = startupType->GetMethod(methodName, BindingFlags::Instance | BindingFlags::Public);
 		if (app->invokeMethod == nullptr) 
@@ -248,36 +247,28 @@ Handle<Value> ClrFunc::Call(const Arguments& args)
     try 
     {
         int appId = args[0]->Int32Value();
-        ClrFuncInvokeContext^ context = gcnew ClrFuncInvokeContext(Handle<v8::Function>::Cast(args[2]));
+        ClrFuncInvokeContext^ context = gcnew ClrFuncInvokeContext(args[2]);
         context->Payload = ClrFunc::MarshalV8ToCLR(context, args[1]);
         ClrFunc^ app = ClrFunc::apps->default[appId - 1];
         Task<System::Object^>^ task = (Task<System::Object^>^)app->invokeMethod->Invoke(
             app->instance, gcnew array<System::Object^> { context->Payload });
-        if (app->completesSynchronously)
+        if (task->IsCompleted)
         {
-            if (task->IsCompleted)
-            {
-                context->Task = task;
-                return scope.Close(context->CompleteOnV8Thread(FALSE));
-            }
-            else
-            {
-                throw gcnew System::InvalidOperationException("The CLR function was declared as synchronous "
-                    + "but it returned without completing the Task.");
-            }
+            // Completed synchronously. Return a value or invoke callback based on call pattern.
+            context->Task = task;
+            return scope.Close(context->CompleteOnV8Thread());
+        }
+        else if (context->Sync)
+        {
+            // Will complete asynchronously but was called as a synchronous function.
+            throw gcnew System::InvalidOperationException("The CLR function was declared as synchronous "
+                + "but it returned without completing the Task.");
         }
         else 
         {
-            if (task->IsCompleted)
-            {
-                context->Task = task;
-                context->CompleteOnV8Thread(TRUE);
-            }
-            else
-            {
-                task->ContinueWith(gcnew System::Action<Task<System::Object^>^,System::Object^>(
-                    edgeAppCompletedOnCLRThread), context);
-            }
+            // Will complete asynchronously. Schedule continuation to finish processing.
+            task->ContinueWith(gcnew System::Action<Task<System::Object^>^,System::Object^>(
+                edgeAppCompletedOnCLRThread), context);
         }
     }
     catch (System::Exception^ e)
