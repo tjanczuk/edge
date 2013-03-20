@@ -78,7 +78,15 @@ myFunction('Some input', function (error, result) {
 });
 ```
 
-In one representation, you can embed C# code inside node.js code by providing a C# literal representing a .NET async lambda expression of `Func<object,Task<object>>` type:
+Alternatively, if you know the C# implementation will complete synchronously given the circumstances, you can call this function as any synchronous JavaScript function as follows:
+
+```javascript
+var result = myFunction('Some input', true);
+```
+
+The `true` parameter instead of a callback indicates that node.js expects the C# implementation to complete synchronsouly. If the CLR function implementation does not complete synchronously, the call above will result in an exception. 
+
+One representation of CLR code that edge.js accepts is C# source code. You can embed C# literal representing a .NET async lambda expression implementing the `Func<object,Task<object>>` delegate directly inside node.js code:
 
 ```javascript
 var add7 = edge.func('async (input) => { return (int)input + 7; }');
