@@ -27,7 +27,7 @@ Read more about the background and motivations of the project [here](http://toma
 ## What you need
 
 * Windows
-* node.js 0.10.x or 0.8.x (developed and tested with v0.8.22 and v0.10.0, both x32 and x64 architectures)  
+* node.js 0.6.x or later (developed and tested with v0.6.20, v0.8.22, and v0.10.0, both x32 and x64 architectures)  
 * [.NET 4.5](http://www.microsoft.com/en-us/download/details.aspx?id=30653)  
 
 ## How to: hello, world

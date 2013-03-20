@@ -9,7 +9,7 @@
   "description": "Edge.js: run .NET and node.js code in-process",
   "tags" : ["owin", "edge", "net", "clr", "c#", "managed", ".net"],
   "main": "./lib/edge.js",
-  "engines": { "node": "0.8.x || 0.10.x" },
+  "engines": { "node": ">= 0.6" },
   "licenses": [ { "type": "Apache", "url": "http://www.apache.org/licenses/LICENSE-2.0" } ],
   "dependencies": {
   },

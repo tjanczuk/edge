@@ -99,7 +99,11 @@ void ClrFuncInvokeContext::DisposeUvEdgeAsync()
     if (this->uv_edge_async)
     {
         DBG("ClrFuncInvokeContext::DisposeUvEdgeAsync");
+#if UV_VERSION_MAJOR==0 && UV_VERSION_MINOR<8
+        uv_unref(uv_default_loop());
+#else
         uv_unref((uv_handle_t*)&this->uv_edge_async->uv_async);
+#endif     
         delete this->uv_edge_async;
         this->uv_edge_async = NULL;
     }
@@ -110,7 +114,11 @@ void ClrFuncInvokeContext::DisposeUvEdgeAsyncFunc()
     if (this->uv_edge_async_func)
     {
         DBG("ClrFuncInvokeContext::DisposeUvEdgeAsyncFunc");
+#if UV_VERSION_MAJOR==0 && UV_VERSION_MINOR<8
+        uv_unref(uv_default_loop());
+#else
         uv_unref((uv_handle_t*)&this->uv_edge_async_func->uv_async);
+#endif
         delete this->uv_edge_async_func;
         this->uv_edge_async_func = NULL;
     }
