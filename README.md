@@ -200,7 +200,7 @@ var add7 = edge.func({
 
 ## How to: marshal data
 
-Edge module can marhshal any JSON-serializable value between .NET and node.js. Edge also supports marshaling between node.js `Buffer` instance and a .NET `byte[]` array to help you efficiently pass binary data.
+Edge module can marshal any JSON-serializable value between .NET and node.js. Edge also supports marshaling between node.js `Buffer` instance and a .NET `byte[]` array to help you efficiently pass binary data.
 
 You can call .NET from node.js and pass in a complex JavaScript object as follows:
 
@@ -337,10 +337,9 @@ namespace Edge.Sample
 {
     public class Startup
     {
-        public async Task<object> Invoke(object input)
+        public async Task<object> Invoke(IDictionary<string, object> input)
         {
-            IDictionary<string, object> payload = (IDictionary<string, object>)input;
-            Func<object, Task<object>> add = (Func<object, Task<object>>)payload["add"];
+            Func<object, Task<object>> add = (Func<object, Task<object>>)input["add"];
             var twoNumbers = new { a = 2, b = 3 };
             var addResult = (int)await add(twoNumbers);
             return addResult * 2;
@@ -368,7 +367,7 @@ The proxy to that function in .NET has the following signature:
 Func<object,Task<object>>
 ```
 
-Usin TPL in CLR to provide a proxy to an asynchronous node.js function allows the .NET code to use the convenience of the `await` keyword when invoking the node.js functionality. The example above shows the use of the `await` keyword when calling the proxy of the node.js `add` method.  
+Using TPL in CLR to provide a proxy to an asynchronous node.js function allows the .NET code to use the convenience of the `await` keyword when invoking the node.js functionality. The example above shows the use of the `await` keyword when calling the proxy of the node.js `add` method.  
 
 ## How to: exceptions
 
@@ -478,7 +477,7 @@ cd ..
 npm install
 ```
 
-Note: the node.js version number you provide must be version number corresponding to one of the subdirectories of http://nodejs.org/dist. The command will build both x32 and x63 architectures (assuming you use x64 machine). The command will also copy the edge.node executables to appropriate locations under lib\native directory where they are looked up from at runtime. The `npm install` step copies the C standard library shared DLL to the location of the edge.node for the ocmponent to be ready to go.
+Note: the node.js version number you provide must be version number corresponding to one of the subdirectories of http://nodejs.org/dist. The command will build both x32 and x64 architectures (assuming you use x64 machine). The command will also copy the edge.node executables to appropriate locations under lib\native directory where they are looked up from at runtime. The `npm install` step copies the C standard library shared DLL to the location of the edge.node for the component to be ready to go.
 
 To build the C++\CLI native extension using the version of node.js installed on your machine, issue the followig command:
 
