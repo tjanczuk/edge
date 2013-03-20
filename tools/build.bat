@@ -1,4 +1,5 @@
 @echo off
+set SELF=%~dp0
 if "%1" equ "" (
     echo Usage: build.bat debug^|release {version} {version} ...
     echo e.g. build.bat release 0.8.22 0.10.0
@@ -15,12 +16,10 @@ if not exist "%NODEEXE%" (
     exit /b -1
 )
 for %%i in ("%NODEEXE%") do set NODEDIR=%%~dpi
-SET DESTDIRROOT=%~dp0\..\lib\native\win32
+SET DESTDIRROOT=%SELF%\..\lib\native\win32
 set VERSIONS=0.10.0
 if "%1" neq "" set VERSIONS=%1
-echo %VERSIONS%
-
-pushd %~dp0\..
+pushd %SELF%\..
 for %%V in (%VERSIONS%) do call :build ia32 x86 %%V 
 for %%V in (%VERSIONS%) do call :build x64 x64 %%V 
 popd
@@ -33,7 +32,7 @@ set DESTDIR=%DESTDIRROOT%\%1\%3
 if exist "%DESTDIR%\node.exe" goto gyp
 if not exist "%DESTDIR%\NUL" mkdir "%DESTDIR%"
 echo Downloading node.exe %2 %3...
-node %~dp0\download.js %2 %3 "%DESTDIR%"
+node %SELF%\download.js %2 %3 "%DESTDIR%"
 if %ERRORLEVEL% neq 0 (
     echo Cannot download node.exe %2 v%3
     exit /b -1
