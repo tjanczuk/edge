@@ -48,7 +48,6 @@ void NodejsFuncInvokeContext::CallFuncOnV8Thread()
 {
     DBG("NodejsFuncInvokeContext::CallFuncOnV8Thread");
     HandleScope scope;
-    this->functionContext->ClrInvokeContext->RecreateUvEdgeAsyncFunc();
     try 
     {
         TryCatch try_catch;

@@ -167,8 +167,7 @@ System::Object^ ClrFunc::MarshalV8ToCLR(ClrFuncInvokeContext^ context, Handle<v8
 
     if (jsdata->IsFunction() && context != nullptr) 
     {
-        NodejsFunc^ functionContext = gcnew NodejsFunc(
-            context, Handle<v8::Function>::Cast(jsdata));
+        NodejsFunc^ functionContext = gcnew NodejsFunc(context, Handle<v8::Function>::Cast(jsdata));
         System::Func<System::Object^,Task<System::Object^>^>^ netfunc = 
             gcnew System::Func<System::Object^,Task<System::Object^>^>(
                 functionContext, &NodejsFunc::FunctionWrapper);
@@ -258,7 +257,7 @@ Handle<Value> ClrFunc::Call(const Arguments& args)
         {
             // Completed synchronously. Return a value or invoke callback based on call pattern.
             context->Task = task;
-            return scope.Close(context->CompleteOnV8Thread());
+            return scope.Close(context->CompleteOnV8Thread(true));
         }
         else if (context->Sync)
         {

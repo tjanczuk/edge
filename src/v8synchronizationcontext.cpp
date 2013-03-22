@@ -8,20 +8,7 @@ void continueOnV8Thread(uv_async_t* handle, int status)
     HandleScope handleScope;
     uv_edge_async_t* uv_edge_async = CONTAINING_RECORD(handle, uv_edge_async_t, uv_async);
     System::Action^ action = uv_edge_async->action;
-    if (uv_edge_async == V8SynchronizationContext::uv_edge_async)
-    {
-    	// This is a completion of an action registered in RegisterActionFromCLRThread.
-    	// Release the wait handle to allow the uv_edge_async reuse by another CLR thread.
-    	uv_edge_async->action = nullptr;
-    	V8SynchronizationContext::funcWaitHandle->Set();
-    }
-    else
-    {
-    	// This is a completion of an action registered in RegisterActionFromV8Thread.
-    	// Unref the handle to stop preventing the process from exiting.
-    	V8SynchronizationContext::Unref(uv_edge_async);
-    	delete uv_edge_async;
-    }
+    V8SynchronizationContext::CancelAction(uv_edge_async);
 
     action();
 }
@@ -74,4 +61,22 @@ void V8SynchronizationContext::ExecuteAction(uv_edge_async_t* uv_edge_async)
         0, 
         (ULONG_PTR)NULL, 
         &uv_edge_async->uv_async.async_req.overlapped);	
+}
+
+void V8SynchronizationContext::CancelAction(uv_edge_async_t* uv_edge_async)
+{
+    if (uv_edge_async == V8SynchronizationContext::uv_edge_async)
+    {
+    	// This is a cancellation of an action registered in RegisterActionFromCLRThread.
+    	// Release the wait handle to allow the uv_edge_async reuse by another CLR thread.
+    	uv_edge_async->action = nullptr;
+    	V8SynchronizationContext::funcWaitHandle->Set();
+    }
+    else
+    {
+    	// This is a cancellation of an action registered in RegisterActionFromV8Thread.
+    	// Unref the handle to stop preventing the process from exiting.
+    	V8SynchronizationContext::Unref(uv_edge_async);
+    	delete uv_edge_async;
+    }
 }

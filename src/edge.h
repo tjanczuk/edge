@@ -37,17 +37,16 @@ Handle<Value> throwV8Exception(System::Exception^ exception);
 typedef struct uv_edge_async_s {
     uv_async_t uv_async;
     gcroot<System::Action^> action;
-    gcroot<System::Object^> context;
 } uv_edge_async_t;
 
 ref class V8SynchronizationContext {
 public:
 
-    // The node process will not exit until ExecuteAction had been called for all actions 
+    // The node process will not exit until ExecuteAction or CancelAction had been called for all actions 
     // registered with RegisterActionOnV8Thread. Actions registered with RegisterActionFromCLRThread 
-    // do not prevent process exit.
-    // Calls from JavaScript to .NET use RegisterActionOnV8Thread.
-    // Calls from .NET to JavaScript use RegisterActionOnCLRThread.
+    // do not prevent the process from exiting.
+    // Calls from JavaScript to .NET use RegisterActionOnV8Thread for callbacks.
+    // Calls from .NET to JavaScript use RegisterActionOnCLRThread to invoke a JavaScript function.
     // This means that if any call of a .NET function from JavaScript is in progress, the process won't exit.
     // It also means that existence of .NET proxies to JavaScript functions in the CLR does not prevent the 
     // process from exiting.
@@ -60,19 +59,17 @@ public:
     static uv_edge_async_t* RegisterActionFromCLRThread(System::Action^ action);
     static uv_edge_async_t* RegisterActionFromV8Thread(System::Action^ action);
     static void ExecuteAction(uv_edge_async_t* uv_edge_async);
+    static void CancelAction(uv_edge_async_t* uv_edge_async);
     static void Unref(uv_edge_async_t* uv_edge_async);
 };
 
 ref class ClrFuncInvokeContext {
 private:
-    Persistent<Function>* callback;    
+    Persistent<Function>* callback;
     uv_edge_async_t* uv_edge_async;
-    uv_edge_async_t* uv_edge_async_func;
-    AutoResetEvent^ funcWaitHandle;
     List<System::IntPtr>^ persistentHandles;
 
     void DisposeCallback();
-    void DisposeUvEdgeAsync();
 
 public:
 
@@ -83,10 +80,8 @@ public:
     ClrFuncInvokeContext(Handle<v8::Value> callbackOrSync);
 
     void CompleteOnCLRThread(System::Threading::Tasks::Task<System::Object^>^ task);
-    Handle<v8::Value> CompleteOnV8Thread();
-    void DisposeUvEdgeAsyncFunc();
-    void RecreateUvEdgeAsyncFunc();
-    uv_edge_async_t* WaitForUvEdgeAsyncFunc();
+    void CompleteOnV8ThreadAsynchronous();
+    Handle<v8::Value> CompleteOnV8Thread(bool completedSynchronously);
     void AddPersistentHandle(Persistent<Value>* handle);
     void DisposePersistentHandles();
 };
@@ -94,7 +89,6 @@ public:
 ref class NodejsFunc {
 public:
 
-    property ClrFuncInvokeContext^ ClrInvokeContext;
     property Persistent<Function>* Func;
 
     NodejsFunc(ClrFuncInvokeContext^ appInvokeContext, Handle<Function> function);

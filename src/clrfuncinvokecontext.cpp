@@ -1,23 +1,5 @@
 #include "edge.h"
 
-void completeOnV8Thread(uv_async_t* handle, int status)
-{
-    DBG("completeOnV8Thread");
-    HandleScope handleScope;
-    uv_edge_async_t* uv_edge_async = CONTAINING_RECORD(handle, uv_edge_async_t, uv_async);
-    System::Object^ context = uv_edge_async->context;
-    (dynamic_cast<ClrFuncInvokeContext^>(context))->CompleteOnV8Thread();
-}
-
-void callFuncOnV8Thread(uv_async_t* handle, int status)
-{
-    DBG("continueOnCLRThread");
-    HandleScope handleScope;
-    uv_edge_async_t* uv_edge_async = CONTAINING_RECORD(handle, uv_edge_async_t, uv_async);
-    System::Object^ context = uv_edge_async->context;
-    (dynamic_cast<NodejsFuncInvokeContext^>(context))->CallFuncOnV8Thread();
-}
-
 ClrFuncInvokeContext::ClrFuncInvokeContext(Handle<v8::Value> callbackOrSync)
 {
     DBG("ClrFuncInvokeContext::ClrFuncInvokeContext");
@@ -32,12 +14,8 @@ ClrFuncInvokeContext::ClrFuncInvokeContext(Handle<v8::Value> callbackOrSync)
         this->Sync = callbackOrSync->BooleanValue();
     }
 
-    this->uv_edge_async = new uv_edge_async_t;
-    this->uv_edge_async->context = this;
-    uv_async_init(uv_default_loop(), &this->uv_edge_async->uv_async, completeOnV8Thread);
-    this->funcWaitHandle = gcnew AutoResetEvent(false);
-    this->uv_edge_async_func = NULL;
-    this->RecreateUvEdgeAsyncFunc();
+    this->uv_edge_async = V8SynchronizationContext::RegisterActionFromV8Thread(
+        gcnew System::Action(this, &ClrFuncInvokeContext::CompleteOnV8ThreadAsynchronous));
     this->persistentHandles = gcnew List<System::IntPtr>();
 }
 
@@ -63,25 +41,6 @@ void ClrFuncInvokeContext::DisposePersistentHandles()
     this->persistentHandles->Clear();
 }
 
-void ClrFuncInvokeContext::RecreateUvEdgeAsyncFunc()
-{
-    DBG("ClrFuncInvokeContext::RecreateUvEdgeAsyncFunc");
-    this->DisposeUvEdgeAsyncFunc();
-    this->uv_edge_async_func = new uv_edge_async_t;
-    uv_async_init(uv_default_loop(), &this->uv_edge_async_func->uv_async, callFuncOnV8Thread);
-    // release one CLR thread associated with this call from JS to CLR 
-    // that waits to call back to an exported JS function 
-    this->funcWaitHandle->Set(); 
-}
-
-uv_edge_async_t* ClrFuncInvokeContext::WaitForUvEdgeAsyncFunc()
-{
-    DBG("ClrFuncInvokeContext::WaitForUvEdgeAsyncFunc: start wait");
-    this->funcWaitHandle->WaitOne();
-    DBG("ClrFuncInvokeContext::WaitForUvEdgeAsyncFunc: end wait");
-    return this->uv_edge_async_func;
-}
-
 void ClrFuncInvokeContext::DisposeCallback()
 {
     if (this->callback)
@@ -94,54 +53,29 @@ void ClrFuncInvokeContext::DisposeCallback()
     }
 }
 
-void ClrFuncInvokeContext::DisposeUvEdgeAsync()
-{
-    if (this->uv_edge_async)
-    {
-        DBG("ClrFuncInvokeContext::DisposeUvEdgeAsync");
-#if UV_VERSION_MAJOR==0 && UV_VERSION_MINOR<8
-        uv_unref(uv_default_loop());
-#else
-        uv_unref((uv_handle_t*)&this->uv_edge_async->uv_async);
-#endif     
-        delete this->uv_edge_async;
-        this->uv_edge_async = NULL;
-    }
-}
-
-void ClrFuncInvokeContext::DisposeUvEdgeAsyncFunc()
-{
-    if (this->uv_edge_async_func)
-    {
-        DBG("ClrFuncInvokeContext::DisposeUvEdgeAsyncFunc");
-#if UV_VERSION_MAJOR==0 && UV_VERSION_MINOR<8
-        uv_unref(uv_default_loop());
-#else
-        uv_unref((uv_handle_t*)&this->uv_edge_async_func->uv_async);
-#endif
-        delete this->uv_edge_async_func;
-        this->uv_edge_async_func = NULL;
-    }
-}
-
 void ClrFuncInvokeContext::CompleteOnCLRThread(System::Threading::Tasks::Task<System::Object^>^ task)
 {
     DBG("ClrFuncInvokeContext::CompleteOnCLRThread");
     this->Task = task;
-    BOOL ret = PostQueuedCompletionStatus(
-        uv_default_loop()->iocp, 
-        0, 
-        (ULONG_PTR)NULL, 
-        &this->uv_edge_async->uv_async.async_req.overlapped);
+    V8SynchronizationContext::ExecuteAction(this->uv_edge_async);
 }
 
-Handle<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread()
+void ClrFuncInvokeContext::CompleteOnV8ThreadAsynchronous()
+{
+    HandleScope scope;
+    this->CompleteOnV8Thread(false);
+}
+
+Handle<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread(bool completedSynchronously)
 {
     DBG("ClrFuncInvokeContext::CompleteOnV8Thread");
 
     HandleScope handleScope;
-    this->DisposeUvEdgeAsync();
-    this->DisposeUvEdgeAsyncFunc();
+    if (completedSynchronously)
+    {
+        V8SynchronizationContext::CancelAction(this->uv_edge_async);
+    }
+
     this->DisposePersistentHandles();
 
     if (!this->Sync && !this->callback)
