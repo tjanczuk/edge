@@ -36,8 +36,32 @@ Handle<Value> throwV8Exception(System::Exception^ exception);
 
 typedef struct uv_edge_async_s {
     uv_async_t uv_async;
+    gcroot<System::Action^> action;
     gcroot<System::Object^> context;
 } uv_edge_async_t;
+
+ref class V8SynchronizationContext {
+public:
+
+    // The node process will not exit until ExecuteAction had been called for all actions 
+    // registered with RegisterActionOnV8Thread. Actions registered with RegisterActionFromCLRThread 
+    // do not prevent process exit.
+    // Calls from JavaScript to .NET use RegisterActionOnV8Thread.
+    // Calls from .NET to JavaScript use RegisterActionOnCLRThread.
+    // This means that if any call of a .NET function from JavaScript is in progress, the process won't exit.
+    // It also means that existence of .NET proxies to JavaScript functions in the CLR does not prevent the 
+    // process from exiting.
+    // In this model, JavaScript owns the lifetime of the process.
+
+    static uv_edge_async_t* uv_edge_async;
+    static AutoResetEvent^ funcWaitHandle;
+
+    static void Initialize();
+    static uv_edge_async_t* RegisterActionFromCLRThread(System::Action^ action);
+    static uv_edge_async_t* RegisterActionFromV8Thread(System::Action^ action);
+    static void ExecuteAction(uv_edge_async_t* uv_edge_async);
+    static void Unref(uv_edge_async_t* uv_edge_async);
+};
 
 ref class ClrFuncInvokeContext {
 private:

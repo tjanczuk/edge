@@ -18,6 +18,7 @@ Handle<Value> callClrFunc(const v8::Arguments& args)
 void init(Handle<Object> target) 
 {
     DBG("edge::init");
+    V8SynchronizationContext::Initialize();
     bufferConstructor = Persistent<Function>::New(Handle<Function>::Cast(
         Context::GetCurrent()->Global()->Get(String::New("Buffer")))); 
     json = Persistent<v8::Object>::New(Context::GetCurrent()->Global()->Get(String::New("JSON"))->ToObject());
