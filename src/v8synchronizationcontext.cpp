@@ -21,6 +21,7 @@ void V8SynchronizationContext::Initialize()
     uv_async_init(uv_default_loop(), &V8SynchronizationContext::uv_edge_async->uv_async, continueOnV8Thread);
     V8SynchronizationContext::Unref(V8SynchronizationContext::uv_edge_async);
     V8SynchronizationContext::funcWaitHandle = gcnew AutoResetEvent(true);
+    V8SynchronizationContext::v8ThreadId = GetCurrentThreadId();
 }
 
 void V8SynchronizationContext::Unref(uv_edge_async_t* uv_edge_async)
@@ -32,24 +33,27 @@ void V8SynchronizationContext::Unref(uv_edge_async_t* uv_edge_async)
 #endif  
 }
 
-uv_edge_async_t* V8SynchronizationContext::RegisterActionFromV8Thread(System::Action^ action)
+uv_edge_async_t* V8SynchronizationContext::RegisterAction(System::Action^ action)
 {
-	// This executes on V8 thread
+    if (GetCurrentThreadId() == V8SynchronizationContext::v8ThreadId)
+    {
+        // This executes on V8 thread.
+        // Allocate new uv_edge_async.
 
-	uv_edge_async_t* uv_edge_async = new uv_edge_async_t;
-	uv_edge_async->action = action;
-	uv_async_init(uv_default_loop(), &uv_edge_async->uv_async, continueOnV8Thread);
-	return uv_edge_async;
-}
+        uv_edge_async_t* uv_edge_async = new uv_edge_async_t;
+        uv_edge_async->action = action;
+        uv_async_init(uv_default_loop(), &uv_edge_async->uv_async, continueOnV8Thread);
+        return uv_edge_async;
+    }
+    else 
+    {
+    	// This executes on CLR thread. 
+    	// Acquire exlusive access to uv_edge_async previously initialized on V8 thread.
 
-uv_edge_async_t* V8SynchronizationContext::RegisterActionFromCLRThread(System::Action^ action)
-{
-	// This executes on CLR thread. 
-	// Acquire exlusive access to uv_edge_async previously initialized on V8 thread.
-
-	V8SynchronizationContext::funcWaitHandle->WaitOne();
-	V8SynchronizationContext::uv_edge_async->action = action;
-	return V8SynchronizationContext::uv_edge_async;
+    	V8SynchronizationContext::funcWaitHandle->WaitOne();
+    	V8SynchronizationContext::uv_edge_async->action = action;
+    	return V8SynchronizationContext::uv_edge_async;
+    }
 }
 
 void V8SynchronizationContext::ExecuteAction(uv_edge_async_t* uv_edge_async)

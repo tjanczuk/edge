@@ -14,7 +14,7 @@ ClrFuncInvokeContext::ClrFuncInvokeContext(Handle<v8::Value> callbackOrSync)
         this->Sync = callbackOrSync->BooleanValue();
     }
 
-    this->uv_edge_async = V8SynchronizationContext::RegisterActionFromV8Thread(
+    this->uv_edge_async = V8SynchronizationContext::RegisterAction(
         gcnew System::Action(this, &ClrFuncInvokeContext::CompleteOnV8ThreadAsynchronous));
     this->persistentHandles = gcnew List<System::IntPtr>();
 }
