@@ -1,5 +1,4 @@
-var edge = require('../lib/edge.js')
-	, assert = require('assert');
+var edge = require('../lib/edge.js'), assert = require('assert');
 
 var edgeTestDll = __dirname + '\\Edge.Tests.dll';
 
@@ -29,7 +28,7 @@ describe('async call from node.js to .net', function () {
 			g: [ 1, 'foo' ],
 			h: { a: 'foo', b: 12 },
 			i: function (payload, callback) { }
-		}
+		};
 		func(payload, function (error, result) {
 			assert.ifError(error);
 			assert.equal(result, 'yes');
@@ -72,7 +71,7 @@ describe('async call from node.js to .net', function () {
 		assert.throws(
 			func,
 			/Test .NET exception/
-		);	
+		);
 	});
 
 	it('successfuly marshals .net exception thrown on CLR thread from .net to node.js', function (done) {

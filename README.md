@@ -519,7 +519,27 @@ cd test
 test.bat x64 0.8.22
 ```
 
-Would run tests agsinst node.js 0.8.22 on x64 architecture.
+Would run tests against node.js 0.8.22 on x64 architecture.
+
+## Building with grunt
+
+If you want to apply just default configuration, the easiest way to build edge is using of `grunt` build system. Make sure, latest `grunt` is installed on your machine.
+
+```
+npm install -g grunt-cli
+```
+
+Install application dependencies,
+
+```
+npm install
+```
+
+Build application,
+
+```
+grunt build
+```
 
 ## Contribution and derived work
 
