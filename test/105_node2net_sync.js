@@ -1,5 +1,4 @@
-var edge = require('../lib/edge.js')
-	, assert = require('assert');
+var edge = require('../lib/edge.js'), assert = require('assert');
 
 var edgeTestDll = __dirname + '\\Edge.Tests.dll';
 
@@ -24,8 +23,8 @@ describe('sync call from node.js to .net', function () {
 			assert.ifError(error);
 			assert.equal(result, '.NET welcomes Node.js');
 			done();
-		});		
-	});	
+		});
+	});
 
 	it('successfuly marshals data from node.js to .net', function () {
 		var func = edge.func({
@@ -42,7 +41,7 @@ describe('sync call from node.js to .net', function () {
 			g: [ 1, 'foo' ],
 			h: { a: 'foo', b: 12 },
 			i: function (payload, callback) { }
-		}
+		};
 		var result = func(payload, true);
 		assert.equal(result, 'yes');
 	});
@@ -57,7 +56,7 @@ describe('sync call from node.js to .net', function () {
 		assert.throws(
 			function() { func(null, true); },
 			/Test .NET exception/
-		);	
+		);
 	});
 
 	it('fails if C# method does not complete synchronously', function () {
@@ -69,8 +68,8 @@ describe('sync call from node.js to .net', function () {
 			}
 		*/});
 		assert.throws(
-			function() { func(null, true) },
+			function() { func(null, true); },
 			/The CLR function was declared as synchronous but it returned without completing the Task/
-		);	
+		);
 	});
 });

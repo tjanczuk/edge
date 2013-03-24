@@ -46,12 +46,26 @@ module.exports = function(grunt) {
         trailing : true,
         undef: true,
         globals: {
-          jQuery: true,
-          Backbone: true,
           _: true,
-          Marionette: true,
-          $: true,
-          slice: true
+          after: true,
+          async: true,
+          afterEach: true,
+          Backbone: true,
+          before: true,
+          beforeEach: true,
+          describe: true,
+          expect: true,
+          iit: true,
+          it: true,
+          jasmine: true,
+          moment: true,
+          runs: true,
+          sinon: true,
+          spyOn: true,
+          waits: true,
+          waitsFor: true,
+          xit: true,
+          xdescribe: true
         }
       },
       js: ['./lib/*.js', './test/**/*.js']
