@@ -8,7 +8,6 @@ module.exports = function(grunt) {
         globals: ['should'],
         timeout: 3000,
         ignoreLeaks: false,
-        grep: '*-test',
         ui: 'bdd',
         reporter: 'spec'
       },
@@ -50,12 +49,7 @@ module.exports = function(grunt) {
   });
 
   // Laoded tasks
-  grunt.loadNpmTasks('grunt-rigger');
-  grunt.loadNpmTasks('grunt-mocha');
-  grunt.loadNpmTasks('grunt-contrib-concat');
   grunt.loadNpmTasks('grunt-contrib-jshint');
-  grunt.loadNpmTasks('grunt-contrib-uglify');
-  grunt.loadNpmTasks('grunt-simple-watch');
   grunt.loadNpmTasks('grunt-simple-mocha');
 
   // Default task.
