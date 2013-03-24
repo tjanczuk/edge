@@ -3,6 +3,23 @@ module.exports = function(grunt) {
 
   // Project configuration.
   grunt.initConfig({
+    shell: {
+      configure: {
+        command: 'node-gyp configure --msvs_version=2012',
+        options: {
+            stdout: true,
+            stderr: true
+        }
+      },
+      build: {
+        command: 'node-gyp build --debug',
+        options: {
+            stdout: true,
+            stderr: true
+        }
+      }
+    },
+
     simplemocha: {
       options: {
         globals: ['should'],
@@ -82,9 +99,11 @@ module.exports = function(grunt) {
   // Laoded tasks
   grunt.loadNpmTasks('grunt-contrib-jshint');
   grunt.loadNpmTasks('grunt-simple-mocha');
+  grunt.loadNpmTasks('grunt-shell');
 
   // Default task.
   grunt.registerTask('default', ['jshint', 'simplemocha']);
+  grunt.registerTask('build', ['shell', 'jshint', 'simplemocha']);
   grunt.registerTask('test', ['simplemocha']);
   grunt.registerTask('watch-test', ['watch']);
 };
