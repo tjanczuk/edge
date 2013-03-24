@@ -10,11 +10,6 @@ var readRegistery = edge.func(function () {/*
 		{
 			public async Task<object> Invoke(IDictionary<string, object> input)
 			{
-				return await Task.Run(() => ReadRegisteryKey(input));
-			}
-
-			private static object ReadRegisteryKey(IDictionary<string, object> input)
-			{
 				var keyName = (string) input["keyName"];
 				var valueName = (string) input["valueName"];
 				var defaultValue = (string) null;
