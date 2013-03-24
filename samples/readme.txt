@@ -18,3 +18,4 @@ Scenarios:
 202_sql.js - access SQL with async ADO.NET
 	set OWIN_SQL_CONNECTION_STRING=Data Source=localhost;Initial Catalog=Northwind;Integrated Security=True
 	reference assemblies
+206_registery - read/write registery operations
