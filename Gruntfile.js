@@ -54,7 +54,7 @@ module.exports = function(grunt) {
           slice: true
         }
       },
-      js: ['./lib/*.js']
+      js: ['./lib/*.js', './test/**/*.js']
     },
 
     watch: {
