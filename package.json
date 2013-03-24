@@ -7,22 +7,39 @@
   },
   "version": "0.7.4-pre",
   "description": "Edge.js: run .NET and node.js code in-process",
-  "tags" : ["owin", "edge", "net", "clr", "c#", "managed", ".net"],
+  "tags": [
+    "owin",
+    "edge",
+    "net",
+    "clr",
+    "c#",
+    "managed",
+    ".net"
+  ],
   "main": "./lib/edge.js",
-  "engines": { "node": ">= 0.6" },
-  "licenses": [ { "type": "Apache", "url": "http://www.apache.org/licenses/LICENSE-2.0" } ],
-  "dependencies": {
+  "engines": {
+    "node": ">= 0.6"
   },
+  "licenses": [
+    {
+      "type": "Apache",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0"
+    }
+  ],
+  "dependencies": {},
   "devDependencies": {
-    "mocha": "1.8.1"
+    "mocha": "1.8.1",
+    "grunt": "0.4.0",
+    "grunt-contrib-jshint": "~0.3.0",
+    "grunt-simple-mocha": "~0.3.2"
   },
   "homepage": "https://github.com/tjanczuk/edge",
   "repository": {
     "type": "git",
     "url": "git@github.com:tjanczuk/edge.git"
   },
-  "bugs" : {
-    "url" : "http://github.com/tjanczuk/edge/issues"
+  "bugs": {
+    "url": "http://github.com/tjanczuk/edge/issues"
   },
   "scripts": {
     "install": "tools\\install.bat",
