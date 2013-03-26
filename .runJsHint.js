@@ -55,7 +55,6 @@ filesToLint.forEach(function (filename) {
 });
 
 if (utils.errors > 0) {
-	utils.renderResults();
 	return process.exit(1);
 }
 
