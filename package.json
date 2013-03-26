@@ -29,10 +29,7 @@
   "dependencies": {},
   "devDependencies": {
     "mocha": "1.8.1",
-    "grunt": "0.4.0",
-    "grunt-contrib-jshint": "~0.3.0",
-    "grunt-simple-mocha": "~0.3.2",
-    "grunt-shell": "~0.2.1"
+    "jshint": "1.1.0"
   },
   "homepage": "https://github.com/tjanczuk/edge",
   "repository": {
@@ -44,6 +41,7 @@
   },
   "scripts": {
     "install": "tools\\install.bat",
-    "test": "test\\test.bat"
+    "test": "test\\test.bat",
+    "jshint": "node .runJsHint.js"
   }
 }
