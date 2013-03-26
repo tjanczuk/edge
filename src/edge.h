@@ -134,6 +134,7 @@ ref class ClrFunc {
 private:
     System::Object^ instance;
     MethodInfo^ invokeMethod;
+    System::Func<System::Object^,Task<System::Object^>^>^ func;
     static List<ClrFunc^>^ apps;
 
     ClrFunc();
@@ -146,21 +147,30 @@ private:
 
 public:
     static ClrFunc();
-    static Handle<Value> Initialize(const v8::Arguments& args);
-    static Handle<Value> Call(const v8::Arguments& args);
+    static Handle<v8::Value> Initialize(const v8::Arguments& args);
+    static Handle<v8::Function> Initialize(System::Func<System::Object^,Task<System::Object^>^>^ func);
+    static Handle<v8::Value> Call(const v8::Arguments& args);
+    Handle<v8::Value> Call(Handle<v8::Value> payload, Handle<v8::Value> callback);
     static Handle<v8::Value> MarshalCLRToV8(System::Object^ netdata);
     static System::Object^ MarshalV8ToCLR(ClrFuncInvokeContext^ context, Handle<v8::Value> jsdata);    
 };
 
+typedef struct clrFuncWrap {
+    gcroot<ClrFunc^> clrFunc;
+} ClrFuncWrap;
+
 ref class EdgeJavaScriptConverter: JavaScriptConverter {
 private:
-    static cli::array<System::Type^>^ supportedTypes = {  cli::array<byte>::typeid };
+    static cli::array<System::Type^>^ supportedTypes = { 
+        cli::array<byte>::typeid,
+        System::Func<System::Object^,Task<System::Object^>^>::typeid
+    };
 
 public:
 
     EdgeJavaScriptConverter();
 
-    property List<cli::array<byte>^>^ Buffers;
+    property List<System::Object^>^ Objects;
 
     property IEnumerable<System::Type^>^ SupportedTypes {
         IEnumerable<System::Type^>^ get () override 
@@ -178,7 +188,7 @@ public:
         System::Object^ obj, 
         JavaScriptSerializer^ serializer) override;
 
-    Handle<v8::Value> FixupBuffers(Handle<v8::Value> data);
+    Handle<v8::Value> FixupResult(Handle<v8::Value> data);
 };
 
 #endif

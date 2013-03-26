@@ -59,9 +59,46 @@ BOOL ClrFunc::TryCompile(
     return result;
 }
 
+Handle<v8::Value> clrFuncProxy(const v8::Arguments& args)
+{
+    DBG("clrFuncProxy");
+    HandleScope scope;
+    Handle<v8::External> correlator = Handle<v8::External>::Cast(args.Callee()->Get(v8::String::NewSymbol("_edgeContext")));
+    ClrFuncWrap* wrap = (ClrFuncWrap*)(correlator->Value());
+    ClrFunc^ clrFunc = wrap->clrFunc;
+    return scope.Close(clrFunc->Call(args[0], args[1]));
+}
+
+void clrFuncProxyNearDeath(v8::Persistent<v8::Value> object, void* parameters)
+{
+    DBG("clrFuncProxyNearDeath");
+    ClrFuncWrap* wrap = (ClrFuncWrap*)parameters;
+    object.Dispose();
+    object.Clear();
+    wrap->clrFunc = nullptr;
+    delete wrap;
+}
+
+Handle<v8::Function> ClrFunc::Initialize(System::Func<System::Object^,Task<System::Object^>^>^ func)
+{
+    DBG("ClrFunc::Initialize Func<object,Task<object>> wrapper");
+
+    HandleScope scope;
+
+    ClrFunc^ app = gcnew ClrFunc();
+    app->func = func;
+    ClrFuncWrap* wrap = new ClrFuncWrap;
+    wrap->clrFunc = app;    
+    v8::Persistent<v8::Function> funcProxy = v8::Persistent<v8::Function>::New(
+        FunctionTemplate::New(clrFuncProxy)->GetFunction());
+    funcProxy->Set(v8::String::NewSymbol("_edgeContext"), v8::External::New((void*)wrap));
+    funcProxy.MakeWeak((void*)wrap, clrFuncProxyNearDeath);
+    return scope.Close(funcProxy);
+}
+
 Handle<Value> ClrFunc::Initialize(const v8::Arguments& args)
 {
-    DBG("ClrFunc::Initialize");
+    DBG("ClrFunc::Initialize MethodInfo wrapper");
 
     HandleScope scope;
     Handle<v8::Object> options = args[0]->ToObject();
@@ -147,10 +184,10 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(System::Object^ netdata)
         serialized = stringCLR2V8(serializer->Serialize(netdata));
         Handle<v8::Value> argv[] = { serialized };
         jsdata = jsonParse->Call(json, 1, argv);
-        if (converter->Buffers->Count > 0)
+        if (converter->Objects->Count > 0)
         {
             // fixup object graph to replace buffer placeholders with buffers
-            jsdata = converter->FixupBuffers(jsdata);
+            jsdata = converter->FixupResult(jsdata);
         }
     }
     catch (System::Exception^ e)
@@ -242,17 +279,45 @@ System::Object^ ClrFunc::MarshalV8ToCLR(ClrFuncInvokeContext^ context, Handle<v8
 
 Handle<Value> ClrFunc::Call(const Arguments& args) 
 {
-    DBG("ClrFunc::Call");
+    DBG("ClrFunc::Call static");
     HandleScope scope;
     
     try 
     {
         int appId = args[0]->Int32Value();
-        ClrFuncInvokeContext^ context = gcnew ClrFuncInvokeContext(args[2]);
-        context->Payload = ClrFunc::MarshalV8ToCLR(context, args[1]);
         ClrFunc^ app = ClrFunc::apps->default[appId - 1];
-        Task<System::Object^>^ task = (Task<System::Object^>^)app->invokeMethod->Invoke(
-            app->instance, gcnew array<System::Object^> { context->Payload });
+        return scope.Close(app->Call(args[1], args[2]));
+    }
+    catch (System::Exception^ e)
+    {
+        return scope.Close(throwV8Exception(e));
+    }
+
+    return scope.Close(Undefined());
+}
+
+Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> callback)
+{
+    DBG("ClrFunc::Call instance");
+    HandleScope scope;
+    
+    try 
+    {
+        ClrFuncInvokeContext^ context = gcnew ClrFuncInvokeContext(callback);
+        context->Payload = ClrFunc::MarshalV8ToCLR(context, payload);
+        Task<System::Object^>^ task;
+        if (this->func == nullptr)
+        {
+            // call a Func<object,Task<object>> through reflection
+            task = (Task<System::Object^>^)this->invokeMethod->Invoke(
+                this->instance, gcnew array<System::Object^> { context->Payload });
+        }
+        else
+        {
+            // call a Func<object,Task<object>> instance
+            task = this->func(context->Payload);
+        }
+
         if (task->IsCompleted)
         {
             // Completed synchronously. Return a value or invoke callback based on call pattern.
@@ -277,5 +342,5 @@ Handle<Value> ClrFunc::Call(const Arguments& args)
         return scope.Close(throwV8Exception(e));
     }
 
-    return scope.Close(Undefined());
+    return scope.Close(Undefined());    
 }

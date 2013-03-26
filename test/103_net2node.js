@@ -45,6 +45,7 @@ describe('async call from .net to node.js', function () {
 				assert.equal(typeof result.h, 'object');
 				assert.ok(result.h.a === 'foo');
 				assert.ok(result.h.b === 12);				
+				assert.equal(typeof result.i, 'function');
 				callback(null, 'yes');
 			}			
 		};
