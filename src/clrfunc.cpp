@@ -1,10 +1,5 @@
 #include "edge.h"
 
-static ClrFunc::ClrFunc()
-{
-    ClrFunc::apps = gcnew List<ClrFunc^>();
-}
-
 ClrFunc::ClrFunc()
 {
     // empty
@@ -96,7 +91,7 @@ Handle<v8::Function> ClrFunc::Initialize(System::Func<System::Object^,Task<Syste
     return scope.Close(funcProxy);
 }
 
-Handle<Value> ClrFunc::Initialize(const v8::Arguments& args)
+Handle<v8::Value> ClrFunc::Initialize(const v8::Arguments& args)
 {
     DBG("ClrFunc::Initialize MethodInfo wrapper");
 
@@ -143,24 +138,17 @@ Handle<Value> ClrFunc::Initialize(const v8::Arguments& args)
             }
         }
 
-        System::Type^ startupType = assembly->GetType(typeName, true, true);
-        ClrFunc^ app = gcnew ClrFunc();
-        app->instance = System::Activator::CreateInstance(startupType, false);
-        app->invokeMethod = startupType->GetMethod(methodName, BindingFlags::Instance | BindingFlags::Public);
-		if (app->invokeMethod == nullptr) 
-		{
-			throw gcnew System::InvalidOperationException(
-                "Unable to access the CLR method to wrap through reflection. Make sure it is a public instance method.");
-		}
+        ClrFuncReflectionWrap^ wrap = ClrFuncReflectionWrap::Create(assembly, typeName, methodName);
+        Handle<v8::Function> result = ClrFunc::Initialize(
+            gcnew System::Func<System::Object^,Task<System::Object^>^>(
+                wrap, &ClrFuncReflectionWrap::Call));
 
-        ClrFunc::apps->Add(app);
+        return scope.Close(result);
     }
     catch (System::Exception^ e)
     {
         return scope.Close(throwV8Exception(e));
     }
-
-    return scope.Close(Integer::New(ClrFunc::apps->Count));
 }
 
 void edgeAppCompletedOnCLRThread(Task<System::Object^>^ task, System::Object^ state)
@@ -277,25 +265,6 @@ System::Object^ ClrFunc::MarshalV8ToCLR(ClrFuncInvokeContext^ context, Handle<v8
     }
 }
 
-Handle<Value> ClrFunc::Call(const Arguments& args) 
-{
-    DBG("ClrFunc::Call static");
-    HandleScope scope;
-    
-    try 
-    {
-        int appId = args[0]->Int32Value();
-        ClrFunc^ app = ClrFunc::apps->default[appId - 1];
-        return scope.Close(app->Call(args[1], args[2]));
-    }
-    catch (System::Exception^ e)
-    {
-        return scope.Close(throwV8Exception(e));
-    }
-
-    return scope.Close(Undefined());
-}
-
 Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> callback)
 {
     DBG("ClrFunc::Call instance");
@@ -305,19 +274,7 @@ Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> cal
     {
         ClrFuncInvokeContext^ context = gcnew ClrFuncInvokeContext(callback);
         context->Payload = ClrFunc::MarshalV8ToCLR(context, payload);
-        Task<System::Object^>^ task;
-        if (this->func == nullptr)
-        {
-            // call a Func<object,Task<object>> through reflection
-            task = (Task<System::Object^>^)this->invokeMethod->Invoke(
-                this->instance, gcnew array<System::Object^> { context->Payload });
-        }
-        else
-        {
-            // call a Func<object,Task<object>> instance
-            task = this->func(context->Payload);
-        }
-
+        Task<System::Object^>^ task = this->func(context->Payload);
         if (task->IsCompleted)
         {
             // Completed synchronously. Return a value or invoke callback based on call pattern.
@@ -327,8 +284,9 @@ Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> cal
         else if (context->Sync)
         {
             // Will complete asynchronously but was called as a synchronous function.
-            throw gcnew System::InvalidOperationException("The CLR function was declared as synchronous "
-                + "but it returned without completing the Task.");
+            throw gcnew System::InvalidOperationException("The JavaScript function was called synchronously "
+                + "but the underlying CLR function returned without completing the Task. Call the "
+                + "JavaScript function asynchronously.");
         }
         else 
         {

@@ -13,7 +13,8 @@
             'src/nodejsfunc.cpp',
             'src/nodejsfuncinvokecontext.cpp',
             'src/edgejavascriptconverter.cpp',
-            'src/v8synchronizationcontext.cpp'
+            'src/v8synchronizationcontext.cpp',
+            'src/clrfuncreflectionwrap.cpp'
           ]
       	}]
       ],

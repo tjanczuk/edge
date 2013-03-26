@@ -10,11 +10,6 @@ Handle<Value> initializeClrFunc(const v8::Arguments& args)
     return ClrFunc::Initialize(args);
 }
 
-Handle<Value> callClrFunc(const v8::Arguments& args)
-{
-    return ClrFunc::Call(args);
-}
-
 void init(Handle<Object> target) 
 {
     DBG("edge::init");
@@ -25,7 +20,6 @@ void init(Handle<Object> target)
     jsonParse = Persistent<Function>::New(Handle<Function>::Cast(json->Get(String::New("parse"))));
     debugMode = (0 < GetEnvironmentVariable("EDGE_DEBUG", NULL, 0));
     NODE_SET_METHOD(target, "initializeClrFunc", initializeClrFunc);
-    NODE_SET_METHOD(target, "callClrFunc", callClrFunc);
 }
 
 NODE_MODULE(edge, init);

@@ -130,12 +130,22 @@ public:
     void CallFuncOnV8Thread();
 };
 
-ref class ClrFunc {
+ref class ClrFuncReflectionWrap {
 private:
     System::Object^ instance;
-    MethodInfo^ invokeMethod;
+    MethodInfo^ invokeMethod;    
+
+    ClrFuncReflectionWrap();
+
+public:
+
+    static ClrFuncReflectionWrap^ Create(Assembly^ assembly, System::String^ typeName, System::String^ methodName);
+    Task<System::Object^>^ Call(System::Object^ payload);
+};
+
+ref class ClrFunc {
+private:
     System::Func<System::Object^,Task<System::Object^>^>^ func;
-    static List<ClrFunc^>^ apps;
 
     ClrFunc();
 
@@ -143,13 +153,11 @@ private:
         System::String^ csx, 
         cli::array<System::Object^>^ references, 
         System::String^% errors, 
-        Assembly^% assembly);
+        Assembly^% assembly);    
 
 public:
-    static ClrFunc();
     static Handle<v8::Value> Initialize(const v8::Arguments& args);
     static Handle<v8::Function> Initialize(System::Func<System::Object^,Task<System::Object^>^>^ func);
-    static Handle<v8::Value> Call(const v8::Arguments& args);
     Handle<v8::Value> Call(Handle<v8::Value> payload, Handle<v8::Value> callback);
     static Handle<v8::Value> MarshalCLRToV8(System::Object^ netdata);
     static System::Object^ MarshalV8ToCLR(ClrFuncInvokeContext^ context, Handle<v8::Value> jsdata);    

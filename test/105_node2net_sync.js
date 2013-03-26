@@ -70,7 +70,7 @@ describe('sync call from node.js to .net', function () {
 		*/});
 		assert.throws(
 			function() { func(null, true) },
-			/The CLR function was declared as synchronous but it returned without completing the Task/
+			/ The JavaScript function was called synchronously but/
 		);	
 	});
 });
