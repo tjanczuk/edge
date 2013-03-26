@@ -1,8 +1,8 @@
 @echo off
 set SELF=%~dp0
 if "%1" equ "" (
-    echo Usage: build.bat debug^|release {version} {version} ...
-    echo e.g. build.bat release 0.8.22 0.10.0
+    echo Usage: build.bat debug^|release "{version} {version}" ...
+    echo e.g. build.bat release "0.8.22 0.10.0"
     exit /b -1
 )
 
@@ -17,8 +17,14 @@ if not exist "%NODEEXE%" (
 )
 for %%i in ("%NODEEXE%") do set NODEDIR=%%~dpi
 SET DESTDIRROOT=%SELF%\..\lib\native\win32
-set VERSIONS=0.10.0
-if "%1" neq "" set VERSIONS=%1
+set VERSIONS=
+:harvestVersions
+if "%1" neq "" (
+    set VERSIONS=%VERSIONS% %1
+    shift
+    goto :harvestVersions
+)
+if "%VERSIONS%" equ "" set VERSIONS=0.10.0
 pushd %SELF%\..
 for %%V in (%VERSIONS%) do call :build ia32 x86 %%V 
 for %%V in (%VERSIONS%) do call :build x64 x64 %%V 
