@@ -181,7 +181,7 @@ If you prefer, instead of using comments you can specify references by providing
 
 ```javascript
 var add7 = edge.func({
-    csx: function() {/*
+    source: function() {/*
 
         using System.Data;
         using System.Threading.Tasks;
@@ -368,6 +368,47 @@ Func<object,Task<object>>
 ```
 
 Using TPL in CLR to provide a proxy to an asynchronous node.js function allows the .NET code to use the convenience of the `await` keyword when invoking the node.js functionality. The example above shows the use of the `await` keyword when calling the proxy of the node.js `add` method.  
+
+## How to: export .NET function to node.js
+
+Similarly to marshaling functions from node.js to .NET, edge.js can also marshal functions from .NET to node.js. The .NET code export a `Func<object,Task<object>>` delegate to node.js as part of the return value of a method invocation. For example:
+
+```javascript
+var createHello = edge.func(function () {/*
+    async (input) =>
+    {
+        return (Func<object,Task<object>>)(async (i) => { 
+            Console.WriteLine("Hello from .NET"); 
+            return null; 
+        });
+    }
+*/});
+
+var hello = createHello(null, true); 
+hello(null, true); // prints out "Hello from .NET"
+```
+
+This mechanism in conjunction with a closure can be used to expose CLR class instances or CLR state in general to JavaScript. For example:
+
+```javascript
+var createCounter = edge.func(function () {/*
+    async (input) =>
+    {
+        var k = (int)input; 
+        return (Func<object,Task<object>>)(async (i) => { return ++k; });
+    }
+*/});
+
+var counter = createCounter(12, true); // create counter with 12 as initial state
+console.log(counter(null, true)); // prints 13
+console.log(counter(null, true)); // prints 14
+```
+
+## How to: support for other CLR languages
+
+Edge.js can work with any pre-compiled CLR assembly that contains the `Func<object,Task<object>>` delegate. Out of the box, edge.js also supports compiling C# code on the fly. 
+
+Edge.js also supports a lightweight composibility model that allows other CLR languages to be enabled for scripting within a node.js application. If you would like to help enable your favorite CLR language to work with node.js, please read the [add support for a CLR language](https://github.com/tjanczuk/edge/wiki/Add-support-for-a-CLR-language) guide.
 
 ## How to: exceptions
 
