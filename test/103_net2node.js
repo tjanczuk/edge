@@ -1,5 +1,4 @@
-var edge = require('../lib/edge.js')
-	, assert = require('assert');
+var edge = require('../lib/edge.js'), assert = require('assert');
 
 var edgeTestDll = __dirname + '\\Edge.Tests.dll';
 
@@ -13,7 +12,7 @@ describe('async call from .net to node.js', function () {
 		var payload = {
 			hello: function (payload, callback) {
 				callback(null, 'Node.js welcomes ' + payload);
-			}			
+			}
 		};
 		func(payload, function (error, result) {
 			assert.ifError(error);
@@ -44,17 +43,18 @@ describe('async call from .net to node.js', function () {
 				assert.ok(result.g[1] === 'foo');
 				assert.equal(typeof result.h, 'object');
 				assert.ok(result.h.a === 'foo');
-				assert.ok(result.h.b === 12);				
+				assert.ok(result.h.b === 12);
 				assert.equal(typeof result.i, 'function');
+
 				callback(null, 'yes');
-			}			
+			}
 		};
 		func(payload, function (error, result) {
 			assert.ifError(error);
 			assert.equal(result, 'yes');
 			done();
 		});
-	});	
+	});
 
 	it('successfuly marshals data from node.js to .net', function (done) {
 		var func = edge.func({
@@ -74,7 +74,7 @@ describe('async call from .net to node.js', function () {
 					h: { a: 'foo', b: 12 }
 				};
 				callback(null, payload);
-			}			
+			}
 		};
 		func(payload, function (error, result) {
 			assert.ifError(error);
@@ -91,7 +91,7 @@ describe('async call from .net to node.js', function () {
 		var payload = {
 			hello: function (result, callback) {
 				throw new Error('Sample Node.js exception');
-			}			
+			}
 		};
 		func(payload, function (error, result) {
 			assert.ifError(error);
@@ -99,7 +99,7 @@ describe('async call from .net to node.js', function () {
 			assert.ok(result.indexOf('Sample Node.js exception') > 0);
 			done();
 		});
-	});			
+	});
 
 	it('successfuly marshals v8 exception in callback', function (done) {
 		var func = edge.func({
@@ -111,7 +111,7 @@ describe('async call from .net to node.js', function () {
 				process.nextTick(function () {
 					callback(new Error('Sample Node.js exception'));
 				});
-			}			
+			}
 		};
 		func(payload, function (error, result) {
 			assert.ifError(error);
@@ -119,5 +119,5 @@ describe('async call from .net to node.js', function () {
 			assert.ok(result.indexOf('Sample Node.js exception') > 0);
 			done();
 		});
-	});				
+	});
 });

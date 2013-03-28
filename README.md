@@ -558,7 +558,7 @@ cd test
 test.bat x64 0.8.22
 ```
 
-Would run tests agsinst node.js 0.8.22 on x64 architecture.
+Would run tests against node.js 0.8.22 on x64 architecture.
 
 ## Contribution and derived work
 

@@ -7,26 +7,43 @@
   },
   "version": "0.7.5-pre",
   "description": "Edge.js: run .NET and node.js code in-process",
-  "tags" : ["owin", "edge", "net", "clr", "c#", "managed", ".net"],
+  "tags": [
+    "owin",
+    "edge",
+    "net",
+    "clr",
+    "c#",
+    "managed",
+    ".net"
+  ],
   "main": "./lib/edge.js",
-  "engines": { "node": ">= 0.6" },
-  "licenses": [ { "type": "Apache", "url": "http://www.apache.org/licenses/LICENSE-2.0" } ],
+  "engines": {
+    "node": ">= 0.6"
+  },
+  "licenses": [
+    {
+      "type": "Apache",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0"
+    }
+  ],
   "dependencies": {
     "edge-cs": "*"
   },
   "devDependencies": {
-    "mocha": "1.8.1"
+    "mocha": "1.8.1",
+    "jshint": "1.1.0"
   },
   "homepage": "https://github.com/tjanczuk/edge",
   "repository": {
     "type": "git",
     "url": "git@github.com:tjanczuk/edge.git"
   },
-  "bugs" : {
-    "url" : "http://github.com/tjanczuk/edge/issues"
+  "bugs": {
+    "url": "http://github.com/tjanczuk/edge/issues"
   },
   "scripts": {
     "install": "tools\\install.bat",
-    "test": "test\\test.bat"
+    "test": "test\\test.bat",
+    "jshint": "node ./tools/.runJsHint.js"
   }
 }
