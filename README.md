@@ -560,6 +560,12 @@ test.bat x64 0.8.22
 
 Would run tests against node.js 0.8.22 on x64 architecture.
 
+Lastly, you can run jshint on the project with 
+
+```
+npm run jshint
+```
+
 ## Contribution and derived work
 
 I do welcome contributions via pull request and derived work. 
