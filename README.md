@@ -505,15 +505,21 @@ You can debug the .NET code running as part of your node.js application by attac
 
 ## Building
 
-You must have Visual Studio 2012 toolset as well as Python 2.7.x installed for building.
+You must have Visual Studio 2012 toolset as well as Python 2.7.x and npm-gyp installed for building.
+
+To build and test the project against all supported versions of node.js in x86 and x64 flavors, run the following:
+
+```
+tools\buildall.bat
+test\testall.bat
+npm run jshint
+```
 
 To build one of the versions of node.js officially released by [node.js](http://nodejs.org/dist), do the following:
 
 ```
 cd tools
 build.bat release 0.10.0
-cd ..
-npm install
 ```
 
 Note: the node.js version number you provide must be version number corresponding to one of the subdirectories of http://nodejs.org/dist. The command will build both x32 and x64 architectures (assuming you use x64 machine). The command will also copy the edge.node executables to appropriate locations under lib\native directory where they are looked up from at runtime. The `npm install` step copies the C standard library shared DLL to the location of the edge.node for the component to be ready to go.
@@ -560,7 +566,7 @@ test.bat x64 0.8.22
 
 Would run tests against node.js 0.8.22 on x64 architecture.
 
-Lastly, you can run jshint on the project with 
+Lastly, you can run jshint on the project with:
 
 ```
 npm run jshint
