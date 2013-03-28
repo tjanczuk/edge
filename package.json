@@ -42,6 +42,6 @@
   "scripts": {
     "install": "tools\\install.bat",
     "test": "test\\test.bat",
-    "jshint": "node .runJsHint.js"
+    "jshint": "node ./tools/.runJsHint.js"
   }
 }
