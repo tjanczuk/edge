@@ -16,8 +16,6 @@ using namespace System::Reflection;
 using namespace System::Threading::Tasks;
 using namespace System::Threading;
 using namespace System::Web::Script::Serialization;
-using namespace System::CodeDom::Compiler;
-using namespace Microsoft::CSharp;
 
 #define DBG(msg) if (debugMode) System::Console::WriteLine(msg);
 
@@ -148,12 +146,6 @@ private:
     System::Func<System::Object^,Task<System::Object^>^>^ func;
 
     ClrFunc();
-
-    static BOOL TryCompile(
-        System::String^ csx, 
-        cli::array<System::Object^>^ references, 
-        System::String^% errors, 
-        Assembly^% assembly);    
 
 public:
     static Handle<v8::Value> Initialize(const v8::Arguments& args);

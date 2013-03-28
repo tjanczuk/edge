@@ -12,6 +12,7 @@
   "engines": { "node": ">= 0.6" },
   "licenses": [ { "type": "Apache", "url": "http://www.apache.org/licenses/LICENSE-2.0" } ],
   "dependencies": {
+    "edge-cs": "*"
   },
   "devDependencies": {
     "mocha": "1.8.1"

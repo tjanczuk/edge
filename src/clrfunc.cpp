@@ -5,55 +5,6 @@ ClrFunc::ClrFunc()
     // empty
 }
 
-BOOL ClrFunc::TryCompile(
-    System::String^ csx, 
-    cli::array<System::Object^>^ references, 
-    System::String^% errors, 
-    Assembly^% assembly)
-{
-    BOOL result = FALSE;
-    assembly = nullptr;
-    errors = nullptr;
-
-    Dictionary<System::String^, System::String^>^ options = gcnew Dictionary<System::String^, System::String^>();
-    options->Add("CompilerVersion", "v4.0");
-    CSharpCodeProvider^ csc = gcnew CSharpCodeProvider(options);
-    CompilerParameters^ parameters = gcnew CompilerParameters();
-    parameters->GenerateInMemory = true;
-    if (references != nullptr)
-    {
-        for each (System::Object^ reference in references)
-        {
-            parameters->ReferencedAssemblies->Add((System::String^)reference);
-        }
-    }
-
-    parameters->ReferencedAssemblies->Add("System.dll");
-
-    CompilerResults^ results = csc->CompileAssemblyFromSource(parameters, csx);
-    if (results->Errors->HasErrors) 
-    {
-        for (int i = 0; i < results->Errors->Count; i++)
-        {
-            if (errors == nullptr)
-            {
-                errors = results->Errors[i]->ToString();
-            }
-            else
-            {
-                errors += "\n" + results->Errors[i]->ToString();
-            }
-        }
-    }
-    else 
-    {
-        assembly = results->CompiledAssembly;
-        result = TRUE;
-    }   
-
-    return result;
-}
-
 Handle<v8::Value> clrFuncProxy(const v8::Arguments& args)
 {
     DBG("clrFuncProxy");
@@ -103,45 +54,41 @@ Handle<v8::Value> ClrFunc::Initialize(const v8::Arguments& args)
 
     try 
     {
+        Handle<v8::Function> result;
+
         Handle<v8::Value> jsassemblyFile = options->Get(String::NewSymbol("assemblyFile"));
-        String::Utf8Value assemblyFile(jsassemblyFile);
-        String::Utf8Value nativeTypeName(options->Get(String::NewSymbol("typeName")));
-        String::Utf8Value nativeMethodName(options->Get(String::NewSymbol("methodName")));  
-        typeName = gcnew System::String(*nativeTypeName);
-        methodName = gcnew System::String(*nativeMethodName);      
         if (jsassemblyFile->IsString()) {
+            // reference .NET code through pre-compiled CLR assembly 
+            String::Utf8Value assemblyFile(jsassemblyFile);
+            String::Utf8Value nativeTypeName(options->Get(String::NewSymbol("typeName")));
+            String::Utf8Value nativeMethodName(options->Get(String::NewSymbol("methodName")));  
+            typeName = gcnew System::String(*nativeTypeName);
+            methodName = gcnew System::String(*nativeMethodName);      
             assembly = Assembly::LoadFrom(gcnew System::String(*assemblyFile));
+            ClrFuncReflectionWrap^ wrap = ClrFuncReflectionWrap::Create(assembly, typeName, methodName);
+            result = ClrFunc::Initialize(
+                gcnew System::Func<System::Object^,Task<System::Object^>^>(
+                    wrap, &ClrFuncReflectionWrap::Call));
         }
         else {
-            cli::array<System::Object^>^ references = 
-                (cli::array<System::Object^>^)ClrFunc::MarshalV8ToCLR(nullptr, options->Get(String::NewSymbol("references")));
-            String::Utf8Value nativencsx(options->Get(String::NewSymbol("csx")));
-            System::String^ csx = gcnew System::String(*nativencsx);
-            System::String^ errorsClass;
-            if (!ClrFunc::TryCompile(csx, references, errorsClass, assembly)) {
-                csx = "using System;\n"
-                    + "using System.Threading.Tasks;\n"
-                    + "public class Startup {\n"
-                    + "    public async Task<object> Invoke(object ___input) {\n"
-                    + "        Func<object, Task<object>> func = " + csx + ";\n"
-                    + "        return await func(___input);\n"
-                    + "    }\n"
-                    + "}";
-                System::String^ errorsLambda;
-                if (!ClrFunc::TryCompile(csx, references, errorsLambda, assembly)) {
-                    throw gcnew System::InvalidOperationException(
-                        "Unable to compile C# code.\n----> Errors when compiling as a CLR library:\n"
-                        + errorsClass
-                        + "\n----> Errors when compiling as a CLR async lambda expression:\n"
-                        + errorsLambda);
-                }
+            // reference .NET code throgh embedded source code that needs to be compiled
+            String::Utf8Value compilerFile(options->Get(String::NewSymbol("compiler")));
+            assembly = Assembly::LoadFrom(gcnew System::String(*compilerFile));
+            System::Type^ compilerType = assembly->GetType("EdgeCompiler", true, true);
+            System::Object^ compilerInstance = System::Activator::CreateInstance(compilerType, false);
+            MethodInfo^ compileFunc = compilerType->GetMethod("CompileFunc", BindingFlags::Instance | BindingFlags::Public);
+            if (compileFunc == nullptr) 
+            {
+                throw gcnew System::InvalidOperationException(
+                    "Unable to access the CompileFunc method of the EdgeCompiler class in the edge.js compiler assembly.");
             }
-        }
 
-        ClrFuncReflectionWrap^ wrap = ClrFuncReflectionWrap::Create(assembly, typeName, methodName);
-        Handle<v8::Function> result = ClrFunc::Initialize(
-            gcnew System::Func<System::Object^,Task<System::Object^>^>(
-                wrap, &ClrFuncReflectionWrap::Call));
+            System::Object^ parameters = ClrFunc::MarshalV8ToCLR(nullptr, options);
+            System::Func<System::Object^,Task<System::Object^>^>^ func = 
+                (System::Func<System::Object^,Task<System::Object^>^>^)compileFunc->Invoke(
+                    compilerInstance, gcnew array<System::Object^> { parameters });
+            result = ClrFunc::Initialize(func);
+        }
 
         return scope.Close(result);
     }

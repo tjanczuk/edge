@@ -3,7 +3,7 @@ var edge = require('../lib/edge.js')
 
 var edgeTestDll = __dirname + '\\Edge.Tests.dll';
 
-describe('csx', function () {
+describe('edge-cs', function () {
 
 	it('succeeds with literal lambda', function (done) {
 		var func = edge.func('async (input) => { return "Hello, " + input.ToString(); }');
@@ -81,7 +81,7 @@ describe('csx', function () {
 
 	it('succeeds with custom class and method name', function (done) {
 		var func = edge.func({
-			csx: function () {/* 
+			source: function () {/* 
 				using System.Threading.Tasks;
 
 				namespace Foo 
@@ -146,7 +146,7 @@ describe('csx', function () {
 					}			
 				*/});
 			 },
-			/Unable to access the CLR method to wrap through reflection/
+			/Unable to access CLR method to wrap through reflection/
 		);	
 	});		
 
@@ -171,7 +171,7 @@ describe('csx', function () {
 
 	it('succeeds with System.Data.dll reference', function (done) {
 		var func = edge.func({
-			csx: function () {/* 
+			source: function () {/* 
 				//#r "System.Data.dll"
 
 				using System.Threading.Tasks;

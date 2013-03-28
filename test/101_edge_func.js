@@ -12,28 +12,42 @@ describe('edge.func', function () {
 	it('fails without parameters', function () {
 		assert.throws(
 			edge.func,
-			/Specify the file name of the CLR DLL or provide an options object/
+			/Specify the source code as string or provide an options object/
 		);		
 	});
 
 	it('fails with a wrong parameter', function () {
 		assert.throws(
 			function () { edge.func(12); },
-			/Specify the file name of the CLR DLL or provide an options object/
+			/Specify the source code as string or provide an options object/
 		);		
 	});
 
-	it('fails with missing assemblyFile or csx', function () {
+	it('fails with a wrong language parameter', function () {
+		assert.throws(
+			function () { edge.func(12, 'somescript'); },
+			/The first argument must be a string identifying the language compiler to use/
+		);		
+	});
+
+	it('fails with a unsupported language parameter', function () {
+		assert.throws(
+			function () { edge.func('idontexist', 'somescript'); },
+			/Unsupported language 'idontexist'/
+		);		
+	});	
+
+	it('fails with missing assemblyFile or source', function () {
 		assert.throws(
 			function () { edge.func({}); },
-			/Provide DLL or CSX file name or C# literal as a string parmeter/
+			/Provide DLL or source file name or .NET script literal as a string parmeter, or specify an options object/
 		);		
 	});
 
-	it('fails with both assemblyFile or csx', function () {
+	it('fails with both assemblyFile or source', function () {
 		assert.throws(
-			function () { edge.func({ assemblyFile: 'foo.dll', csx: 'async (input) => { return null; }'}); },
-			/Provide either an asseblyFile or csx property, but not both/
+			function () { edge.func({ assemblyFile: 'foo.dll', source: 'async (input) => { return null; }'}); },
+			/Provide either an asseblyFile or source property, but not both/
 		);		
 	});
 
