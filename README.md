@@ -371,7 +371,7 @@ Using TPL in CLR to provide a proxy to an asynchronous node.js function allows t
 
 ## How to: export .NET function to node.js
 
-Similarly to marshaling functions from node.js to .NET, edge.js can also marshal functions from .NET to node.js. The .NET code export a `Func<object,Task<object>>` delegate to node.js as part of the return value of a method invocation. For example:
+Similarly to marshaling functions from node.js to .NET, edge.js can also marshal functions from .NET to node.js. The .NET code can export a `Func<object,Task<object>>` delegate to node.js as part of the return value of a .NET method invocation. For example:
 
 ```javascript
 var createHello = edge.func(function () {/*
@@ -406,9 +406,7 @@ console.log(counter(null, true)); // prints 14
 
 ## How to: support for other CLR languages
 
-Edge.js can work with any pre-compiled CLR assembly that contains the `Func<object,Task<object>>` delegate. Out of the box, edge.js also supports compiling C# code on the fly. 
-
-Edge.js also supports a lightweight composibility model that allows other CLR languages to be enabled for scripting within a node.js application. If you would like to help enable your favorite CLR language to work with node.js, please read the [add support for a CLR language](https://github.com/tjanczuk/edge/wiki/Add-support-for-a-CLR-language) guide.
+Edge.js can work with any pre-compiled CLR assembly that contains the `Func<object,Task<object>>` delegate. Out of the box, edge.js also allows you to embed C# source code in a node.js applicaiton and compile it on the fly. To enable compilation of other CLR languages (e.g. F#) at runtime or to support other idioms of constructing C# script, you can use the compiler composibility model provided by edge.js. Please read the [add support for a CLR language](https://github.com/tjanczuk/edge/wiki/Add-support-for-a-CLR-language) guide to get started. 
 
 ## How to: exceptions
 
