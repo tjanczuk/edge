@@ -23,8 +23,6 @@ using namespace System::Web::Script::Serialization;
 // http://sambro.is-super-awesome.com/2011/03/03/creating-a-proper-buffer-in-a-node-c-addon/
 extern BOOL debugMode;
 extern Persistent<Function> bufferConstructor;
-extern Persistent<v8::Object> json;
-extern Persistent<Function> jsonParse;
 
 Handle<v8::String> stringCLR2V8(System::String^ text);
 System::String^ stringV82CLR(Handle<v8::String> text);
@@ -147,6 +145,8 @@ private:
 
     ClrFunc();
 
+    static Handle<v8::Value> MarshalCLRObjectToV8(System::Object^ netdata);
+
 public:
     static Handle<v8::Value> Initialize(const v8::Arguments& args);
     static Handle<v8::Function> Initialize(System::Func<System::Object^,Task<System::Object^>^>^ func);
@@ -158,37 +158,5 @@ public:
 typedef struct clrFuncWrap {
     gcroot<ClrFunc^> clrFunc;
 } ClrFuncWrap;
-
-ref class EdgeJavaScriptConverter: JavaScriptConverter {
-private:
-    static cli::array<System::Type^>^ supportedTypes = { 
-        cli::array<byte>::typeid,
-        System::Func<System::Object^,Task<System::Object^>^>::typeid
-    };
-
-public:
-
-    EdgeJavaScriptConverter();
-
-    property List<System::Object^>^ Objects;
-
-    property IEnumerable<System::Type^>^ SupportedTypes {
-        IEnumerable<System::Type^>^ get () override 
-        {
-            return supportedTypes; 
-        }
-    };
-
-    System::Object^ Deserialize(
-        IDictionary<System::String^, System::Object^>^ dictionary, 
-        System::Type^ type, 
-        JavaScriptSerializer^ serializer) override;
-
-    IDictionary<System::String^, System::Object^>^ Serialize(
-        System::Object^ obj, 
-        JavaScriptSerializer^ serializer) override;
-
-    Handle<v8::Value> FixupResult(Handle<v8::Value> data);
-};
 
 #endif

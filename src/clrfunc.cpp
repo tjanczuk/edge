@@ -108,21 +108,118 @@ void edgeAppCompletedOnCLRThread(Task<System::Object^>^ task, System::Object^ st
 Handle<v8::Value> ClrFunc::MarshalCLRToV8(System::Object^ netdata)
 {
     HandleScope scope;
-    Handle<v8::String> serialized;
-    EdgeJavaScriptConverter^ converter = gcnew EdgeJavaScriptConverter();
     Handle<v8::Value> jsdata;
+
+    if (netdata == nullptr)
+    {
+        return scope.Close(Undefined());
+    }
 
     try 
     {
-        JavaScriptSerializer^ serializer = gcnew JavaScriptSerializer();
-        serializer->RegisterConverters(gcnew cli::array<JavaScriptConverter^> { converter });
-        serialized = stringCLR2V8(serializer->Serialize(netdata));
-        Handle<v8::Value> argv[] = { serialized };
-        jsdata = jsonParse->Call(json, 1, argv);
-        if (converter->Objects->Count > 0)
+        System::Type^ type = netdata->GetType();
+        if (type == System::String::typeid)
         {
-            // fixup object graph to replace buffer placeholders with buffers
-            jsdata = converter->FixupResult(jsdata);
+            jsdata = stringCLR2V8((System::String^)netdata);
+        }
+        else if (type == System::Char::typeid)
+        {
+            jsdata = stringCLR2V8(((System::Char^)netdata)->ToString());
+        }
+        else if (type == bool::typeid)
+        {
+            jsdata = v8::Boolean::New((bool)netdata);
+        }
+        else if (type == System::Guid::typeid)
+        {
+            jsdata = stringCLR2V8(netdata->ToString());
+        }
+        else if (type == System::DateTime::typeid)
+        {
+            jsdata = stringCLR2V8(netdata->ToString());
+        }
+        else if (type == System::DateTimeOffset::typeid)
+        {
+            jsdata = stringCLR2V8(netdata->ToString());
+        }
+        else if (type == System::Uri::typeid)
+        {
+            jsdata = stringCLR2V8(netdata->ToString());
+        }
+        else if (type == int::typeid)
+        {
+            jsdata = v8::Integer::New((int)netdata);
+        }
+        else if (type == System::Int64::typeid)
+        {
+            jsdata = v8::Number::New(((System::IConvertible^)netdata)->ToDouble(nullptr));
+        }
+        else if (type == double::typeid)
+        {
+            jsdata = v8::Number::New((double)netdata);
+        }
+        else if (type == float::typeid)
+        {
+            jsdata = v8::Number::New((float)netdata);
+        }
+        else if (type->IsPrimitive || type == System::Decimal::typeid)
+        {
+            System::IConvertible^ convertible = dynamic_cast<System::IConvertible^>(netdata);
+            if (convertible != nullptr)
+            {
+                jsdata = stringCLR2V8(convertible->ToString());
+            }
+            else
+            {
+                jsdata = stringCLR2V8(netdata->ToString());
+            }
+        }
+        else if (type->IsEnum)
+        {
+            jsdata = stringCLR2V8(netdata->ToString());
+        }
+        else if (type == cli::array<byte>::typeid)
+        {
+            cli::array<byte>^ buffer = (cli::array<byte>^)netdata;
+            pin_ptr<unsigned char> pinnedBuffer = &buffer[0];
+            node::Buffer* slowBuffer = node::Buffer::New(buffer->Length);
+            memcpy(node::Buffer::Data(slowBuffer), pinnedBuffer, buffer->Length);
+            Handle<v8::Value> args[] = { 
+                slowBuffer->handle_, 
+                v8::Integer::New(buffer->Length), 
+                v8::Integer::New(0) 
+            };
+            jsdata = bufferConstructor->NewInstance(3, args);    
+        }
+        else if (dynamic_cast<System::Collections::IDictionary^>(netdata) != nullptr)
+        {
+            Handle<v8::Object> result = v8::Object::New();
+            for each (System::Collections::DictionaryEntry^ entry in (System::Collections::IDictionary^)netdata)
+            {
+                if (dynamic_cast<System::String^>(entry->Key) != nullptr)
+                result->Set(stringCLR2V8((System::String^)entry->Key), ClrFunc::MarshalCLRToV8(entry->Value));
+            }
+
+            jsdata = result;
+        }
+        else if (dynamic_cast<System::Collections::IEnumerable^>(netdata) != nullptr)
+        {
+            Handle<v8::Array> result = v8::Array::New();
+            unsigned int i = 0;
+            for each (System::Object^ entry in (System::Collections::IEnumerable^)netdata)
+            {
+                result->Set(i++, ClrFunc::MarshalCLRToV8(entry));
+            }
+
+            jsdata = result;
+        }
+        else if (type == System::Func<System::Object^,Task<System::Object^>^>::typeid)
+        {
+            jsdata = ClrFunc::Initialize((System::Func<System::Object^,Task<System::Object^>^>^)netdata);
+        }
+        else
+        {
+            jsdata = ClrFunc::MarshalCLRObjectToV8(netdata);
         }
     }
     catch (System::Exception^ e)
@@ -131,6 +228,49 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(System::Object^ netdata)
     }
 
     return scope.Close(jsdata);
+}
+
+Handle<v8::Value> ClrFunc::MarshalCLRObjectToV8(System::Object^ netdata)
+{
+    HandleScope scope;
+    Handle<v8::Object> result = v8::Object::New();
+    System::Type^ type = netdata->GetType();
+
+    for each (FieldInfo^ field in type->GetFields(BindingFlags::Public | BindingFlags::Instance))
+    {
+        result->Set(
+            stringCLR2V8(field->Name), 
+            ClrFunc::MarshalCLRToV8(field->GetValue(netdata)));
+    }
+
+    for each (PropertyInfo^ property in type->GetProperties(BindingFlags::GetProperty | BindingFlags::Public | BindingFlags::Instance))
+    {
+        if (property->IsDefined(System::Web::Script::Serialization::ScriptIgnoreAttribute::typeid, true))
+        {
+            continue;
+        }
+
+        System::Web::Script::Serialization::ScriptIgnoreAttribute^ attr =
+            (System::Web::Script::Serialization::ScriptIgnoreAttribute^)System::Attribute::GetCustomAttribute(
+                property, 
+                System::Web::Script::Serialization::ScriptIgnoreAttribute::typeid,
+                true);
+
+        if (attr != nullptr && attr->ApplyToOverrides)
+        {
+            continue;
+        }
+
+        MethodInfo^ getMethod = property->GetGetMethod();
+        if (getMethod != nullptr && getMethod->GetParameters()->Length <= 0)
+        {
+            result->Set(
+                stringCLR2V8(property->Name), 
+                ClrFunc::MarshalCLRToV8(getMethod->Invoke(netdata, nullptr)));
+        }
+    }
+
+    return scope.Close(result);
 }
 
 System::Object^ ClrFunc::MarshalV8ToCLR(ClrFuncInvokeContext^ context, Handle<v8::Value> jsdata)
