@@ -246,6 +246,60 @@ var addAndMultiplyBy2 = require('edge').func(function () {/*
         </section>              
 
         <section>
+          <h2>Return C# function to node.js</h2>
+          <p><small>C# function is also data</small></p>
+          <pre><code class="javascript">
+var createHello = require('edge').func(function () {/*
+    async (input) => {
+        return (Func&lt;object,Task&lt;object&gt;&gt;)(async (i) => { 
+            Console.WriteLine("Hello from .NET"); 
+            return null; 
+        });
+    }
+*/});
+
+var hello = createHello(null, true); 
+hello(null, true); // prints out "Hello from .NET"
+          </code></pre>         
+          <a href="https://github.com/tjanczuk/edge/blob/master/samples/110_clr_instance.js"><small>see full example</small></a>
+        </section>              
+
+        <section>
+          <h2>Manage C# state from node.js</h2>
+          <p><small>Call node.js proxy to C# closure over CLR data</small></p>
+          <pre><code class="javascript">
+var createCounter = require('edge').func(function () {/*
+    async (input) => {
+        var k = (int)input; // CLR state 
+        return (Func&lt;object,Task&lt;object&gt;&gt;)
+          (async (i) => { return ++k; });
+    }
+*/});
+
+// create counter with initial state of 12
+var counter = createCounter(12, true); 
+console.log(counter(null, true)); // prints 13
+console.log(counter(null, true)); // prints 14
+          </code></pre>         
+          <a href="https://github.com/tjanczuk/edge/blob/master/samples/110_clr_instance.js"><small>see full example</small></a>
+        </section>   
+
+        <section>
+          <h2>F# coming soon to node.js</h2>
+          <p><small>Bring any CLR language as edge.js extension</small></p>
+          <pre><code class="javascript">
+var hello = require('edge').func('fsharp', function() {/*
+    async {
+        return async.Return("F# welcomes " + input)
+    }
+*/});
+
+hello('Node.js', function (error, result) { ... });
+          </code></pre>         
+          <a href="https://github.com/tjanczuk/edge/issues/32"><small>get engaged</small></a>
+        </section>
+
+        <section>
           <h2>Let's build something...</h2>
         </section>         
 
