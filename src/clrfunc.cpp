@@ -245,20 +245,23 @@ Handle<v8::Value> ClrFunc::MarshalCLRObjectToV8(System::Object^ netdata)
 
     for each (PropertyInfo^ property in type->GetProperties(BindingFlags::GetProperty | BindingFlags::Public | BindingFlags::Instance))
     {
-        if (property->IsDefined(System::Web::Script::Serialization::ScriptIgnoreAttribute::typeid, true))
+        if (enableScriptIgnoreAttribute)
         {
-            continue;
-        }
+            if (property->IsDefined(System::Web::Script::Serialization::ScriptIgnoreAttribute::typeid, true))
+            {
+                continue;
+            }
 
-        System::Web::Script::Serialization::ScriptIgnoreAttribute^ attr =
-            (System::Web::Script::Serialization::ScriptIgnoreAttribute^)System::Attribute::GetCustomAttribute(
-                property, 
-                System::Web::Script::Serialization::ScriptIgnoreAttribute::typeid,
-                true);
+            System::Web::Script::Serialization::ScriptIgnoreAttribute^ attr =
+                (System::Web::Script::Serialization::ScriptIgnoreAttribute^)System::Attribute::GetCustomAttribute(
+                    property, 
+                    System::Web::Script::Serialization::ScriptIgnoreAttribute::typeid,
+                    true);
 
-        if (attr != nullptr && attr->ApplyToOverrides)
-        {
-            continue;
+            if (attr != nullptr && attr->ApplyToOverrides)
+            {
+                continue;
+            }
         }
 
         MethodInfo^ getMethod = property->GetGetMethod();

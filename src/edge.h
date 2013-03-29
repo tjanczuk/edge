@@ -22,6 +22,7 @@ using namespace System::Web::Script::Serialization;
 // Good explanation of native Buffers at 
 // http://sambro.is-super-awesome.com/2011/03/03/creating-a-proper-buffer-in-a-node-c-addon/
 extern BOOL debugMode;
+extern BOOL enableScriptIgnoreAttribute;
 extern Persistent<Function> bufferConstructor;
 
 Handle<v8::String> stringCLR2V8(System::String^ text);
