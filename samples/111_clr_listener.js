@@ -15,8 +15,7 @@ var createController = edge.func(function () {/*
         {
             return new {
                 yieldControl = (Func<object,Task<object>>)((i) => {
-                    Startup.AcquireControl();
-                    return Startup.tcs.Task;
+                    return Startup.AcquireControl();
                 }),
                 regainControl = (Func<object,Task<object>>)(async (i) => {
                     Startup.ReleaseControl();
@@ -25,7 +24,7 @@ var createController = edge.func(function () {/*
             };
         }
 
-        static void AcquireControl()
+        static Task<object> AcquireControl()
         {
             // single threaded; always called on V8 thread
 
@@ -34,7 +33,9 @@ var createController = edge.func(function () {/*
                 throw new InvalidOperationException("CLR already controls the lifetime of the process.");
             }
 
-            tcs = new TaskCompletionSource<object>();
+            TaskCompletionSource<object> tmp = new TaskCompletionSource<object>();
+            tcs = tmp;
+            return tmp.Task;
         }
 
         public static void ReleaseControl()
