@@ -449,8 +449,8 @@ C:\projects\barebones>node sample.js
 c:\projects\edge\lib\edge.js:58
                 edge.callClrFunc(appId, data, callback);
                      ^
-System.Reflection.TargetInvocationException: Exception has been thrown by the target of an invocation. ---> System.Excep
-tion: Sample .NET exception
+System.Reflection.TargetInvocationException: Exception has been thrown by the target of an invocation. 
+---> System.Exception: Sample .NET exception
    at Edge.Sample.Startup.Invoke(Object input) in c:\projects\barebones\sample.cs:line 12
 ``` 
 
@@ -517,7 +517,7 @@ If you have integrated .NET code into a node.js application using a pre-compiled
 var hello = edge.func('My.Assembly.dll');
 ```
 
-then the best way to debug your .NET code is to attach a managed code debugger (e.g. Visual Studio) to the node.exe process. Since the node.exe process runs both native and managed code, make sure to select the appropriate language to target:
+then the best way to debug your .NET code is to attach a managed code debugger (e.g. Visual Studio) to the node.exe process. Since the node.exe process runs both native and managed code, make sure to select managed code type as target:
 
 ![debug](https://f.cloud.github.com/assets/822369/190564/a41bab2c-7efb-11e2-878f-82ae2325876c.PNG)
 
