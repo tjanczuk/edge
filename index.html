@@ -64,33 +64,33 @@
         </section>
 
         <section>
-          <section>
-            <h2>.NET welcomes Node.js</h2>
-            <p><small>Call C# async lambda from node.js</small></p>
-            <pre><code>
+          <h2>.NET welcomes Node.js</h2>
+          <p><small>Call C# async lambda from node.js</small></p>
+          <pre><code>
 var edge = require('edge');
 
 var hello = edge.func(
-  'async (input) => { return ".NET welcomes " + input.ToString(); }'
+    'async (input) => { return ".NET welcomes " + input.ToString(); }'
 );
 
 hello('Node.js', function (error, result) {
-  if (error) throw error;
-  console.log(result);
+    if (error) throw error;
+    console.log(result);
 });
-            </code></pre>     
-            <a href="https://github.com/tjanczuk/edge/blob/master/samples/101_hello_lambda.js"><small>see full code</small></a>
-            <pre><code>
+          </code></pre>     
+          <a href="https://github.com/tjanczuk/edge/blob/master/samples/101_hello_lambda.js"><small>see full code</small></a>
+          <pre><code>
 c:\projects\edgedemo> node sample.js
 .NET welcomes Node.js
-            </code></pre>                  
-          </section>
-          <section>
-            <h2>Interop model</h2>
-            <p><small>Async, in-process convention of calls between .NET and node.js</small></p>
-             <img src="https://f.cloud.github.com/assets/822369/234085/b305625c-8768-11e2-8de0-e03ae98e7249.PNG" alt="edge.js interop model" /> 
-          </section>          
+          </code></pre>                  
         </section>
+
+        <section>
+          <h2>Interop model</h2>
+          <p><small>Async, in-process calling convention between .NET and node.js</small></p>
+           <img src="https://f.cloud.github.com/assets/822369/234085/b305625c-8768-11e2-8de0-e03ae98e7249.PNG" alt="edge.js interop model" /> 
+        </section>          
+
         <section>
           <h2>C# grows multi-line</h2>
           <p><small>Embed multi-line C# in a node.js file</small></p>
@@ -105,6 +105,12 @@ hello('Node.js', function (error, result) { ... });
             </code></pre>         
             <a href="https://github.com/tjanczuk/edge/blob/master/samples/102_hello_function.js"><small>see full code</small></a>
         </section>
+
+        <section>
+          <h2>Debugging</h2>
+          <p><small>Use Visual Studio to debug C# code running in node.exe</small></p>
+           <img src="https://f.cloud.github.com/assets/822369/326781/923d870c-9b4a-11e2-8f45-201a6431afbf.PNG" alt="edge.js debugging" /> 
+        </section> 
 
         <section>
           <h2>C# in its own file</h2>
