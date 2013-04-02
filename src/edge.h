@@ -1,3 +1,19 @@
+/**
+ * Portions Copyright (c) Microsoft Corporation. All rights reserved. 
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *  http://www.apache.org/licenses/LICENSE-2.0  
+ *
+ * THIS CODE IS PROVIDED *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS
+ * OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION 
+ * ANY IMPLIED WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR 
+ * PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT. 
+ *
+ * See the Apache Version 2.0 License for specific language governing 
+ * permissions and limitations under the License.
+ */
 #ifndef __EDGE_H
 #define __EDGE_H
 
@@ -68,7 +84,6 @@ ref class ClrFuncInvokeContext {
 private:
     Persistent<Function>* callback;
     uv_edge_async_t* uv_edge_async;
-    List<System::IntPtr>^ persistentHandles;
 
     void DisposeCallback();
 
@@ -83,8 +98,6 @@ public:
     void CompleteOnCLRThread(System::Threading::Tasks::Task<System::Object^>^ task);
     void CompleteOnV8ThreadAsynchronous();
     Handle<v8::Value> CompleteOnV8Thread(bool completedSynchronously);
-    void AddPersistentHandle(Persistent<Value>* handle);
-    void DisposePersistentHandles();
 };
 
 ref class NodejsFunc {
@@ -93,8 +106,18 @@ public:
     property Persistent<Function>* Func;
 
     NodejsFunc(ClrFuncInvokeContext^ appInvokeContext, Handle<Function> function);
+    ~NodejsFunc();
+    !NodejsFunc();
 
     Task<System::Object^>^ FunctionWrapper(System::Object^ payload);
+};
+
+ref class PersistentDisposeContext {
+private:
+    System::IntPtr ptr;
+public:
+    PersistentDisposeContext(Persistent<Value>* handle);
+    void CallDisposeOnV8Thread();
 };
 
 ref class NodejsFuncInvokeContext;

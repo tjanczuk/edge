@@ -1,3 +1,19 @@
+/**
+ * Portions Copyright (c) Microsoft Corporation. All rights reserved. 
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *  http://www.apache.org/licenses/LICENSE-2.0  
+ *
+ * THIS CODE IS PROVIDED *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS
+ * OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION 
+ * ANY IMPLIED WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR 
+ * PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT. 
+ *
+ * See the Apache Version 2.0 License for specific language governing 
+ * permissions and limitations under the License.
+ */
 #include "edge.h"
 
 void continueOnV8Thread(uv_async_t* handle, int status)
@@ -17,6 +33,7 @@ void V8SynchronizationContext::Initialize()
 {
 	// This executes on V8 thread
 
+    DBG("V8SynchronizationContext::Initialize");
     V8SynchronizationContext::uv_edge_async = new uv_edge_async_t;
     uv_async_init(uv_default_loop(), &V8SynchronizationContext::uv_edge_async->uv_async, continueOnV8Thread);
     V8SynchronizationContext::Unref(V8SynchronizationContext::uv_edge_async);
@@ -26,6 +43,7 @@ void V8SynchronizationContext::Initialize()
 
 void V8SynchronizationContext::Unref(uv_edge_async_t* uv_edge_async)
 {
+    DBG("V8SynchronizationContext::Unref");
 #if UV_VERSION_MAJOR==0 && UV_VERSION_MINOR<8
     uv_unref(uv_default_loop());
 #else
@@ -35,6 +53,8 @@ void V8SynchronizationContext::Unref(uv_edge_async_t* uv_edge_async)
 
 uv_edge_async_t* V8SynchronizationContext::RegisterAction(System::Action^ action)
 {
+    DBG("V8SynchronizationContext::RegisterAction");
+
     if (GetCurrentThreadId() == V8SynchronizationContext::v8ThreadId)
     {
         // This executes on V8 thread.
@@ -58,8 +78,8 @@ uv_edge_async_t* V8SynchronizationContext::RegisterAction(System::Action^ action
 
 void V8SynchronizationContext::ExecuteAction(uv_edge_async_t* uv_edge_async)
 {
+    DBG("V8SynchronizationContext::ExecuteAction");
 	// Transfer control to completeOnV8hread method executing on V8 thread
-
     BOOL ret = PostQueuedCompletionStatus(
         uv_default_loop()->iocp, 
         0, 
@@ -69,6 +89,7 @@ void V8SynchronizationContext::ExecuteAction(uv_edge_async_t* uv_edge_async)
 
 void V8SynchronizationContext::CancelAction(uv_edge_async_t* uv_edge_async)
 {
+    DBG("V8SynchronizationContext::CancelAction");
     if (uv_edge_async == V8SynchronizationContext::uv_edge_async)
     {
     	// This is a cancellation of an action registered in RegisterActionFromCLRThread.
