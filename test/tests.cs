@@ -1,3 +1,19 @@
+/**
+ * Portions Copyright (c) Microsoft Corporation. All rights reserved. 
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *  http://www.apache.org/licenses/LICENSE-2.0  
+ *
+ * THIS CODE IS PROVIDED *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS
+ * OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION 
+ * ANY IMPLIED WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR 
+ * PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT. 
+ *
+ * See the Apache Version 2.0 License for specific language governing 
+ * permissions and limitations under the License.
+ */
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -142,5 +158,53 @@ namespace Edge.Tests
             return result;
         }       
 
+        private WeakReference weakRefToNodejsFunc;
+        public Task<object> InvokeBackAfterCLRCallHasFinished(object input)
+        {
+            var trace = new List<string>();
+            trace.Add("InvokeBackAfterCLRCallHasFinished#EnteredCLR");
+            Func<object, Task<object>> callback = (Func<object, Task<object>>)(((IDictionary<string, object>)input)["eventCallback"]);
+
+            // The target of the callback function is the ref to the NodejsFunc acting as
+            // the proxy for the JS function to call.
+            weakRefToNodejsFunc = new WeakReference(callback.Target);
+
+            trace.Add("InvokeBackAfterCLRCallHasFinished#LeftCLR");
+
+            var result = new TaskCompletionSource<object>();
+            result.SetResult(trace);
+
+            // Now simulate an event callback after this CLR method has finished.
+            Task.Delay(50).ContinueWith(async (value) => {
+                // This throws an exception if the weak reference is not
+                // pointing to an existing object.
+                GC.GetGeneration(weakRefToNodejsFunc);
+                await callback("InvokeBackAfterCLRCallHasFinished#CallingCallbackFromDelayedTask");
+            });
+
+            return result.Task;
+        }
+
+        public Task<object> EnsureNodejsFuncIsCollected(object input) {
+
+            var succeed = false;
+            GC.Collect();
+            try
+            {
+                // Throws an exception if the object the weak reference
+                // points to is GCed.
+                GC.GetGeneration(weakRefToNodejsFunc);
+            }
+            catch(Exception)
+            {
+                // The NodejsFunc is GCed.
+                succeed = true;
+            }
+            weakRefToNodejsFunc = null;            
+
+            var result = new TaskCompletionSource<object>();
+            result.SetResult(succeed);
+            return result.Task;
+        }
     }
 }
