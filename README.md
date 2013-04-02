@@ -564,7 +564,7 @@ After setting `EDGE_CS_DEBUG=1` environment variable before starting node.exe an
 
 ## Building
 
-You must have Visual Studio 2012 toolset, Python 2.7.x, and npm-gyp installed for building.
+You must have Visual Studio 2012 toolset, Python 2.7.x, and node-gyp installed for building.
 
 To build and test the project against all supported versions of node.js in x86 and x64 flavors, run the following:
 
