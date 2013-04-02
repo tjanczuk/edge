@@ -27,7 +27,7 @@
     }
   ],
   "dependencies": {
-    "edge-cs": "*"
+    "edge-cs": "0.2.0"
   },
   "devDependencies": {
     "mocha": "1.8.1",
