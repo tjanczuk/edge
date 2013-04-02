@@ -9,7 +9,7 @@ See the [Edge.js overview](http://tjanczuk.github.com/edge).
 
 ## Introduction 
 
-Edge.js allows you to run .NET and node.js code in one process. You can call .NET functions from node.js and node.js functions from .NET. Edge.js takes care of marshaling data between CLR and V8. Edge.js also reconciles threading models of single threaded V8 and multi-threaded CLR. The .NET code can be pre-compiled or specified as C# source: edge.js can compile C# script at runtime.
+Edge.js allows you to run .NET and node.js code in one process. You can call .NET functions from node.js and node.js functions from .NET. Edge.js takes care of marshaling data between CLR and V8. Edge.js also reconciles threading models of single threaded V8 and multi-threaded CLR. Edge.js ensures correct lifetime of objects on V8 and CLR heaps. The .NET code can be pre-compiled or specified as C# source: edge.js can compile C# script at runtime. Edge allows CLR languages other than C# to be plugged in.
 
 ![edgejs](https://f.cloud.github.com/assets/822369/266383/e6320302-8df7-11e2-94f3-45f3eca2979f.PNG)
 
@@ -17,8 +17,6 @@ Edge.js provides a basic, prescriptive model and implementation for interoperabi
 * implementing express.js handlers and connect middleware for node.js application using .NET 4.5 ([read more](http://tomasz.janczuk.org/2013/02/hosting-net-code-in-nodejs-applications.html)),  
 * implementing CPU-bound computations in .NET and running them in-process with node.js application without blocking the event loop ([read more](http://tomasz.janczuk.org/2013/02/cpu-bound-workers-for-nodejs.html)),  
 * using C# and .NET instead of writing native node.js extensions in C/C++ and Win32 to access Windows specific functionality from a node.js application ([read more](http://tomasz.janczuk.org/2013/02/access-ms-sql-from-nodejs-application.html)). 
-
-Edge.js is a native node.js module for Windows. It bridges between JavaScript, native, and CLR/.NET code (think C#). The module takes care of marshaling data between V8 and CLR heaps as well as reconciling threading models. The .NET code is running in-process either asynchronously or on CLR threads while the node.js event loop remains unblocked. The .NET code can be integrated into a node.js application as C# script that will be automatically compiled, or as a pre-compiled CLR assembly.
 
 Read more about the background and motivations of the project [here](http://tomasz.janczuk.org/2013/02/hosting-net-code-in-nodejs-applications.html). 
 
@@ -200,7 +198,7 @@ var add7 = edge.func({
 
 ## How to: marshal data
 
-Edge module can marshal any JSON-serializable value between .NET and node.js. Edge also supports marshaling between node.js `Buffer` instance and a .NET `byte[]` array to help you efficiently pass binary data.
+Edge.js can marshal any JSON-serializable value between .NET and node.js (although JSON serializaton is not used in the process). Edge also supports marshaling between node.js `Buffer` instance and a .NET `byte[]` array to help you efficiently pass binary data.
 
 You can call .NET from node.js and pass in a complex JavaScript object as follows:
 
@@ -247,7 +245,7 @@ namespace Edge.Sample
 }
 ```
 
-Similar type marshaling is applied when .NET code passes data back to node.js code. In .NET code you can provide an instance of any JSON-serializable CLR type, including domain specific types like `Person` or anonymous objects. For example:
+Similar type marshaling is applied when .NET code passes data back to node.js code. In .NET code you can provide an instance of any CLR type that would normally be JSON serializable, including domain specific types like `Person` or anonymous objects. For example:
 
 ```c#
 using System.Threading.Tasks;
@@ -301,6 +299,16 @@ C:\projects\barebones>node sample.js
   anArray: [ 1, 'foo' ],
   anObject: { a: 'foo', b: 12 } }
 ```
+
+When data is marshaled from .NET to node.js, no checks for circular references are made. They will typically result in stack overflows. Make sure the object graph you are passing from .NET to node.js is a tree and does not contain any cycles. 
+
+When marshaling strongly typed objects (e.g. Person) form .NET to node.js, you can optionaly tell edge.js to observe the [System.Web.Script.Serialization.ScriptIgnoreAttribute](http://msdn.microsoft.com/en-us/library/system.web.script.serialization.scriptignoreattribute.aspx). You opt in to this behavior by setting the `EDGE_ENABLE_SCRIPTIGNOREATTRIBUTE` environment variable:
+
+```
+set EDGE_ENABLE_SCRIPTIGNOREATTRIBUTE=1
+```
+
+Edge.js by default does not observe the ScriptIgnoreAttribute to avoid the associated performance cost. 
 
 ## How to: call node.js from .NET
 
@@ -499,13 +507,64 @@ System.Exception: Error: Sample JavaScript error
 
 ## How to: debugging
 
-You can debug the .NET code running as part of your node.js application by attaching a managed code debugger (e.g. Visual Studio) to node.exe. This method is currently only available if you integrated a pre-compiled CLR assembly with node.js as opposed to embedding C# literals in the application. Since the node.exe process runs both native and managed code, make sure to select the appropriate language to target:
+You can debug the .NET code running as part of your node.js application by attaching a managed code debugger (e.g. Visual Studio) to node.exe. You can debug .NET code in a pre-compiled CLR assembly as well C# literals embedded in the application and compiled by edge.js at runtime. 
+
+### Debugging pre-compiled .NET code
+
+If you have integrated .NET code into a node.js application using a pre-compiled CLR assembly like this:
+
+```javascript
+var hello = edge.func('My.Assembly.dll');
+```
+
+then the best way to debug your .NET code is to attach a managed code debugger (e.g. Visual Studio) to the node.exe process. Since the node.exe process runs both native and managed code, make sure to select the appropriate language to target:
 
 ![debug](https://f.cloud.github.com/assets/822369/190564/a41bab2c-7efb-11e2-878f-82ae2325876c.PNG)
 
+From there, you can set breakpoints in your .NET code and the debugger will stop when they are reached.
+
+### Debugging embedded C# code
+
+Debugging embedded C# code requires that `EDGE_CS_DEBUG` environment variable is set in the environment of the node.exe process:
+
+```
+set EDGE_CS_DEBUG=1
+```
+
+Without this setting (the default), edge.js will not generate debugging information when compiling embedded C# code.
+
+You can debug C# code embedded into a node.js application using a reference to a *.cs or *.csx file:
+
+```javacript
+var hello = edge.func('MyClass.cs');
+```
+
+You can also debug C# code embeeded directly into a *.js file using the function comment syntax:
+
+```javscript
+var hello = edge.func(function () {/*
+    async (input)
+    {
+        System.Diagnostics.Debugger.Break();
+        var result = ".NET welcomes " + input.ToString();
+        return result;
+    }
+*/});
+```
+
+You *cannot* debug C# code embedded as a simple string literal:
+
+```javascript
+var hello = edge.func('async (input) => { return 2 * (int)input; }');
+```
+
+After setting `EDGE_CS_DEBUG=1` environment variable before starting node.exe and attaching the managed debugger to the node.exe process, you can set breakpoints in C# code (which may appear as a JavaScript comment), or use `System.Diagnostics.Debugger.Break()` to break into the debugger from .NET code. 
+
+![debug-inline](https://f.cloud.github.com/assets/822369/326781/923d870c-9b4a-11e2-8f45-201a6431afbf.PNG)
+
 ## Building
 
-You must have Visual Studio 2012 toolset as well as Python 2.7.x and npm-gyp installed for building.
+You must have Visual Studio 2012 toolset, Python 2.7.x, and npm-gyp installed for building.
 
 To build and test the project against all supported versions of node.js in x86 and x64 flavors, run the following:
 
