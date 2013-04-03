@@ -7,6 +7,24 @@ An edge connects two nodes. This edge connects node.js and .NET. V8 and CLR. Nod
 
 See the [Edge.js overview](http://tjanczuk.github.com/edge).
 
+## Contents
+
+[Introduction](https://github.com/tjanczuk/edge#introduction)
+[What you need](https://github.com/tjanczuk/edge#what-you-need)
+[How to: C# hello, world](https://github.com/tjanczuk/edge#how-to-c-hello-world)
+[How to: integrate C# code into node.js code](https://github.com/tjanczuk/edge#how-to-integrate-c-code-into-nodejs-code)
+[How to: specify additional CLR assembly references in C# code](https://github.com/tjanczuk/edge#how-to-specify-additional-clr-assembly-references-in-c-code)
+[How to: marshal data between C# and node.js](https://github.com/tjanczuk/edge#how-to-marshal-data-between-c-and-nodejs)
+[How to: call node.js from C#](https://github.com/tjanczuk/edge#how-to-call-nodejs-from-c)
+[How to: export C# function to node.js](https://github.com/tjanczuk/edge#how-to-export-c-function-to-nodejs)
+[How to: script Python in a node.js application](https://github.com/tjanczuk/edge#how-to-script-python-in-a-nodejs-application)
+[How to: support for other CLR languages](https://github.com/tjanczuk/edge#how-to-support-for-other-clr-languages)
+[How to: exceptions](https://github.com/tjanczuk/edge#how-to-exceptions)
+[How to: debugging](https://github.com/tjanczuk/edge#how-to-debugging)
+[Building](https://github.com/tjanczuk/edge#building)
+[Running tests](https://github.com/tjanczuk/edge#running-tests)
+[Contribution and derived work](https://github.com/tjanczuk/edge#contribution-and-derived-work)
+
 ## Introduction 
 
 Edge.js allows you to run .NET and node.js code in one process. You can call .NET functions from node.js and node.js functions from .NET. Edge.js takes care of marshaling data between CLR and V8. Edge.js also reconciles threading models of single threaded V8 and multi-threaded CLR. Edge.js ensures correct lifetime of objects on V8 and CLR heaps. The CLR code can be pre-compiled or specified as C# or Python source: edge.js can execute C# or IronPython script at runtime. Edge allows CLR languages other than C# or IronPython to be plugged in.
