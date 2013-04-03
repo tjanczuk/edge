@@ -9,8 +9,8 @@ See the [Edge.js overview](http://tjanczuk.github.com/edge).
 
 ## Contents
 
-[Introduction](https://github.com/tjanczuk/edge#introduction)
-[What you need](https://github.com/tjanczuk/edge#what-you-need)
+[Introduction](https://github.com/tjanczuk/edge#introduction)  
+[What you need](https://github.com/tjanczuk/edge#what-you-need)  
 [How to: C# hello, world](https://github.com/tjanczuk/edge#how-to-c-hello-world)
 [How to: integrate C# code into node.js code](https://github.com/tjanczuk/edge#how-to-integrate-c-code-into-nodejs-code)
 [How to: specify additional CLR assembly references in C# code](https://github.com/tjanczuk/edge#how-to-specify-additional-clr-assembly-references-in-c-code)
