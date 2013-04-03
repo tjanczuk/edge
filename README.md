@@ -1,7 +1,7 @@
 Edge.js: run .NET and node.js code in-process
 ====
 
-An edge connects two nodes. This edge connects node.js and .NET. V8 and CLR.
+An edge connects two nodes. This edge connects node.js and .NET. V8 and CLR. Node.js, Python, and C# - in process.
 
 ## Before you dive in
 
@@ -311,7 +311,7 @@ set EDGE_ENABLE_SCRIPTIGNOREATTRIBUTE=1
 
 Edge.js by default does not observe the ScriptIgnoreAttribute to avoid the associated performance cost. 
 
-## How to: call node.js from C#
+## How to: call node.js from C#  
 
 In addition to marshaling data, edge can marshal proxies to JavaScript functions when invoking .NET code from node.js. This allows .NET code to call back into node.js. 
 
@@ -451,6 +451,35 @@ Run and enjoy:
 ```
 C:\projects\edgerepro>node py.js
 Python welcomes Node.js
+```
+
+### The interop model
+
+Your Python script must evaluate to a lamda expression that accepts a single parameter. The parameter represents marshalled input from the node.js code. The return value of the lambda expression is passed back as the result to node.js code. The Python script can contain constructs (e.g. Python functions) that are used in the closure of the lambda expression. The instance of the script with associated state is created when `edge.func` is called in node.js. Each call to the function referes to that instance.
+
+The simplest *echo* Python script you can embed in node.js looks like this:
+
+```python
+lambda x: x
+```
+
+To say hello, you can use something like this:
+
+```python
+lambda: x: "Hello, " + x
+```
+
+To maintain a running sum of numbers:
+
+```python
+current = 0
+
+def add(x):
+    global current
+    current = current + x
+    return current
+
+lambda x: add(x)
 ```
 
 ### Python in its own file
