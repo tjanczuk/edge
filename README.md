@@ -1,7 +1,7 @@
 Edge.js: run .NET and node.js code in-process
 ====
 
-An edge connects two nodes. This edge connects node.js and .NET.
+An edge connects two nodes. This edge connects node.js and .NET. V8 and CLR.
 
 ## Before you dive in
 
@@ -9,14 +9,14 @@ See the [Edge.js overview](http://tjanczuk.github.com/edge).
 
 ## Introduction 
 
-Edge.js allows you to run .NET and node.js code in one process. You can call .NET functions from node.js and node.js functions from .NET. Edge.js takes care of marshaling data between CLR and V8. Edge.js also reconciles threading models of single threaded V8 and multi-threaded CLR. Edge.js ensures correct lifetime of objects on V8 and CLR heaps. The .NET code can be pre-compiled or specified as C# source: edge.js can compile C# script at runtime. Edge allows CLR languages other than C# to be plugged in.
+Edge.js allows you to run .NET and node.js code in one process. You can call .NET functions from node.js and node.js functions from .NET. Edge.js takes care of marshaling data between CLR and V8. Edge.js also reconciles threading models of single threaded V8 and multi-threaded CLR. Edge.js ensures correct lifetime of objects on V8 and CLR heaps. The CLR code can be pre-compiled or specified as C# or Python source: edge.js can execute C# or IronPython script at runtime. Edge allows CLR languages other than C# or IronPython to be plugged in.
 
-![edgejs](https://f.cloud.github.com/assets/822369/266383/e6320302-8df7-11e2-94f3-45f3eca2979f.PNG)
+![Python C# Node.js](https://f.cloud.github.com/assets/822369/332372/da7e53ea-9c24-11e2-9fd4-a24f62c7115c.png)
 
 Edge.js provides a basic, prescriptive model and implementation for interoperability between .NET and node.js in-process. You can built upon and extended this basic mechanism to support more specific scenarios, for example:
 * implementing express.js handlers and connect middleware for node.js application using .NET 4.5 ([read more](http://tomasz.janczuk.org/2013/02/hosting-net-code-in-nodejs-applications.html)),  
 * implementing CPU-bound computations in .NET and running them in-process with node.js application without blocking the event loop ([read more](http://tomasz.janczuk.org/2013/02/cpu-bound-workers-for-nodejs.html)),  
-* using C# and .NET instead of writing native node.js extensions in C/C++ and Win32 to access Windows specific functionality from a node.js application ([read more](http://tomasz.janczuk.org/2013/02/access-ms-sql-from-nodejs-application.html)). 
+* using C# and IronPython and .NET instead of writing native node.js extensions in C/C++ and Win32 to access Windows specific functionality from a node.js application ([read more](http://tomasz.janczuk.org/2013/02/access-ms-sql-from-nodejs-application.html)). 
 
 Read more about the background and motivations of the project [here](http://tomasz.janczuk.org/2013/02/hosting-net-code-in-nodejs-applications.html). 
 
@@ -27,8 +27,9 @@ Read more about the background and motivations of the project [here](http://toma
 * Windows
 * node.js 0.6.x or later (developed and tested with v0.6.20, v0.8.22, and v0.10.0, both x32 and x64 architectures)  
 * [.NET 4.5](http://www.microsoft.com/en-us/download/details.aspx?id=30653)  
+* to use Python, you also need [IronPython 2.7.3 or later](http://ironpython.codeplex.com/releases/view/81726)  
 
-## How to: hello, world
+## How to: C# hello, world
 
 Install edge:
 
@@ -153,7 +154,7 @@ var clrMethod = edge.func('My.Edge.Samples.dll');
 
 In that case the default typeName of `My.Edge.Samples.Startup` and methodName of `Invoke` is assumed as explained above. 
 
-## How to: specify additional CLR assembly references
+## How to: specify additional CLR assembly references in C# code
 
 When you provide C# source code and let edge compile it for you at runtime, edge will by default reference only mscorlib.dll and System.dll assemblies. In applications that require additional assemblies you can specify them in C# code using a special comment pattern. For example, to use ADO.NET you must reference System.Data.dll:
 
@@ -196,7 +197,7 @@ var add7 = edge.func({
 );
 ```
 
-## How to: marshal data
+## How to: marshal data between C# and node.js
 
 Edge.js can marshal any JSON-serializable value between .NET and node.js (although JSON serializaton is not used in the process). Edge also supports marshaling between node.js `Buffer` instance and a .NET `byte[]` array to help you efficiently pass binary data.
 
@@ -310,7 +311,7 @@ set EDGE_ENABLE_SCRIPTIGNOREATTRIBUTE=1
 
 Edge.js by default does not observe the ScriptIgnoreAttribute to avoid the associated performance cost. 
 
-## How to: call node.js from .NET
+## How to: call node.js from C#
 
 In addition to marshaling data, edge can marshal proxies to JavaScript functions when invoking .NET code from node.js. This allows .NET code to call back into node.js. 
 
@@ -377,7 +378,7 @@ Func<object,Task<object>>
 
 Using TPL in CLR to provide a proxy to an asynchronous node.js function allows the .NET code to use the convenience of the `await` keyword when invoking the node.js functionality. The example above shows the use of the `await` keyword when calling the proxy of the node.js `add` method.  
 
-## How to: export .NET function to node.js
+## How to: export C# function to node.js
 
 Similarly to marshaling functions from node.js to .NET, edge.js can also marshal functions from .NET to node.js. The .NET code can export a `Func<object,Task<object>>` delegate to node.js as part of the return value of a .NET method invocation. For example:
 
@@ -412,9 +413,108 @@ console.log(counter(null, true)); // prints 13
 console.log(counter(null, true)); // prints 14
 ```
 
+## How to: script Python in a node.js application
+
+Edge.js enables you to run Python and node.js in-process.
+
+You need Windows, [node.js](http://nodejs.org) (any stable version 0.6.x or later), [.NET 4.5](http://www.microsoft.com/en-us/download/details.aspx?id=30653), and [IronPython 2.7.3](http://ironpython.codeplex.com/releases/view/81726) to proceed.
+
+### Hello, world
+
+Install edge and edge-py modules:
+
+```
+npm install edge
+npm install edge-py
+```
+
+In your server.js:
+
+```javascript
+var edge = require('edge');
+
+var hello = edge.func('py', function () {/*
+    def hello(input):
+        return "Python welcomes " + input
+
+    lambda x: hello(x)
+*/});
+
+hello('Node.js', function (error, result) {
+    if (error) throw error;
+    console.log(result);
+});
+```
+
+Run and enjoy:
+
+```
+C:\projects\edgerepro>node py.js
+Python welcomes Node.js
+```
+
+### Python in its own file
+
+You can reference Python script stored in a *.py file instead of embedding Python code in a node.js script.
+
+In your hello.py file:
+
+```python
+def hello(input):
+    return "Python welcomes " + input
+
+lambda x: hello(x)
+```
+
+In your hello.js file:
+
+```javascript
+var edge = require('edge');
+
+var hello = edge.func('py', 'hello.py');
+
+hello('Node.js', function (error, result) {
+    if (error) throw error;
+    console.log(result);
+});
+```
+
+Run and enjoy:
+
+```
+C:\projects\edgerepro>node hello.js
+Python welcomes Node.js
+```
+
+### To sync or to async, that is the question
+
+In the examples above Pythion script was executing asynchronously on its own thread without blocking the singleton V8 thread on which the node.js event loop runs. This means your node.js application remains reponsive while the Python code executes in the background. 
+
+If know your Python code is non-blocking, or if your know what your are doing, you can tell edge.js to execute Python code on the singleton V8 thread. This will improve performance for non-blocking Python scripts embedded in a node.js application:
+
+```javascript
+var edge = require('edge');
+
+var hello = edge.func('py', {
+    source: function () {/*
+        def hello(input):
+            return "Python welcomes " + input
+
+        lambda x: hello(x)
+    */},
+    sync: true
+});
+
+console.log(hello('Node.js', true));
+```
+
+The `sync: true` property in the call to `edge.func` tells edge.js to execute Python code on the V8 thread as opposed to creating a new thread to run Python script on. The `true` parameter in the call to `hello` requests that edge.js does in fact call the `hello` function synchronously, i.e. return the result as opposed to calling a callback function. 
+
 ## How to: support for other CLR languages
 
-Edge.js can work with any pre-compiled CLR assembly that contains the `Func<object,Task<object>>` delegate. Out of the box, edge.js also allows you to embed C# source code in a node.js applicaiton and compile it on the fly. To enable compilation of other CLR languages (e.g. F#) at runtime or to support other idioms of constructing C# script, you can use the compiler composibility model provided by edge.js. Please read the [add support for a CLR language](https://github.com/tjanczuk/edge/wiki/Add-support-for-a-CLR-language) guide to get started. 
+Edge.js can work with any pre-compiled CLR assembly that contains the `Func<object,Task<object>>` delegate. Out of the box, edge.js also allows you to embed C# source code in a node.js application and compile it on the fly. With the use of the `edge-py` module, edge.js can also execute embedded IronPython script. 
+
+To enable compilation of other CLR languages (e.g. F#) at runtime or to support other idioms of constructing C# script, you can use the compiler composibility model provided by edge.js. Please read the [add support for a CLR language](https://github.com/tjanczuk/edge/wiki/Add-support-for-a-CLR-language) guide to get started. 
 
 ## How to: exceptions
 
