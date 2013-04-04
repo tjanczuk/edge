@@ -50,6 +50,7 @@ Handle<Value> throwV8Exception(System::Exception^ exception);
 typedef struct uv_edge_async_s {
     uv_async_t uv_async;
     gcroot<System::Action^> action;
+    BOOL singleton;
 } uv_edge_async_t;
 
 ref class V8SynchronizationContext {

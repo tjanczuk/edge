@@ -22,8 +22,8 @@ Handle<Value> v8FuncCallback(const v8::Arguments& args)
     HandleScope scope;
     Handle<v8::External> correlator = Handle<v8::External>::Cast(args.Callee()->Get(v8::String::NewSymbol("_edgeContext")));
     NodejsFuncInvokeContextWrap* wrap = (NodejsFuncInvokeContextWrap*)(correlator->Value());
-    NodejsFuncInvokeContext^ context = wrap->context;
-	wrap->context = nullptr;
+    NodejsFuncInvokeContext^ context = wrap->context;    
+    wrap->context = nullptr;
     if (!args[0]->IsUndefined() && !args[0]->IsNull())
     {
         context->CompleteWithError(gcnew System::Exception(exceptionV82stringCLR(args[0])));
