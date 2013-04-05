@@ -106,7 +106,7 @@ public:
 
     property Persistent<Function>* Func;
 
-    NodejsFunc(ClrFuncInvokeContext^ appInvokeContext, Handle<Function> function);
+    NodejsFunc(Handle<Function> function);
     ~NodejsFunc();
     !NodejsFunc();
 
@@ -177,7 +177,7 @@ public:
     static Handle<v8::Function> Initialize(System::Func<System::Object^,Task<System::Object^>^>^ func);
     Handle<v8::Value> Call(Handle<v8::Value> payload, Handle<v8::Value> callback);
     static Handle<v8::Value> MarshalCLRToV8(System::Object^ netdata);
-    static System::Object^ MarshalV8ToCLR(ClrFuncInvokeContext^ context, Handle<v8::Value> jsdata);    
+    static System::Object^ MarshalV8ToCLR(Handle<v8::Value> jsdata);    
 };
 
 typedef struct clrFuncWrap {
