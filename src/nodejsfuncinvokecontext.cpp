@@ -66,12 +66,7 @@ void NodejsFuncInvokeContext::CallFuncOnV8Thread()
     HandleScope scope;
     try 
     {
-        TryCatch try_catch;
         Handle<v8::Value> jspayload = ClrFunc::MarshalCLRToV8(this->payload);
-        if (try_catch.HasCaught()) 
-        {
-            throw gcnew System::Exception("Unable to convert CLR value to V8 value.");
-        }
 
         Handle<v8::FunctionTemplate> callbackTemplate = v8::FunctionTemplate::New(v8FuncCallback);
         Handle<v8::Function> callback = callbackTemplate->GetFunction();
@@ -118,7 +113,7 @@ void NodejsFuncInvokeContext::CompleteWithResult(Handle<v8::Value> result)
     DBG("NodejsFuncInvokeContext::CompleteWithResult");
     try 
     {
-        this->result = ClrFunc::MarshalV8ToCLR(nullptr, result);
+        this->result = ClrFunc::MarshalV8ToCLR(result);
         Task::Run(gcnew System::Action(this, &NodejsFuncInvokeContext::Complete));
     }
     catch (System::Exception^ e)

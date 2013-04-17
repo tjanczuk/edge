@@ -83,7 +83,7 @@ Handle<v8::Value> ClrFunc::Initialize(const v8::Arguments& args)
                     "Unable to access the CompileFunc method of the EdgeCompiler class in the edge.js compiler assembly.");
             }
 
-            System::Object^ parameters = ClrFunc::MarshalV8ToCLR(nullptr, options);
+            System::Object^ parameters = ClrFunc::MarshalV8ToCLR(options);
             System::Func<System::Object^,Task<System::Object^>^>^ func = 
                 (System::Func<System::Object^,Task<System::Object^>^>^)compileFunc->Invoke(
                     compilerInstance, gcnew array<System::Object^> { parameters });
@@ -112,119 +112,112 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(System::Object^ netdata)
 
     if (netdata == nullptr)
     {
-        return scope.Close(Undefined());
+        return scope.Close(Null());
     }
 
-    try 
+    System::Type^ type = netdata->GetType();
+    if (type == System::String::typeid)
     {
-        System::Type^ type = netdata->GetType();
-        if (type == System::String::typeid)
+        jsdata = stringCLR2V8((System::String^)netdata);
+    }
+    else if (type == System::Char::typeid)
+    {
+        jsdata = stringCLR2V8(((System::Char^)netdata)->ToString());
+    }
+    else if (type == bool::typeid)
+    {
+        jsdata = v8::Boolean::New((bool)netdata);
+    }
+    else if (type == System::Guid::typeid)
+    {
+        jsdata = stringCLR2V8(netdata->ToString());
+    }
+    else if (type == System::DateTime::typeid)
+    {
+        jsdata = stringCLR2V8(netdata->ToString());
+    }
+    else if (type == System::DateTimeOffset::typeid)
+    {
+        jsdata = stringCLR2V8(netdata->ToString());
+    }
+    else if (type == System::Uri::typeid)
+    {
+        jsdata = stringCLR2V8(netdata->ToString());
+    }
+    else if (type == int::typeid)
+    {
+        jsdata = v8::Integer::New((int)netdata);
+    }
+    else if (type == System::Int64::typeid)
+    {
+        jsdata = v8::Number::New(((System::IConvertible^)netdata)->ToDouble(nullptr));
+    }
+    else if (type == double::typeid)
+    {
+        jsdata = v8::Number::New((double)netdata);
+    }
+    else if (type == float::typeid)
+    {
+        jsdata = v8::Number::New((float)netdata);
+    }
+    else if (type->IsPrimitive || type == System::Decimal::typeid)
+    {
+        System::IConvertible^ convertible = dynamic_cast<System::IConvertible^>(netdata);
+        if (convertible != nullptr)
         {
-            jsdata = stringCLR2V8((System::String^)netdata);
-        }
-        else if (type == System::Char::typeid)
-        {
-            jsdata = stringCLR2V8(((System::Char^)netdata)->ToString());
-        }
-        else if (type == bool::typeid)
-        {
-            jsdata = v8::Boolean::New((bool)netdata);
-        }
-        else if (type == System::Guid::typeid)
-        {
-            jsdata = stringCLR2V8(netdata->ToString());
-        }
-        else if (type == System::DateTime::typeid)
-        {
-            jsdata = stringCLR2V8(netdata->ToString());
-        }
-        else if (type == System::DateTimeOffset::typeid)
-        {
-            jsdata = stringCLR2V8(netdata->ToString());
-        }
-        else if (type == System::Uri::typeid)
-        {
-            jsdata = stringCLR2V8(netdata->ToString());
-        }
-        else if (type == int::typeid)
-        {
-            jsdata = v8::Integer::New((int)netdata);
-        }
-        else if (type == System::Int64::typeid)
-        {
-            jsdata = v8::Number::New(((System::IConvertible^)netdata)->ToDouble(nullptr));
-        }
-        else if (type == double::typeid)
-        {
-            jsdata = v8::Number::New((double)netdata);
-        }
-        else if (type == float::typeid)
-        {
-            jsdata = v8::Number::New((float)netdata);
-        }
-        else if (type->IsPrimitive || type == System::Decimal::typeid)
-        {
-            System::IConvertible^ convertible = dynamic_cast<System::IConvertible^>(netdata);
-            if (convertible != nullptr)
-            {
-                jsdata = stringCLR2V8(convertible->ToString());
-            }
-            else
-            {
-                jsdata = stringCLR2V8(netdata->ToString());
-            }
-        }
-        else if (type->IsEnum)
-        {
-            jsdata = stringCLR2V8(netdata->ToString());
-        }
-        else if (type == cli::array<byte>::typeid)
-        {
-            cli::array<byte>^ buffer = (cli::array<byte>^)netdata;
-            pin_ptr<unsigned char> pinnedBuffer = &buffer[0];
-            node::Buffer* slowBuffer = node::Buffer::New(buffer->Length);
-            memcpy(node::Buffer::Data(slowBuffer), pinnedBuffer, buffer->Length);
-            Handle<v8::Value> args[] = { 
-                slowBuffer->handle_, 
-                v8::Integer::New(buffer->Length), 
-                v8::Integer::New(0) 
-            };
-            jsdata = bufferConstructor->NewInstance(3, args);    
-        }
-        else if (dynamic_cast<System::Collections::IDictionary^>(netdata) != nullptr)
-        {
-            Handle<v8::Object> result = v8::Object::New();
-            for each (System::Collections::DictionaryEntry^ entry in (System::Collections::IDictionary^)netdata)
-            {
-                if (dynamic_cast<System::String^>(entry->Key) != nullptr)
-                result->Set(stringCLR2V8((System::String^)entry->Key), ClrFunc::MarshalCLRToV8(entry->Value));
-            }
-
-            jsdata = result;
-        }
-        else if (dynamic_cast<System::Collections::IEnumerable^>(netdata) != nullptr)
-        {
-            Handle<v8::Array> result = v8::Array::New();
-            unsigned int i = 0;
-            for each (System::Object^ entry in (System::Collections::IEnumerable^)netdata)
-            {
-                result->Set(i++, ClrFunc::MarshalCLRToV8(entry));
-            }
-
-            jsdata = result;
-        }
-        else if (type == System::Func<System::Object^,Task<System::Object^>^>::typeid)
-        {
-            jsdata = ClrFunc::Initialize((System::Func<System::Object^,Task<System::Object^>^>^)netdata);
+            jsdata = stringCLR2V8(convertible->ToString());
         }
         else
         {
-            jsdata = ClrFunc::MarshalCLRObjectToV8(netdata);
+            jsdata = stringCLR2V8(netdata->ToString());
         }
     }
-    catch (System::Exception^ e)
+    else if (type->IsEnum)
     {
-        return scope.Close(throwV8Exception(e));
+        jsdata = stringCLR2V8(netdata->ToString());
+    }
+    else if (type == cli::array<byte>::typeid)
+    {
+        cli::array<byte>^ buffer = (cli::array<byte>^)netdata;
+        pin_ptr<unsigned char> pinnedBuffer = &buffer[0];
+        node::Buffer* slowBuffer = node::Buffer::New(buffer->Length);
+        memcpy(node::Buffer::Data(slowBuffer), pinnedBuffer, buffer->Length);
+        Handle<v8::Value> args[] = { 
+            slowBuffer->handle_, 
+            v8::Integer::New(buffer->Length), 
+            v8::Integer::New(0) 
+        };
+        jsdata = bufferConstructor->NewInstance(3, args);    
+    }
+    else if (dynamic_cast<System::Collections::IDictionary^>(netdata) != nullptr)
+    {
+        Handle<v8::Object> result = v8::Object::New();
+        for each (System::Collections::DictionaryEntry^ entry in (System::Collections::IDictionary^)netdata)
+        {
+            if (dynamic_cast<System::String^>(entry->Key) != nullptr)
+            result->Set(stringCLR2V8((System::String^)entry->Key), ClrFunc::MarshalCLRToV8(entry->Value));
+        }
+
+        jsdata = result;
+    }
+    else if (dynamic_cast<System::Collections::IEnumerable^>(netdata) != nullptr)
+    {
+        Handle<v8::Array> result = v8::Array::New();
+        unsigned int i = 0;
+        for each (System::Object^ entry in (System::Collections::IEnumerable^)netdata)
+        {
+            result->Set(i++, ClrFunc::MarshalCLRToV8(entry));
+        }
+
+        jsdata = result;
+    }
+    else if (type == System::Func<System::Object^,Task<System::Object^>^>::typeid)
+    {
+        jsdata = ClrFunc::Initialize((System::Func<System::Object^,Task<System::Object^>^>^)netdata);
+    }
+    else
+    {
+        jsdata = ClrFunc::MarshalCLRObjectToV8(netdata);
     }
 
     return scope.Close(jsdata);
@@ -276,13 +269,13 @@ Handle<v8::Value> ClrFunc::MarshalCLRObjectToV8(System::Object^ netdata)
     return scope.Close(result);
 }
 
-System::Object^ ClrFunc::MarshalV8ToCLR(ClrFuncInvokeContext^ context, Handle<v8::Value> jsdata)
+System::Object^ ClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata)
 {
     HandleScope scope;
 
-    if (jsdata->IsFunction() && context != nullptr) 
+    if (jsdata->IsFunction()) 
     {
-        NodejsFunc^ functionContext = gcnew NodejsFunc(context, Handle<v8::Function>::Cast(jsdata));
+        NodejsFunc^ functionContext = gcnew NodejsFunc(Handle<v8::Function>::Cast(jsdata));
         System::Func<System::Object^,Task<System::Object^>^>^ netfunc = 
             gcnew System::Func<System::Object^,Task<System::Object^>^>(
                 functionContext, &NodejsFunc::FunctionWrapper);
@@ -304,7 +297,7 @@ System::Object^ ClrFunc::MarshalV8ToCLR(ClrFuncInvokeContext^ context, Handle<v8
         cli::array<System::Object^>^ netarray = gcnew cli::array<System::Object^>(jsarray->Length());
         for (unsigned int i = 0; i < jsarray->Length(); i++)
         {
-            netarray[i] = ClrFunc::MarshalV8ToCLR(context, jsarray->Get(i));
+            netarray[i] = ClrFunc::MarshalV8ToCLR(jsarray->Get(i));
         }
 
         return netarray;
@@ -319,7 +312,7 @@ System::Object^ ClrFunc::MarshalV8ToCLR(ClrFuncInvokeContext^ context, Handle<v8
             Handle<v8::String> name = Handle<v8::String>::Cast(propertyNames->Get(i));
             String::Utf8Value utf8name(name);
             System::String^ netname = gcnew System::String(*utf8name);
-            System::Object^ netvalue = ClrFunc::MarshalV8ToCLR(context, jsobject->Get(name));
+            System::Object^ netvalue = ClrFunc::MarshalV8ToCLR(jsobject->Get(name));
             netobject->Add(netname, netvalue);
         }
 
@@ -363,7 +356,7 @@ Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> cal
     try 
     {
         ClrFuncInvokeContext^ context = gcnew ClrFuncInvokeContext(callback);
-        context->Payload = ClrFunc::MarshalV8ToCLR(context, payload);
+        context->Payload = ClrFunc::MarshalV8ToCLR(payload);
         Task<System::Object^>^ task = this->func(context->Payload);
         if (task->IsCompleted)
         {

@@ -176,6 +176,7 @@ namespace Edge.Tests
 
             // Now simulate an event callback after this CLR method has finished.
             Task.Delay(50).ContinueWith(async (value) => {
+                GC.Collect();
                 // This throws an exception if the weak reference is not
                 // pointing to an existing object.
                 GC.GetGeneration(weakRefToNodejsFunc);
