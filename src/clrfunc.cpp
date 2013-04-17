@@ -83,7 +83,7 @@ Handle<v8::Value> ClrFunc::Initialize(const v8::Arguments& args)
                     "Unable to access the CompileFunc method of the EdgeCompiler class in the edge.js compiler assembly.");
             }
 
-            System::Object^ parameters = ClrFunc::MarshalV8ToCLR(nullptr, options);
+            System::Object^ parameters = ClrFunc::MarshalV8ToCLR(options);
             System::Func<System::Object^,Task<System::Object^>^>^ func = 
                 (System::Func<System::Object^,Task<System::Object^>^>^)compileFunc->Invoke(
                     compilerInstance, gcnew array<System::Object^> { parameters });
@@ -276,13 +276,13 @@ Handle<v8::Value> ClrFunc::MarshalCLRObjectToV8(System::Object^ netdata)
     return scope.Close(result);
 }
 
-System::Object^ ClrFunc::MarshalV8ToCLR(ClrFuncInvokeContext^ context, Handle<v8::Value> jsdata)
+System::Object^ ClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata)
 {
     HandleScope scope;
 
-    if (jsdata->IsFunction() && context != nullptr) 
+    if (jsdata->IsFunction()) 
     {
-        NodejsFunc^ functionContext = gcnew NodejsFunc(context, Handle<v8::Function>::Cast(jsdata));
+        NodejsFunc^ functionContext = gcnew NodejsFunc(Handle<v8::Function>::Cast(jsdata));
         System::Func<System::Object^,Task<System::Object^>^>^ netfunc = 
             gcnew System::Func<System::Object^,Task<System::Object^>^>(
                 functionContext, &NodejsFunc::FunctionWrapper);
@@ -304,7 +304,7 @@ System::Object^ ClrFunc::MarshalV8ToCLR(ClrFuncInvokeContext^ context, Handle<v8
         cli::array<System::Object^>^ netarray = gcnew cli::array<System::Object^>(jsarray->Length());
         for (unsigned int i = 0; i < jsarray->Length(); i++)
         {
-            netarray[i] = ClrFunc::MarshalV8ToCLR(context, jsarray->Get(i));
+            netarray[i] = ClrFunc::MarshalV8ToCLR(jsarray->Get(i));
         }
 
         return netarray;
@@ -319,7 +319,7 @@ System::Object^ ClrFunc::MarshalV8ToCLR(ClrFuncInvokeContext^ context, Handle<v8
             Handle<v8::String> name = Handle<v8::String>::Cast(propertyNames->Get(i));
             String::Utf8Value utf8name(name);
             System::String^ netname = gcnew System::String(*utf8name);
-            System::Object^ netvalue = ClrFunc::MarshalV8ToCLR(context, jsobject->Get(name));
+            System::Object^ netvalue = ClrFunc::MarshalV8ToCLR(jsobject->Get(name));
             netobject->Add(netname, netvalue);
         }
 
@@ -363,7 +363,7 @@ Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> cal
     try 
     {
         ClrFuncInvokeContext^ context = gcnew ClrFuncInvokeContext(callback);
-        context->Payload = ClrFunc::MarshalV8ToCLR(context, payload);
+        context->Payload = ClrFunc::MarshalV8ToCLR(payload);
         Task<System::Object^>^ task = this->func(context->Payload);
         if (task->IsCompleted)
         {

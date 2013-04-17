@@ -55,7 +55,6 @@ void ClrFuncInvokeContext::CompleteOnCLRThread(System::Threading::Tasks::Task<Sy
 
 void ClrFuncInvokeContext::CompleteOnV8ThreadAsynchronous()
 {
-    HandleScope scope;
     this->CompleteOnV8Thread(false);
 }
 

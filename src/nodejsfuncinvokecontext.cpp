@@ -118,7 +118,7 @@ void NodejsFuncInvokeContext::CompleteWithResult(Handle<v8::Value> result)
     DBG("NodejsFuncInvokeContext::CompleteWithResult");
     try 
     {
-        this->result = ClrFunc::MarshalV8ToCLR(nullptr, result);
+        this->result = ClrFunc::MarshalV8ToCLR(result);
         Task::Run(gcnew System::Action(this, &NodejsFuncInvokeContext::Complete));
     }
     catch (System::Exception^ e)
