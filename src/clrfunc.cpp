@@ -112,7 +112,7 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(System::Object^ netdata)
 
     if (netdata == nullptr)
     {
-        return scope.Close(Undefined());
+        return scope.Close(Null());
     }
 
     System::Type^ type = netdata->GetType();
