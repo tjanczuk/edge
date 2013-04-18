@@ -199,4 +199,124 @@ describe('call patterns', function () {
         );
     }); 
 
+    it('exception when marshaling CLR data to V8 when calling exported JS function', function (done) {
+        var callout = edge.func(function () {/*
+            using System;
+            using System.Collections.Generic;
+            using System.Threading.Tasks;
+
+            public class BadPerson 
+            {
+                public string Name 
+                {
+                    get 
+                    {
+                        throw new InvalidOperationException("I have no name");
+                    }
+                }
+            }
+
+            public class Startup {
+                public async Task<object> Invoke(Func<object, Task<object>> callin) 
+                {
+                    try 
+                    {
+                        await callin(new BadPerson());
+                        return "Unexpected success";
+                    }
+                    catch (Exception e)
+                    {
+                        while (e.InnerException != null)
+                            e = e.InnerException;
+
+                        if (e.Message == "I have no name")
+                        {
+                            return "Expected failure";
+                        }   
+                        else 
+                        {
+                            return "Unexpected failure: " + e.ToString();
+                        }
+                    }
+                }
+            }
+        */});
+
+        callout(
+            function (data, callback) {
+                callback();
+            },
+            function (error, result) {
+                assert.ifError(error);
+                assert.equal(result, 'Expected failure');
+                done();
+            } 
+        );
+    }); 
+
+    it('exception when marshaling CLR data to V8 when completing a synchronous call from JS to .NET', function () {
+        var callout = edge.func(function () {/*
+            using System;
+            using System.Collections.Generic;
+            using System.Threading.Tasks;
+
+            public class BadPerson 
+            {
+                public string Name 
+                {
+                    get 
+                    {
+                        throw new InvalidOperationException("I have no name");
+                    }
+                }
+            }
+
+            public class Startup {
+                public async Task<object> Invoke(object input) 
+                {
+                    return new BadPerson();
+                }
+            }
+        */});
+
+        assert.throws(
+            function () { callout(null, true); },
+            /I have no name/
+        );
+    }); 
+
+    it('exception when marshaling CLR data to V8 when completing an asynchronous call from JS to .NET', function (done) {
+        var callout = edge.func(function () {/*
+            using System;
+            using System.Collections.Generic;
+            using System.Threading.Tasks;
+
+            public class BadPerson 
+            {
+                public string Name 
+                {
+                    get 
+                    {
+                        throw new InvalidOperationException("I have no name");
+                    }
+                }
+            }
+
+            public class Startup {
+                public async Task<object> Invoke(object input) 
+                {
+                    await Task.Delay(200);
+                    return new BadPerson();
+                }
+            }
+        */});
+
+        callout(false, function (error, result) {
+            assert.equal(typeof error, 'string');
+            assert.ok(error.match(/I have no name/));
+            done();
+        });
+
+    }); 
+
 });

@@ -94,12 +94,12 @@ Handle<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread(bool completedSynchro
         break;
         case TaskStatus::RanToCompletion:
             argc = 2;
-            TryCatch try_catch;
-            argv[1] = ClrFunc::MarshalCLRToV8(this->Task->Result);
-            if (try_catch.HasCaught()) 
-            {
+            try {
+                argv[1] = ClrFunc::MarshalCLRToV8(this->Task->Result);
+            }
+            catch (System::Exception^ e) {
                 argc = 1;
-                argv[0] = try_catch.Exception();
+                argv[0] = exceptionCLR2stringV8(e);
             }
         break;
     };
