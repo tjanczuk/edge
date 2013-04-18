@@ -176,4 +176,27 @@ describe('call patterns', function () {
         callout({ payload: 'callin2', callin: callin }, callback);
     }); 
 
+    it('call JS func exported to .NET as a result of calling a JS func from .NET', function (done) {
+        var callout = edge.func(function () {/*
+            async (input) => {
+                Func<object,Task<object>> func1 = (Func<object,Task<object>>)input;
+                Func<object,Task<object>> func2 = (Func<object,Task<object>>)(await func1(null));
+                return await func2(null);
+            }
+        */});
+
+        callout(
+            function (data, callback) {
+                callback(null, function (data, callback) {
+                    callback(null, 'Func2 called');
+                });
+            }, 
+            function (error, result) {
+                assert.ifError(error);
+                assert.equal(result, 'Func2 called');
+                done();
+            }
+        );
+    }); 
+
 });
