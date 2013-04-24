@@ -414,6 +414,28 @@ zip({ src: '..\\mydir', dest: '..\\mydir.zip' }, function (error) {
          <a href="https://github.com/tjanczuk/edge/blob/master/samples/207_zip.js"><small>see full code</small></a>
         </section>          
 
+        <section>
+          <h2>Image conversion</h2>
+          <p><small>Convert images between JPG, BMP, TIFF, PNG, and GIF</small></p>
+          <pre><code class="javscript">
+var convertImageToJpg = require('edge').func(function() {/*
+  class Startup {
+    public async Task&lt;object&gt; Invoke(string src) {
+      await Task.Run(async () => {
+        Image.FromFile(src).Save(src + '.jpg', ImageFormat.Jpeg);
+      });
+      return null;
+    }
+  }
+*/});
+
+convertImageToJpg('.\\edge.png', function (error) {
+  ...
+});
+
+         </code></pre>
+         <a href="https://github.com/tjanczuk/edge/blob/master/samples/208_convertImage.js"><small>see full code</small></a>
+        </section>    
 
         <section>
           <h2>Express.js handler in C#</h2>
