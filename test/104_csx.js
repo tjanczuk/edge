@@ -168,7 +168,7 @@ describe('edge-cs', function () {
         );
     });
 
-    it('succeeds with System.Data.dll reference', function (done) {
+    it('succeeds with System.Data.dll reference as comment in class', function (done) {
         var func = edge.func({
             source: function () {/* 
                 //#r "System.Data.dll"
@@ -191,4 +191,85 @@ describe('edge-cs', function () {
             done();
         });
     });
+
+    it('succeeds with System.Data.dll reference without comment in class', function (done) {
+        var func = edge.func({
+            source: function () {/* 
+                #r "System.Data.dll"
+
+                using System.Threading.Tasks;
+                using System.Data;
+
+                public class Startup 
+                {
+                    public async Task<object> Invoke(object input) 
+                    {
+                        return "Hello, " + input.ToString();
+                    }
+                }           
+            */}
+        });
+        func("JavaScript", function (error, result) {
+            assert.ifError(error);
+            assert.equal(result, 'Hello, JavaScript');
+            done();
+        });
+    });    
+
+    it('succeeds with System.Data.dll reference as comment in async lambda', function (done) {
+        var func = edge.func({
+            source: function () {/* 
+                //#r "System.Data.dll"
+                
+                async (input) => 
+                {
+                    return "Hello, " + input.ToString();
+                }
+            */}
+        });
+        func("JavaScript", function (error, result) {
+            assert.ifError(error);
+            assert.equal(result, 'Hello, JavaScript');
+            done();
+        });
+    });
+
+    it('succeeds with System.Data.dll reference without comment in async lambda', function (done) {
+        var func = edge.func({
+            source: function () {/* 
+                #r "System.Data.dll"
+                
+                async (input) => 
+                {
+                    return "Hello, " + input.ToString();
+                }
+            */}
+        });
+        func("JavaScript", function (error, result) {
+            assert.ifError(error);
+            assert.equal(result, 'Hello, JavaScript');
+            done();
+        });
+    });
+
+    it('succeeds with System.Data.dll reference and a using statement in async lambda', function (done) {
+        var func = edge.func({
+            source: function () {/* 
+                #r "System.Data.dll"
+
+                using System.Data;
+                
+                async (input) => 
+                {
+                    return input.ToString() + " is " + SqlDbType.Real.ToString();
+                }
+            */}
+        });
+        func("JavaScript", function (error, result) {
+            assert.ifError(error);
+            assert.equal(result, 'JavaScript is Real');
+            done();
+        });
+    });
+
 });
