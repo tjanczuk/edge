@@ -3,35 +3,31 @@
 var edge = require('../lib/edge');
 
 var listCertificates = edge.func(function() {/*
-    //#r "System.dll"
+    #r "System.dll"
 
-    using System;
-    using System.Threading.Tasks;
-    using System.Security.Cryptography.X509Certificates;
     using System.Collections.Generic;
+    using System.Security.Cryptography.X509Certificates;
 
-    class Startup
+    async (data) =>
     {
-        public async Task<object> Invoke(IDictionary<string,object> input)
+        var input = (IDictionary<string,object>)data;
+        X509Store store = new X509Store(
+            (string)input["storeName"], 
+            (StoreLocation)Enum.Parse(typeof(StoreLocation), (string)input["storeLocation"]));
+        store.Open(OpenFlags.ReadOnly);
+        try
         {
-            X509Store store = new X509Store(
-                (string)input["storeName"], 
-                (StoreLocation)Enum.Parse(typeof(StoreLocation), (string)input["storeLocation"]));
-            store.Open(OpenFlags.ReadOnly);
-            try
+            List<string> result = new List<string>();
+            foreach (X509Certificate2 certificate in store.Certificates)
             {
-                List<string> result = new List<string>();
-                foreach (X509Certificate2 certificate in store.Certificates)
-                {
-                    result.Add(certificate.Subject);
-                }
+                result.Add(certificate.Subject);
+            }
 
-                return result;
-            }
-            finally
-            {
-                store.Close();
-            }
+            return result;
+        }
+        finally
+        {
+            store.Close();
         }
     }
 */});

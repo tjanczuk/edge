@@ -3,7 +3,7 @@
 var edge = require('../lib/edge');
 
 var convertImage = edge.func(function() {/*
-    //#r "System.Drawing.dll"
+    #r "System.Drawing.dll"
 
     using System;
     using System.Threading.Tasks;

@@ -3,21 +3,24 @@
 var edge = require('../lib/edge');
 
 var writeEventLog = edge.func(function() {/*
+    using System.Collections.Generic;
+    using System.Diagnostics;
+
     async (input) => 
     {
-        var parameters = (System.Collections.Generic.IDictionary<string,object>)input;
+        var parameters = (IDictionary<string,object>)input;
         var source = (string)parameters["source"];
         var log = (string)parameters["log"];
-        if (!System.Diagnostics.EventLog.SourceExists(source))
+        if (!EventLog.SourceExists(source))
         {
-            System.Diagnostics.EventLog.CreateEventSource(source, log);
+            EventLog.CreateEventSource(source, log);
         }
 
-        System.Diagnostics.EventLog.WriteEntry(
+        EventLog.WriteEntry(
             source,
             (string)parameters["message"],
-            (System.Diagnostics.EventLogEntryType)Enum.Parse(
-                typeof(System.Diagnostics.EventLogEntryType), (string)parameters["type"]),
+            (EventLogEntryType)Enum.Parse(
+                typeof(EventLogEntryType), (string)parameters["type"]),
             (int)parameters["id"]
         );
 

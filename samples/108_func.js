@@ -3,18 +3,14 @@
 var edge = require('../lib/edge');
 
 var addAndMultiplyBy2 = edge.func(function () {/*
-	using System;
-	using System.Threading.Tasks;
 	using System.Collections.Generic;
 
-	public class Startup
+	async (data) => 	
 	{
-		public async Task<object> Invoke(IDictionary<string,object> input)
-		{
-			int sum = (int)(input["a"]) + (int)(input["b"]);
-			var multiplyBy2 = (Func<object,Task<object>>)input["multiplyBy2"];
-			return await multiplyBy2(sum);
-		}
+		var input = (IDictionary<string,object>)data;
+		int sum = (int)(input["a"]) + (int)(input["b"]);
+		var multiplyBy2 = (Func<object,Task<object>>)input["multiplyBy2"];
+		return await multiplyBy2(sum);
 	}
 */});
 

@@ -1,23 +1,19 @@
 var edge = require('../lib/edge');
 
 var writeRegistery = edge.func(function () {/*
-		using System;
 		using System.Collections.Generic;
-		using System.Threading.Tasks;
 		using Microsoft.Win32;
 
-		public class Startup
+		async (data) =>
 		{
-			public async Task<object> Invoke(IDictionary<string, object> input)
-			{
-				var keyName = (string)input["keyName"];
-				var valueName = (string)input["valueName"];
-				var value = input["value"];
+			var input = (IDictionary<string,object>)data;
+			var keyName = (string)input["keyName"];
+			var valueName = (string)input["valueName"];
+			var value = input["value"];
 
-				Registry.SetValue(keyName, valueName, value);
+			Registry.SetValue(keyName, valueName, value);
 
-				return null;
-			}
+			return null;
 		}
 	*/}
 );

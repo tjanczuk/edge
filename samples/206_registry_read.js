@@ -1,27 +1,23 @@
 var edge = require('../lib/edge');
 
 var readRegistery = edge.func(function () {/*
-		using System;
 		using System.Collections.Generic;
-		using System.Threading.Tasks;
 		using Microsoft.Win32;
 
-		public class Startup
+		async (data) =>
 		{
-			public async Task<object> Invoke(IDictionary<string, object> input)
+			var input = (IDictionary<string,object>)data;
+			var keyName = (string) input["keyName"];
+			var valueName = (string) input["valueName"];
+			var defaultValue = (string) null;
+			if (input.ContainsKey("defaultValue"))
 			{
-				var keyName = (string) input["keyName"];
-				var valueName = (string) input["valueName"];
-				var defaultValue = (string) null;
-				if (input.ContainsKey("defaultValue"))
-				{
-					defaultValue = (string) input["defaultValue"];
-				}
-
-				var readValue = Registry.GetValue(keyName, valueName, defaultValue);
-
-				return readValue;
+				defaultValue = (string) input["defaultValue"];
 			}
+
+			var readValue = Registry.GetValue(keyName, valueName, defaultValue);
+
+			return readValue;
 		}
 	*/}
 );

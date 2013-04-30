@@ -3,22 +3,17 @@
 var edge = require('../lib/edge');
 
 var hello = edge.func(function () {/*
-	using System;
-	using System.Threading.Tasks;
 	using System.Collections.Generic;
 
-	public class Startup
+	async (data) =>
 	{
-		public async Task<object> Invoke(IDictionary<string,object> input)
+		Console.WriteLine("-----> In .NET:");
+		foreach (var kv in (IDictionary<string,object>)data)
 		{
-			Console.WriteLine("-----> In .NET:");
-			foreach (var kv in input)
-			{
-				Console.WriteLine(kv.Key + ": " + kv.Value.GetType());
-			}
-
-			return null;
+			Console.WriteLine(kv.Key + ": " + kv.Value.GetType());
 		}
+
+		return null;
 	}
 */});
 

@@ -3,23 +3,19 @@
 var edge = require('../lib/edge');
 
 var unzipDirectory = edge.func(function() {/*
-    //#r "System.IO.Compression.FileSystem.dll"
+    #r "System.IO.Compression.FileSystem.dll"
 
-    using System;
-    using System.Threading.Tasks;
     using System.Collections.Generic;
     using System.IO.Compression;
 
-    class Startup
+    async (data) =>
     {
-        public async Task<object> Invoke(IDictionary<string,object> input)
-        {
-            await Task.Run(async () => {
-                ZipFile.ExtractToDirectory((string)input["source"], (string)input["destination"]);
-            });
+        var input = (IDictionary<string,object>)data;
+        await Task.Run(async () => {
+            ZipFile.ExtractToDirectory((string)input["source"], (string)input["destination"]);
+        });
 
-            return null;
-        }
+        return null;
     }
 */});
 
