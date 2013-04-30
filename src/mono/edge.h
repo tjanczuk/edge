@@ -47,14 +47,14 @@ Handle<Value> throwV8Exception(MonoException* exception);
 
 class MonoEmbedding
 {
-	static MonoAssembly* assembly;
+    static MonoAssembly* assembly;
 public:
-	static void Initialize();
-	static MonoAssembly* GetAssembly();
-	static MonoImage* GetImage();
-	static MonoClass* GetClass();
-	static MonoObject* GetClrFuncReflectionWrapFunc(const char* assembly, const char* typeName, const char* methodName, MonoException ** exc);
-	static MonoObject* CreateDictionary();
+    static void Initialize();
+    static MonoAssembly* GetAssembly();
+    static MonoImage* GetImage();
+    static MonoClass* GetClass();
+    static MonoObject* GetClrFuncReflectionWrapFunc(const char* assembly, const char* typeName, const char* methodName, MonoException ** exc);
+    static MonoObject* CreateDictionary();
 };
 
 typedef struct uv_edge_async_s {
@@ -94,34 +94,34 @@ public:
 
 class Task
 {
-public:	
-	enum TaskStatus
-	{
-		Created = 0,
-		WaitingForActivation = 1,
-		WaitingToRun = 2,
-		Running = 3,
-		WaitingForChildrenToComplete = 4,
-		RanToCompletion = 5,
-		Canceled = 6,
-		Faulted = 7
-	};
-	static TaskStatus Status(MonoObject* _this);
-	static MonoException* Exception(MonoObject* _this);
-	static MonoObject* Result(MonoObject* _this);
+public: 
+    enum TaskStatus
+    {
+        Created = 0,
+        WaitingForActivation = 1,
+        WaitingToRun = 2,
+        Running = 3,
+        WaitingForChildrenToComplete = 4,
+        RanToCompletion = 5,
+        Canceled = 6,
+        Faulted = 7
+    };
+    static TaskStatus Status(MonoObject* _this);
+    static MonoException* Exception(MonoObject* _this);
+    static MonoObject* Result(MonoObject* _this);
 };
 
 // wrapper for System.Collections.Generic.Dictionary
 
 class Dictionary
 {
-public:	
-	static void Add(MonoObject* _this, const char* name, MonoObject* value);
+public: 
+    static void Add(MonoObject* _this, const char* name, MonoObject* value);
 };
 
 class ClrFuncInvokeContext {
 private:
-	GCHandle _this;
+    GCHandle _this;
     Persistent<Function>* callback;
     uv_edge_async_t* uv_edge_async;
 
@@ -129,11 +129,11 @@ private:
 
 public:
     MonoObject* Payload();
-	void Payload(MonoObject* value);
+    void Payload(MonoObject* value);
     MonoObject* Task();
-	void Task(MonoObject* value);
+    void Task(MonoObject* value);
     bool Sync();
-	void Sync(bool value);
+    void Sync(bool value);
 
     ClrFuncInvokeContext(Handle<v8::Value> callbackOrSync);
 
@@ -195,7 +195,7 @@ public:
 class ClrFunc {
 private:
     //System::Func<System::Object^,Task<System::Object^>^>^ func;
-	GCHandle func;
+    GCHandle func;
 
     ClrFunc();
 
@@ -214,3 +214,5 @@ typedef struct clrFuncWrap {
 } ClrFuncWrap;
 
 #endif
+
+// vim: ts=4 sw=4 et: 

@@ -18,42 +18,42 @@
 
 static MonoClass* GetClrFuncInvokeContextClass()
 {
-	static MonoClass* klass;
+    static MonoClass* klass;
 
-	if (!klass)
-		klass = mono_class_from_name(MonoEmbedding::GetImage(), "", "ClrFuncInvokeContext");
+    if (!klass)
+        klass = mono_class_from_name(MonoEmbedding::GetImage(), "", "ClrFuncInvokeContext");
 
-	return klass;
+    return klass;
 }
 
 ClrFuncInvokeContext::ClrFuncInvokeContext(Handle<v8::Value> callbackOrSync) : _this(0), callback(0), uv_edge_async(0)
 {
-	static MonoClassField* field;
-	static MonoClassField* syncField;
+    static MonoClassField* field;
+    static MonoClassField* syncField;
 
-	if (!field)
-		field = mono_class_get_field_from_name(GetClrFuncInvokeContextClass(), "native");
-	if (!syncField)
-		syncField = mono_class_get_field_from_name(GetClrFuncInvokeContextClass(), "Sync");
+    if (!field)
+        field = mono_class_get_field_from_name(GetClrFuncInvokeContextClass(), "native");
+    if (!syncField)
+        syncField = mono_class_get_field_from_name(GetClrFuncInvokeContextClass(), "Sync");
 
-	MonoObject* obj = mono_object_new(mono_domain_get(), GetClrFuncInvokeContextClass());
+    MonoObject* obj = mono_object_new(mono_domain_get(), GetClrFuncInvokeContextClass());
 
-	mono_field_set_value(obj, field, this);
-	this->_this = mono_gchandle_new(obj, FALSE);
+    mono_field_set_value(obj, field, this);
+    this->_this = mono_gchandle_new(obj, FALSE);
 
     DBG("ClrFuncInvokeContext::ClrFuncInvokeContext");
     if (callbackOrSync->IsFunction())
     {
         this->callback = new Persistent<Function>();
         *(this->callback) = Persistent<Function>::New(Handle<Function>::Cast(callbackOrSync));
-		this->Sync(FALSE);
+        this->Sync(FALSE);
     }
     else 
     {
-		this->Sync(callbackOrSync->BooleanValue());
+        this->Sync(callbackOrSync->BooleanValue());
     }
 
-	MonoMethod* getAction = mono_class_get_method_from_name(GetClrFuncInvokeContextClass(), "GetCompleteOnV8ThreadAsynchronousAction", -1);
+    MonoMethod* getAction = mono_class_get_method_from_name(GetClrFuncInvokeContextClass(), "GetCompleteOnV8ThreadAsynchronousAction", -1);
     this->uv_edge_async = V8SynchronizationContext::RegisterAction(mono_runtime_invoke(getAction, obj, NULL, NULL));
 }
 
@@ -90,7 +90,7 @@ Handle<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread(bool completedSynchro
     if (completedSynchronously)
     {
         V8SynchronizationContext::CancelAction(this->uv_edge_async);
-		this->uv_edge_async = NULL;
+        this->uv_edge_async = NULL;
     }
 
     if (!this->Sync() && !this->callback)
@@ -155,39 +155,41 @@ Handle<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread(bool completedSynchro
 }
 
 #define IMPLEMENT_REF_FIELD(T, Name)\
-	static MonoClassField* Name ## Field;\
-	T ClrFuncInvokeContext::Name()\
-	{\
-		if (!Name ## Field)\
-		Name ## Field = mono_class_get_field_from_name(GetClrFuncInvokeContextClass(), #Name);\
-		T value;\
-		mono_field_get_value(mono_gchandle_get_target(_this), Name ## Field, &value);\
-		return value;\
-	}\
-	void ClrFuncInvokeContext::Name(T value)\
-	{\
-		if (!Name ## Field)\
-			Name ## Field = mono_class_get_field_from_name(GetClrFuncInvokeContextClass(), #Name);\
-		mono_field_set_value(mono_gchandle_get_target(_this), Name ## Field, value);\
-	}\
+    static MonoClassField* Name ## Field;\
+    T ClrFuncInvokeContext::Name()\
+    {\
+        if (!Name ## Field)\
+        Name ## Field = mono_class_get_field_from_name(GetClrFuncInvokeContextClass(), #Name);\
+        T value;\
+        mono_field_get_value(mono_gchandle_get_target(_this), Name ## Field, &value);\
+        return value;\
+    }\
+    void ClrFuncInvokeContext::Name(T value)\
+    {\
+        if (!Name ## Field)\
+            Name ## Field = mono_class_get_field_from_name(GetClrFuncInvokeContextClass(), #Name);\
+        mono_field_set_value(mono_gchandle_get_target(_this), Name ## Field, value);\
+    }\
 
 #define IMPLEMENT_FIELD(T, Name)\
-	static MonoClassField* Name ## Field;\
-	T ClrFuncInvokeContext::Name()\
-	{\
-		if (!Name ## Field)\
-		Name ## Field = mono_class_get_field_from_name(GetClrFuncInvokeContextClass(), #Name);\
-		T value;\
-		mono_field_get_value(mono_gchandle_get_target(_this), Name ## Field, &value);\
-		return value;\
-	}\
-	void ClrFuncInvokeContext::Name(T value)\
-	{\
-		if (!Name ## Field)\
-			Name ## Field = mono_class_get_field_from_name(GetClrFuncInvokeContextClass(), #Name);\
-		mono_field_set_value(mono_gchandle_get_target(_this), Name ## Field, &value);\
-	}\
+    static MonoClassField* Name ## Field;\
+    T ClrFuncInvokeContext::Name()\
+    {\
+        if (!Name ## Field)\
+        Name ## Field = mono_class_get_field_from_name(GetClrFuncInvokeContextClass(), #Name);\
+        T value;\
+        mono_field_get_value(mono_gchandle_get_target(_this), Name ## Field, &value);\
+        return value;\
+    }\
+    void ClrFuncInvokeContext::Name(T value)\
+    {\
+        if (!Name ## Field)\
+            Name ## Field = mono_class_get_field_from_name(GetClrFuncInvokeContextClass(), #Name);\
+        mono_field_set_value(mono_gchandle_get_target(_this), Name ## Field, &value);\
+    }\
 
 IMPLEMENT_REF_FIELD(MonoObject*, Payload)
 IMPLEMENT_REF_FIELD(MonoObject*, Task)
 IMPLEMENT_FIELD(bool, Sync)
+
+// vim: ts=4 sw=4 et: 

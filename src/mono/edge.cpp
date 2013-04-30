@@ -13,7 +13,7 @@ void init(Handle<Object> target)
 {
     DBG("edge::init");
     V8SynchronizationContext::Initialize();
-	MonoEmbedding::Initialize();
+    MonoEmbedding::Initialize();
     bufferConstructor = Persistent<Function>::New(Handle<Function>::Cast(
         Context::GetCurrent()->Global()->Get(String::New("Buffer")))); 
     debugMode = (0 < GetEnvironmentVariable("EDGE_DEBUG", NULL, 0));
@@ -22,3 +22,5 @@ void init(Handle<Object> target)
 }
 
 NODE_MODULE(edge, init);
+
+// vim: ts=4 sw=4 et: 
