@@ -22,6 +22,10 @@
 #include <node_buffer.h>
 #include <uv.h>
 
+#ifdef _MSC_VER
+#define EDGE_PLATFORM_WINDOWS 1
+#endif
+
 #include "mono/metadata/object.h"
 #include "mono/metadata/appdomain.h"
 typedef int GCHandle;
@@ -64,8 +68,10 @@ typedef struct uv_edge_async_s {
 
 class V8SynchronizationContext {
 private:
-
+#ifdef EDGE_PLATFORM_WINDOWS
     static DWORD v8ThreadId;
+#else
+#endif
 
 public:
 
@@ -79,9 +85,11 @@ public:
     // It also means that existence of .NET proxies to JavaScript functions in the CLR does not prevent the 
     // process from exiting.
     // In this model, JavaScript owns the lifetime of the process.
-
+#ifdef EDGE_PLATFORM_WINDOWS
     static uv_edge_async_t* uv_edge_async;
     static HANDLE funcWaitHandle;
+#else
+#endif
 
     static void Initialize();
     static uv_edge_async_t* RegisterAction(MonoObject* action);
