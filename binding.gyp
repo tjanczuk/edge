@@ -15,24 +15,53 @@
 # permissions and limitations under the License.
 ##
 {
+  'variables': {
+    'mono_installation': 'C:\Mono-3.0.6'
+  },
   'targets': [
     {
       'target_name': 'edge',
       'sources': [ ],
       'conditions': [
-      	['OS=="win"', {
-      	  'sources+': [ 
-            'src/edge.cpp', 
-            'src/utils.cpp', 
-            'src/clrfunc.cpp',
-            'src/clrfuncinvokecontext.cpp',
-            'src/nodejsfunc.cpp',
-            'src/nodejsfuncinvokecontext.cpp',
-            'src/persistentdisposecontext.cpp',
-            'src/v8synchronizationcontext.cpp',
-            'src/clrfuncreflectionwrap.cpp'
+        ['OS=="win"', {
+        'conditions': [
+            ['RUNTIME=="mono"', {
+              'sources+': [ 
+                'src/mono/edge.h', 
+                'src/mono/edge.cpp', 
+                'src/mono/monoembed.cpp',
+                'src/mono/monotask.cpp',
+                'src/mono/utils.cpp', 
+                'src/mono/clrfunc.cpp',
+                'src/mono/clrfuncinvokecontext.cpp',
+                'src/mono/nodejsfunc.cpp',
+                'src/mono/nodejsfuncinvokecontext.cpp',
+                'src/mono/persistentdisposecontext.cpp',
+                'src/mono/v8synchronizationcontext.cpp',
+              ],
+              'include_dirs': [
+                '<(mono_installation)/include/mono-2.0',
+              ],
+              'link_settings': {
+                'libraries': [
+                  '-l<(mono_installation)/lib/mono-2.0.lib',
+                ],
+              },
+            }, {
+              'sources+': [
+                'src/edge.cpp',
+                'src/utils.cpp',
+                'src/clrfunc.cpp',
+                'src/clrfuncinvokecontext.cpp',
+                'src/nodejsfunc.cpp',
+                'src/nodejsfuncinvokecontext.cpp',
+                'src/persistentdisposecontext.cpp',
+                'src/v8synchronizationcontext.cpp',
+                'src/clrfuncreflectionwrap.cpp'
+              ]
+            }]
           ]
-      	}]
+        }]
       ],
       'configurations': {
         'Release': {
@@ -44,7 +73,16 @@
               'RuntimeTypeInfo': -1, 
               'BasicRuntimeChecks': -1,
               'ExceptionHandling': '0',
-              'AdditionalOptions': [ '/clr', '/wd4506' ] 
+              'conditions': [
+                ['RUNTIME=="mono"', 
+                  {
+                    'AdditionalOptions': [ '/wd4506' ] 
+                  },
+                  {
+                    'AdditionalOptions': [ '/clr', '/wd4506' ] 
+                  },
+                ]
+              ]
             },
             'VCLinkerTool': {
               'AdditionalOptions': [ '/ignore:4248' ]
@@ -60,7 +98,16 @@
               'RuntimeTypeInfo': -1, 
               'BasicRuntimeChecks': -1,
               'ExceptionHandling': '0',
-              'AdditionalOptions': [ '/clr', '/wd4506' ] 
+              'conditions': [
+                ['RUNTIME=="mono"', 
+                  {
+                    'AdditionalOptions': [ '/wd4506' ] 
+                  },
+                  {
+                    'AdditionalOptions': [ '/clr', '/wd4506' ] 
+                  },
+                ]
+              ],
             },
             'VCLinkerTool': {
               'AdditionalOptions': [ '/ignore:4248' ]
@@ -68,6 +115,23 @@
           }
         }
       }
+    },
+    {
+      'target_name': 'build_managed',
+      'type': 'none',
+      'dependencies': [ 'edge' ],
+      'actions': [
+        {
+          'action_name': 'compile_mono_embed',
+          'inputs': [
+            'src/mono/monoembedding.cs'
+          ],
+          'outputs': [
+            'src/mono/monoembedding.exe'
+          ],
+          'action': ['csc', '-target:exe', '-out:../src/mono/MonoEmbedding.exe', 'src/mono/MonoEmbedding.cs']
+        }
+      ]
     }
   ]
 }
