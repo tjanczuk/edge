@@ -264,12 +264,11 @@ addAndMultiplyBy2(payload, function (error, result) { ... });
 var addAndMultiplyBy2 = require('edge').func(function () {/*
   using ...;
 
-  public class Startup {
-    public async Task&lt;object&gt; Invoke(IDictionary&lt;string,object&gt; data) {
-      int sum = (int)(data["a"]) + (int)(data["b"]);
-      var timesTwo = (Func&lt;object,Task&lt;object&gt;&gt;)data["timesTwo"];
-      return await timesTwo(sum);
-    }
+  async (data) => {
+    var input = (IDictionary&lt;string,object&gt;)data;
+    int sum = (int)(data["a"]) + (int)(data["b"]);
+    var timesTwo = (Func&lt;object,Task&lt;object&gt;&gt;)data["timesTwo"];
+    return await timesTwo(sum);
   }
 */});
           </code></pre>         
@@ -419,20 +418,18 @@ zip({ src: '..\\mydir', dest: '..\\mydir.zip' }, function (error) {
           <p><small>Convert images between JPG, BMP, TIFF, PNG, and GIF</small></p>
           <pre><code class="javscript">
 var convertImageToJpg = require('edge').func(function() {/*
-  class Startup {
-    public async Task&lt;object&gt; Invoke(string src) {
-      await Task.Run(async () => {
-        Image.FromFile(src).Save(src + '.jpg', ImageFormat.Jpeg);
-      });
-      return null;
-    }
+  #r "System.Drawing.dll"
+  using System.Drawing;
+
+  async (src) => {
+    await Task.Run(async () => {
+      Image.FromFile(src).Save((string)src + ".jpg", ImageFormat.Jpeg);
+    });
+    return null;
   }
 */});
 
-convertImageToJpg('.\\edge.png', function (error) {
-  ...
-});
-
+convertImageToJpg('.\\edge.png', function (error) { ... });
          </code></pre>
          <a href="https://github.com/tjanczuk/edge/blob/master/samples/208_convertImage.js"><small>see full code</small></a>
         </section>    
