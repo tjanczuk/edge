@@ -25,7 +25,7 @@ void clrFuncProxyNearDeath(v8::Persistent<v8::Value> object, void* parameters)
     ClrFuncWrap* wrap = (ClrFuncWrap*)parameters;
     object.Dispose();
     object.Clear();
-    wrap->clrFunc = nullptr;
+    wrap->clrFunc = NULL;
     delete wrap;
 }
 
@@ -122,14 +122,12 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata)
     //try 
     //{
         MonoClass* klass = mono_object_get_class(netdata);
-        const char* name = mono_class_get_name(klass);
         if (klass == mono_get_string_class())
         {
             jsdata = stringCLR2V8((MonoString*)netdata);
         }
         else if (klass == mono_get_char_class())
         {
-            int i = 0;
             //jsdata = stringCLR2V8(((System::Char^)netdata)->ToString());
             ABORT_TODO();
         }
@@ -297,9 +295,8 @@ MonoObject* ClrFunc::MarshalV8ToCLR(ClrFuncInvokeContext* context, Handle<v8::Va
 {
     HandleScope scope;
 
-    if (jsdata->IsFunction() && context != nullptr) 
+    if (jsdata->IsFunction() && context != NULL)
     {
-        int i = 0;
         MonoObject* netfunc = NULL;
         //NodejsFunc^ functionContext = gcnew NodejsFunc(context, Handle<v8::Function>::Cast(jsdata));
         //System::Func<System::Object^,Task<System::Object^>^>^ netfunc = 

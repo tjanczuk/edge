@@ -7,7 +7,7 @@ MonoAssembly* MonoEmbedding::assembly = NULL;
 
 void MonoEmbedding::Initialize()
 {
-    char* fullPath = "C:\\Users\\Jonathan\\Development\\edge\\src\\mono\\MonoEmbedding.exe";
+    const char* fullPath = "C:\\Users\\Jonathan\\Development\\edge\\src\\mono\\MonoEmbedding.exe";
     mono_jit_init (fullPath);
     assembly = mono_domain_assembly_open (mono_domain_get(), fullPath);
     MonoClass* klass = mono_class_from_name(mono_assembly_get_image(assembly), "", "MonoEmbedding");
@@ -16,7 +16,7 @@ void MonoEmbedding::Initialize()
     MonoArray* args = mono_array_new(mono_domain_get(), mono_get_string_class(), 0);
     int ret = mono_runtime_exec_main(main, args, (MonoObject**)&exc);
 
-    mono_add_internal_call("ClrFuncInvokeContext::CompleteOnV8ThreadAsynchronousICall", &ClrFuncInvokeContext::CompleteOnV8ThreadAsynchronous); 
+    mono_add_internal_call("ClrFuncInvokeContext::CompleteOnV8ThreadAsynchronousICall", (const void*)&ClrFuncInvokeContext::CompleteOnV8ThreadAsynchronous); 
 }
 
 MonoAssembly* MonoEmbedding::GetAssembly()

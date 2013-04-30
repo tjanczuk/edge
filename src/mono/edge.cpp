@@ -1,7 +1,7 @@
 #include "edge.h"
 
-BOOL debugMode;
-BOOL enableScriptIgnoreAttribute;
+bool debugMode;
+bool enableScriptIgnoreAttribute;
 Persistent<Function> bufferConstructor;
 
 Handle<Value> initializeClrFunc(const v8::Arguments& args)
