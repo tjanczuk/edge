@@ -3,7 +3,7 @@
 var edge = require('../lib/edge');
 
 var zipDirectory = edge.func(function() {/*
-    //#r "System.IO.Compression.FileSystem.dll"
+    #r "System.IO.Compression.FileSystem.dll"
 
     using System.Collections.Generic;
     using System.IO.Compression;
