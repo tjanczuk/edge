@@ -29,6 +29,9 @@ typedef int GCHandle;
 using namespace v8;
 
 #define DBG(msg) if (debugMode) printf(msg "\n");
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x) 
+#define ABORT_TODO() do { printf(__FILE__ "(" TOSTRING(__LINE__) "): " __FUNCTION__ "\n"); abort(); } while (0)
 
 // Good explanation of native Buffers at 
 // http://sambro.is-super-awesome.com/2011/03/03/creating-a-proper-buffer-in-a-node-c-addon/

@@ -131,6 +131,7 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata)
         {
 			int i = 0;
             //jsdata = stringCLR2V8(((System::Char^)netdata)->ToString());
+			ABORT_TODO();
         }
         else if (klass == mono_get_boolean_class())
         {
@@ -162,7 +163,7 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata)
         }
         else if (klass == mono_get_int64_class())
         {
-			int i = 0;
+			ABORT_TODO();
             //jsdata = v8::Number::New(((System::IConvertible^)netdata)->ToDouble(nullptr));
         }
     //    else if (type == double::typeid)
@@ -237,6 +238,10 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata)
     //{
     //    return scope.Close(throwV8Exception(e));
     //}
+		else
+		{
+			ABORT_TODO();
+		}
 
     return scope.Close(jsdata);
 }
@@ -245,6 +250,7 @@ Handle<v8::Value> ClrFunc::MarshalCLRObjectToV8(MonoObject* netdata)
 {
     HandleScope scope;
     Handle<v8::Object> result = v8::Object::New();
+	ABORT_TODO();
    /* System::Type^ type = netdata->GetType();
 
     for each (FieldInfo^ field in type->GetFields(BindingFlags::Public | BindingFlags::Instance))
@@ -299,6 +305,7 @@ MonoObject* ClrFunc::MarshalV8ToCLR(ClrFuncInvokeContext* context, Handle<v8::Va
         //System::Func<System::Object^,Task<System::Object^>^>^ netfunc = 
         //    gcnew System::Func<System::Object^,Task<System::Object^>^>(
         //        functionContext, &NodejsFunc::FunctionWrapper);
+		ABORT_TODO();
 
         return netfunc;
     }
@@ -306,8 +313,6 @@ MonoObject* ClrFunc::MarshalV8ToCLR(ClrFuncInvokeContext* context, Handle<v8::Va
     {
         Handle<v8::Object> jsbuffer = jsdata->ToObject();
 		MonoArray* netbuffer = mono_array_new(mono_domain_get(), mono_get_byte_class(), (int)node::Buffer::Length(jsbuffer));
-        //cli::array<byte>^ netbuffer = gcnew cli::array<byte>((int)node::Buffer::Length(jsbuffer));
-        //pin_ptr<byte> pinnedNetbuffer = &netbuffer[0];
         memcpy(mono_array_addr_with_size(netbuffer, sizeof(char), 0), node::Buffer::Data(jsbuffer), mono_array_length(netbuffer));
 
         return (MonoObject*)netbuffer;
@@ -339,7 +344,6 @@ MonoObject* ClrFunc::MarshalV8ToCLR(ClrFuncInvokeContext* context, Handle<v8::Va
     }
     else if (jsdata->IsString()) 
     {
-		int i = 0;
         return (MonoObject*)stringV82CLR(Handle<v8::String>::Cast(jsdata));
     }
     else if (jsdata->IsBoolean())
@@ -368,6 +372,7 @@ MonoObject* ClrFunc::MarshalV8ToCLR(ClrFuncInvokeContext* context, Handle<v8::Va
     }
     else
     {
+		ABORT_TODO();
         //throw gcnew System::Exception("Unable to convert V8 value to CLR value.");
     }
 }
@@ -394,6 +399,10 @@ Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> cal
         // Completed synchronously. Return a value or invoke callback based on call pattern.
 		c->Task(task);
         return scope.Close(c->CompleteOnV8Thread(true));
+	}
+	else
+	{
+		ABORT_TODO();
 	}
     //try 
     //{
