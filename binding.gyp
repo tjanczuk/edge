@@ -23,22 +23,22 @@
       'target_name': 'edge',
       'sources': [ ],
       'conditions': [
-        ['OS=="win"', {
-        'conditions': [
-            ['RUNTIME=="mono"', {
-              'sources+': [ 
-                'src/mono/edge.h', 
-                'src/mono/edge.cpp', 
-                'src/mono/monoembed.cpp',
-                'src/mono/monotask.cpp',
-                'src/mono/utils.cpp', 
-                'src/mono/clrfunc.cpp',
-                'src/mono/clrfuncinvokecontext.cpp',
-                'src/mono/nodejsfunc.cpp',
-                'src/mono/nodejsfuncinvokecontext.cpp',
-                'src/mono/persistentdisposecontext.cpp',
-                'src/mono/v8synchronizationcontext.cpp',
-              ],
+        ['RUNTIME=="mono"', {
+          'sources+': [
+            'src/mono/edge.h',
+            'src/mono/edge.cpp',
+            'src/mono/monoembed.cpp',
+            'src/mono/monotask.cpp',
+            'src/mono/utils.cpp',
+            'src/mono/clrfunc.cpp',
+            'src/mono/clrfuncinvokecontext.cpp',
+            'src/mono/nodejsfunc.cpp',
+            'src/mono/nodejsfuncinvokecontext.cpp',
+            'src/mono/persistentdisposecontext.cpp',
+            'src/mono/v8synchronizationcontext.cpp',
+          ],
+          'conditions': [
+            ['OS=="win"', {
               'include_dirs': [
                 '<(mono_installation)/include/mono-2.0',
               ],
@@ -48,18 +48,27 @@
                 ],
               },
             }, {
-              'sources+': [
-                'src/edge.cpp',
-                'src/utils.cpp',
-                'src/clrfunc.cpp',
-                'src/clrfuncinvokecontext.cpp',
-                'src/nodejsfunc.cpp',
-                'src/nodejsfuncinvokecontext.cpp',
-                'src/persistentdisposecontext.cpp',
-                'src/v8synchronizationcontext.cpp',
-                'src/clrfuncreflectionwrap.cpp'
-              ]
+              'include_dirs': [
+                '/Library/Frameworks/Mono.framework/Headers/mono-2.0',
+              ],
+              'link_settings': {
+                'libraries': [
+                  '/Library/Frameworks/Mono.framework/Libraries/libmono-2.0.dylib',
+                ],
+              },
             }]
+          ]
+        }, {
+          'sources+': [
+            'src/edge.cpp',
+            'src/utils.cpp',
+            'src/clrfunc.cpp',
+            'src/clrfuncinvokecontext.cpp',
+            'src/nodejsfunc.cpp',
+            'src/nodejsfuncinvokecontext.cpp',
+            'src/persistentdisposecontext.cpp',
+            'src/v8synchronizationcontext.cpp',
+            'src/clrfuncreflectionwrap.cpp'
           ]
         }]
       ],
