@@ -69,14 +69,12 @@ void ClrFuncInvokeContext::DisposeCallback()
     }
 }
 
-//void ClrFuncInvokeContext::CompleteOnCLRThread(System::Threading::Tasks::Task<System::Object^>^ task)
-//{
-//    DBG("ClrFuncInvokeContext::CompleteOnCLRThread");
-//    this->Task = task;
-//    V8SynchronizationContext::ExecuteAction(this->uv_edge_async);
-//}
-
-
+void ClrFuncInvokeContext::CompleteOnCLRThread(MonoObject* task)
+{
+    DBG("ClrFuncInvokeContext::CompleteOnCLRThread");
+    this->Task(task);
+    V8SynchronizationContext::ExecuteAction(this->uv_edge_async);
+}
 
 void ClrFuncInvokeContext::CompleteOnV8ThreadAsynchronous(ClrFuncInvokeContext *_this)
 {

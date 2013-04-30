@@ -134,7 +134,7 @@ public:
 
     ClrFuncInvokeContext(Handle<v8::Value> callbackOrSync);
 
-    //void CompleteOnCLRThread(MonoObject* task);
+    void CompleteOnCLRThread(MonoObject* task);
     static void __cdecl CompleteOnV8ThreadAsynchronous(ClrFuncInvokeContext *_this);
     Handle<v8::Value> CompleteOnV8Thread(bool completedSynchronously);
 };
