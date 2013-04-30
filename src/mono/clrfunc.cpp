@@ -48,7 +48,6 @@ Handle<v8::Function> ClrFunc::Initialize(MonoObject* func)
 
 Handle<v8::Value> ClrFunc::Initialize(const v8::Arguments& args)
 {
-	MessageBox(NULL, "A", "A", MB_OK);
     DBG("ClrFunc::Initialize MethodInfo wrapper");
 
     HandleScope scope;
