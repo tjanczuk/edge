@@ -30,8 +30,9 @@ ClrFuncInvokeContext::ClrFuncInvokeContext(Handle<v8::Value> callbackOrSync)
         this->Sync = callbackOrSync->BooleanValue();
     }
 
-    this->uv_edge_async = V8SynchronizationContext::RegisterAction(
-        gcnew System::Action(this, &ClrFuncInvokeContext::CompleteOnV8ThreadAsynchronous));
+    ClrActionContext* data = new ClrActionContext;
+    data->action = gcnew System::Action(this, &ClrFuncInvokeContext::CompleteOnV8ThreadAsynchronous);
+    this->uv_edge_async = V8SynchronizationContext::RegisterAction(ClrActionContext::ActionCallback, data);
 }
 
 void ClrFuncInvokeContext::DisposeCallback()

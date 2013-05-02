@@ -30,7 +30,8 @@
             'src/nodejsfuncinvokecontext.cpp',
             'src/persistentdisposecontext.cpp',
             'src/v8synchronizationcontext.cpp',
-            'src/clrfuncreflectionwrap.cpp'
+            'src/clrfuncreflectionwrap.cpp',
+            'src/clractioncontext.cpp'
           ]
       	}]
       ],

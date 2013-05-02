@@ -32,8 +32,9 @@ NodejsFunc::!NodejsFunc()
 {
     DBG("NodejsFunc::!NodejsFunc");
     PersistentDisposeContext^ context = gcnew PersistentDisposeContext((Persistent<Value>*)this->Func);
-    uv_edge_async_t* uv_edge_async = V8SynchronizationContext::RegisterAction(
-        gcnew System::Action(context, &PersistentDisposeContext::CallDisposeOnV8Thread));
+    ClrActionContext* data = new ClrActionContext;
+    data->action = gcnew System::Action(context, &PersistentDisposeContext::CallDisposeOnV8Thread);
+    uv_edge_async_t* uv_edge_async = V8SynchronizationContext::RegisterAction(ClrActionContext::ActionCallback, data);
     V8SynchronizationContext::ExecuteAction(uv_edge_async);
 }
 
@@ -41,8 +42,9 @@ Task<System::Object^>^ NodejsFunc::FunctionWrapper(System::Object^ payload)
 {
     DBG("NodejsFunc::FunctionWrapper");
     NodejsFuncInvokeContext^ context = gcnew NodejsFuncInvokeContext(this, payload);
-    uv_edge_async_t* uv_edge_async = V8SynchronizationContext::RegisterAction(
-        gcnew System::Action(context, &NodejsFuncInvokeContext::CallFuncOnV8Thread));
+    ClrActionContext* data = new ClrActionContext;
+    data->action = gcnew System::Action(context, &NodejsFuncInvokeContext::CallFuncOnV8Thread);
+    uv_edge_async_t* uv_edge_async = V8SynchronizationContext::RegisterAction(ClrActionContext::ActionCallback, data);
     V8SynchronizationContext::ExecuteAction(uv_edge_async);
 
     return context->TaskCompletionSource->Task;
