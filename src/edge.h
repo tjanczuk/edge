@@ -22,6 +22,9 @@
 #include <node_buffer.h>
 #include <uv.h>
 #include <vcclr.h>
+#ifndef _WIN32
+#include <pthread.h>
+#endif
 
 #using <system.dll>
 #using <system.web.extensions.dll>
@@ -53,7 +56,7 @@ typedef struct uv_edge_async_s {
     uv_async_t uv_async;
     uv_async_edge_cb action;
     void* data;
-    BOOL singleton;
+    bool singleton;
 } uv_edge_async_t;
 
 typedef struct clrActionContext {

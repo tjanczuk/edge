@@ -117,7 +117,8 @@ void V8SynchronizationContext::CancelAction(uv_edge_async_t* uv_edge_async)
     {
         // This is a cancellation of an action registered on CLR thread.
         // Release the wait handle to allow the uv_edge_async reuse by another CLR thread.
-        uv_edge_async->action = nullptr;
+        uv_edge_async->action = NULL;
+        uv_edge_async->data = NULL;
 #ifdef USE_WIN32_SYNCHRONIZATION
         ReleaseSemaphore(V8SynchronizationContext::funcWaitHandle, 1, NULL);
 #else        
