@@ -38,7 +38,12 @@ void V8SynchronizationContext::Initialize()
     uv_edge_async->singleton = TRUE;
     uv_async_init(uv_default_loop(), &V8SynchronizationContext::uv_edge_async->uv_async, continueOnV8Thread);
     V8SynchronizationContext::Unref(V8SynchronizationContext::uv_edge_async);
-    V8SynchronizationContext::funcWaitHandle = gcnew AutoResetEvent(true);
+#ifdef USE_WIN32_SYNCHORONIZATION
+    V8SynchronizationContext::funcWaitHandle = CreateSemaphore(NULL, 1, INT_MAX, NULL);
+#else    
+    V8SynchronizationContext::funcWaitHandle = new uv_sem_t;
+    uv_sem_init(V8SynchronizationContext::funcWaitHandle, 1);
+#endif
     V8SynchronizationContext::v8ThreadId = GetCurrentThreadId();
 }
 
@@ -72,7 +77,11 @@ uv_edge_async_t* V8SynchronizationContext::RegisterAction(System::Action^ action
         // This executes on CLR thread. 
         // Acquire exlusive access to uv_edge_async previously initialized on V8 thread.
 
-        V8SynchronizationContext::funcWaitHandle->WaitOne();
+#ifdef USE_WIN32_SYNCHORONIZATION
+        WaitForSingleObject(V8SynchronizationContext::funcWaitHandle, INFINITE);
+#else
+        uv_sem_wait(V8SynchronizationContext::funcWaitHandle);
+#endif
         V8SynchronizationContext::uv_edge_async->action = action;
         return V8SynchronizationContext::uv_edge_async;
     }
@@ -98,7 +107,11 @@ void V8SynchronizationContext::CancelAction(uv_edge_async_t* uv_edge_async)
         // This is a cancellation of an action registered on CLR thread.
         // Release the wait handle to allow the uv_edge_async reuse by another CLR thread.
         uv_edge_async->action = nullptr;
-        V8SynchronizationContext::funcWaitHandle->Set();
+#ifdef USE_WIN32_SYNCHORONIZATION
+        ReleaseSemaphore(V8SynchronizationContext::funcWaitHandle, 1, NULL);
+#else        
+        uv_sem_post(V8SynchronizationContext::funcWaitHandle);
+#endif
     }
     else
     {

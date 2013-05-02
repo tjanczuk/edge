@@ -53,6 +53,10 @@ typedef struct uv_edge_async_s {
     BOOL singleton;
 } uv_edge_async_t;
 
+#if defined(_WIN32) && (UV_VERSION_MAJOR == 0) && (UV_VERSION_MINOR < 8)
+#    define USE_WIN32_SYNCHORONIZATION
+#endif
+
 ref class V8SynchronizationContext {
 private:
 
@@ -72,7 +76,11 @@ public:
     // In this model, JavaScript owns the lifetime of the process.
 
     static uv_edge_async_t* uv_edge_async;
-    static AutoResetEvent^ funcWaitHandle;
+#ifdef USE_WIN32_SYNCHORONIZATION
+    static HANDLE funcWaitHandle;
+#else
+    static uv_sem_t* funcWaitHandle;
+#endif
 
     static void Initialize();
     static uv_edge_async_t* RegisterAction(System::Action^ action);
