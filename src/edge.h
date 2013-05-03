@@ -22,6 +22,9 @@
 #include <node_buffer.h>
 #include <uv.h>
 #include <vcclr.h>
+#ifndef _WIN32
+#include <pthread.h>
+#endif
 
 #using <system.dll>
 #using <system.web.extensions.dll>
@@ -47,16 +50,29 @@ System::String^ exceptionV82stringCLR(Handle<v8::Value> exception);
 Handle<String> exceptionCLR2stringV8(System::Exception^ exception);
 Handle<Value> throwV8Exception(System::Exception^ exception);
 
+typedef void (*uv_async_edge_cb)(void* data);
+
 typedef struct uv_edge_async_s {
     uv_async_t uv_async;
-    gcroot<System::Action^> action;
-    BOOL singleton;
+    uv_async_edge_cb action;
+    void* data;
+    bool singleton;
 } uv_edge_async_t;
 
-ref class V8SynchronizationContext {
+typedef struct clrActionContext {
+    gcroot<System::Action^> action;
+    static void ActionCallback(void* data);
+} ClrActionContext;
+
+#if defined(_WIN32) && (UV_VERSION_MAJOR == 0) && (UV_VERSION_MINOR < 8)
+#    define USE_WIN32_SYNCHRONIZATION
+#endif
+
+class V8SynchronizationContext {
 private:
 
-    static DWORD v8ThreadId;
+    static unsigned long v8ThreadId;
+    static unsigned long GetCurrentThreadId();
 
 public:
 
@@ -72,10 +88,14 @@ public:
     // In this model, JavaScript owns the lifetime of the process.
 
     static uv_edge_async_t* uv_edge_async;
-    static AutoResetEvent^ funcWaitHandle;
+#ifdef USE_WIN32_SYNCHRONIZATION
+    static HANDLE funcWaitHandle;
+#else
+    static uv_sem_t* funcWaitHandle;
+#endif
 
     static void Initialize();
-    static uv_edge_async_t* RegisterAction(System::Action^ action);
+    static uv_edge_async_t* RegisterAction(uv_async_edge_cb action, void* data);
     static void ExecuteAction(uv_edge_async_t* uv_edge_async);
     static void CancelAction(uv_edge_async_t* uv_edge_async);
     static void Unref(uv_edge_async_t* uv_edge_async);
