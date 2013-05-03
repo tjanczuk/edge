@@ -69,11 +69,11 @@ void ClrFuncInvokeContext::DisposeCallback()
     }
 }
 
-void ClrFuncInvokeContext::CompleteOnCLRThread(MonoObject* task)
+void ClrFuncInvokeContext::CompleteOnCLRThread(ClrFuncInvokeContext *_this, MonoObject* task)
 {
     DBG("ClrFuncInvokeContext::CompleteOnCLRThread");
-    this->Task(task);
-    V8SynchronizationContext::ExecuteAction(this->uv_edge_async);
+    _this->Task(task);
+    V8SynchronizationContext::ExecuteAction(_this->uv_edge_async);
 }
 
 void ClrFuncInvokeContext::CompleteOnV8ThreadAsynchronous(ClrFuncInvokeContext *_this)
@@ -103,29 +103,29 @@ Handle<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread(bool completedSynchro
     int argc = 1;
 
     switch (Task::Status(this->Task())) {
-        default:
-            argv[0] = v8::String::New("The operation reported completion in an unexpected state.");
+    default:
+        argv[0] = v8::String::New("The operation reported completion in an unexpected state.");
         break;
-        case Task::Faulted:
-            if (Task::Exception(this->Task()) != NULL) {
-                argv[0] = exceptionCLR2stringV8(Task::Exception(this->Task()));
-            }
-            else {
-                argv[0] = v8::String::New("The operation has failed with an undetermined error.");
-            }
+    case Task::Faulted:
+        if (Task::Exception(this->Task()) != NULL) {
+            argv[0] = exceptionCLR2stringV8(Task::Exception(this->Task()));
+        }
+        else {
+            argv[0] = v8::String::New("The operation has failed with an undetermined error.");
+        }
         break;
-        case Task::Canceled:
-            argv[0] = v8::String::New("The operation was cancelled.");
+    case Task::Canceled:
+        argv[0] = v8::String::New("The operation was cancelled.");
         break;
-        case Task::RanToCompletion:
-            argc = 2;
-            TryCatch try_catch;
-            argv[1] = ClrFunc::MarshalCLRToV8(Task::Result(this->Task()));
-            if (try_catch.HasCaught()) 
-            {
-                argc = 1;
-                argv[0] = try_catch.Exception();
-            }
+    case Task::RanToCompletion:
+        argc = 2;
+        TryCatch try_catch;
+        argv[1] = ClrFunc::MarshalCLRToV8(Task::Result(this->Task()));
+        if (try_catch.HasCaught()) 
+        {
+            argc = 1;
+            argv[0] = try_catch.Exception();
+        }
         break;
     };
 
@@ -154,42 +154,47 @@ Handle<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread(bool completedSynchro
     }
 }
 
+MonoObject* ClrFuncInvokeContext::GetMonoObject()
+{
+    return mono_gchandle_get_target(_this);
+}
+
 #define IMPLEMENT_REF_FIELD(T, Name)\
     static MonoClassField* Name ## Field;\
     T ClrFuncInvokeContext::Name()\
-    {\
-        if (!Name ## Field)\
-        Name ## Field = mono_class_get_field_from_name(GetClrFuncInvokeContextClass(), #Name);\
-        T value;\
-        mono_field_get_value(mono_gchandle_get_target(_this), Name ## Field, &value);\
-        return value;\
-    }\
+{\
+    if (!Name ## Field)\
+    Name ## Field = mono_class_get_field_from_name(GetClrFuncInvokeContextClass(), #Name);\
+    T value;\
+    mono_field_get_value(mono_gchandle_get_target(_this), Name ## Field, &value);\
+    return value;\
+}\
     void ClrFuncInvokeContext::Name(T value)\
-    {\
-        if (!Name ## Field)\
-            Name ## Field = mono_class_get_field_from_name(GetClrFuncInvokeContextClass(), #Name);\
-        mono_field_set_value(mono_gchandle_get_target(_this), Name ## Field, value);\
-    }\
+{\
+    if (!Name ## Field)\
+    Name ## Field = mono_class_get_field_from_name(GetClrFuncInvokeContextClass(), #Name);\
+    mono_field_set_value(mono_gchandle_get_target(_this), Name ## Field, value);\
+}\
 
 #define IMPLEMENT_FIELD(T, Name)\
     static MonoClassField* Name ## Field;\
     T ClrFuncInvokeContext::Name()\
-    {\
-        if (!Name ## Field)\
-        Name ## Field = mono_class_get_field_from_name(GetClrFuncInvokeContextClass(), #Name);\
-        T value;\
-        mono_field_get_value(mono_gchandle_get_target(_this), Name ## Field, &value);\
-        return value;\
-    }\
+{\
+    if (!Name ## Field)\
+    Name ## Field = mono_class_get_field_from_name(GetClrFuncInvokeContextClass(), #Name);\
+    T value;\
+    mono_field_get_value(mono_gchandle_get_target(_this), Name ## Field, &value);\
+    return value;\
+}\
     void ClrFuncInvokeContext::Name(T value)\
-    {\
-        if (!Name ## Field)\
-            Name ## Field = mono_class_get_field_from_name(GetClrFuncInvokeContextClass(), #Name);\
-        mono_field_set_value(mono_gchandle_get_target(_this), Name ## Field, &value);\
-    }\
+{\
+    if (!Name ## Field)\
+    Name ## Field = mono_class_get_field_from_name(GetClrFuncInvokeContextClass(), #Name);\
+    mono_field_set_value(mono_gchandle_get_target(_this), Name ## Field, &value);\
+}\
 
 IMPLEMENT_REF_FIELD(MonoObject*, Payload)
-IMPLEMENT_REF_FIELD(MonoObject*, Task)
-IMPLEMENT_FIELD(bool, Sync)
+    IMPLEMENT_REF_FIELD(MonoObject*, Task)
+    IMPLEMENT_FIELD(bool, Sync)
 
-// vim: ts=4 sw=4 et: 
+    // vim: ts=4 sw=4 et: 

@@ -61,6 +61,9 @@ public:
     static MonoClass* GetClass();
     static MonoObject* GetClrFuncReflectionWrapFunc(const char* assembly, const char* typeName, const char* methodName, MonoException ** exc);
     static MonoObject* CreateDictionary();
+    static MonoClass* GetFuncClass();
+    static MonoArray* IEnumerableToArray(MonoObject* ienumerable);
+    static void ContinueTask(MonoObject* task, MonoObject* state);
 };
 
 typedef struct uv_edge_async_s {
@@ -145,25 +148,28 @@ public:
     bool Sync();
     void Sync(bool value);
 
+    MonoObject* GetMonoObject();
+
     ClrFuncInvokeContext(Handle<v8::Value> callbackOrSync);
 
-    void CompleteOnCLRThread(MonoObject* task);
+    static void __cdecl CompleteOnCLRThread(ClrFuncInvokeContext *_this, MonoObject* task);
     static void __cdecl CompleteOnV8ThreadAsynchronous(ClrFuncInvokeContext *_this);
     Handle<v8::Value> CompleteOnV8Thread(bool completedSynchronously);
 };
 
-//ref class NodejsFunc {
-//public:
-//
-//    property Persistent<Function>* Func;
-//
-//    NodejsFunc(ClrFuncInvokeContext^ appInvokeContext, Handle<Function> function);
-//    ~NodejsFunc();
-//    !NodejsFunc();
-//
-//    Task<System::Object^>^ FunctionWrapper(System::Object^ payload);
-//};
-//
+class NodejsFunc {
+    GCHandle _this;
+public:
+    Persistent<Function>* Func;
+
+    NodejsFunc(ClrFuncInvokeContext* appInvokeContext, Handle<Function> function);
+    //~NodejsFunc();
+    //!NodejsFunc();
+
+    // helper
+    MonoObject* GetFunc();
+};
+
 //ref class PersistentDisposeContext {
 //private:
 //    System::IntPtr ptr;

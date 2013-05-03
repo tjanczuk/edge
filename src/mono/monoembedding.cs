@@ -19,13 +19,40 @@ public static class MonoEmbedding
         return new Func<Object, Task<Object>>(wrap.Call);
     }
 
-    static public Dictionary<string,object> CreateDictionary()
+    static public Dictionary<string, object> CreateDictionary()
     {
         return new Dictionary<string, object>();
     }
+
+    static public object[] IEnumerableToArray(System.Collections.IEnumerable enumerable)
+    {
+        var list = new List<object>();
+        foreach (var item in enumerable)
+            list.Add(item);
+
+        return list.ToArray();
+    }
+
+    static public Type GetFuncType()
+    {
+        return typeof(Func<Object, Task<Object>>);
+    }
+
+    static public void edgeAppCompletedOnCLRThread(Task<object> task, object state)
+    {
+        var context = (ClrFuncInvokeContext)state;
+        context.CompleteOnCLRThread(task);
+    }
+
+    static public void ContinueTask(Task<object> task, object state)
+    {
+        // Will complete asynchronously. Schedule continuation to finish processing.
+        task.ContinueWith(new Action<Task<object>, object>(edgeAppCompletedOnCLRThread), state);
+    }
 }
 
-class ClrFuncInvokeContext {
+class ClrFuncInvokeContext
+{
     IntPtr native;
     //Persistent<Function>* callback;
     //uv_edge_async_t* uv_edge_async;
@@ -39,7 +66,13 @@ class ClrFuncInvokeContext {
 
     //ClrFuncInvokeContext(Handle<v8::Value> callbackOrSync);
 
-    //void CompleteOnCLRThread(System::Threading::Tasks::Task<System::Object^>^ task);
+    [MethodImplAttribute(MethodImplOptions.InternalCall)]
+    extern void CompleteOnCLRThreadICall(IntPtr ptr);
+
+    internal void CompleteOnCLRThread(Task<object> task)
+    {
+    }
+
     [MethodImplAttribute(MethodImplOptions.InternalCall)]
     extern void CompleteOnV8ThreadAsynchronousICall(IntPtr ptr);
 
@@ -56,7 +89,25 @@ class ClrFuncInvokeContext {
     //Handle<v8::Value> CompleteOnV8Thread(bool completedSynchronously);
 };
 
-class ClrFunc {
+class NodejsFunc
+{
+    IntPtr native;
+    //~NodejsFunc();
+    //!NodejsFunc();
+
+    Func<object, Task<object>> GetFunc()
+    {
+        return new Func<object, Task<object>>(this.FunctionWrapper);
+    }
+
+    Task<object> FunctionWrapper(object payload)
+    {
+        return null;
+    }
+};
+
+class ClrFunc
+{
     Func<Object, Task<Object>> func;
 
     //static Handle<v8::Value> MarshalCLRObjectToV8(System::Object^ netdata);

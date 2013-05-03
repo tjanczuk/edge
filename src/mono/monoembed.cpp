@@ -17,6 +17,7 @@ void MonoEmbedding::Initialize()
     int ret = mono_runtime_exec_main(main, args, (MonoObject**)&exc);
 
     mono_add_internal_call("ClrFuncInvokeContext::CompleteOnV8ThreadAsynchronousICall", (const void*)&ClrFuncInvokeContext::CompleteOnV8ThreadAsynchronous); 
+    mono_add_internal_call("ClrFuncInvokeContext::CompleteOnCLRThreadICall", (const void*)&ClrFuncInvokeContext::CompleteOnCLRThread); 
 }
 
 MonoAssembly* MonoEmbedding::GetAssembly()
@@ -48,7 +49,7 @@ MonoObject* MonoEmbedding::GetClrFuncReflectionWrapFunc(const char* assemblyFile
     {
         method = mono_class_get_method_from_name(MonoEmbedding::GetClass(), "GetFunc", 3);
     }
-    
+
     params[0] = mono_string_new(mono_domain_get(), assemblyFile);
     params[1] = mono_string_new(mono_domain_get(), typeName);
     params[2] = mono_string_new(mono_domain_get(), methodName);
@@ -69,6 +70,48 @@ MonoObject* MonoEmbedding::CreateDictionary()
     MonoObject* dictionary = mono_runtime_invoke(method, NULL, NULL, (MonoObject**)&exc);
 
     return dictionary;
+}
+
+MonoClass* MonoEmbedding::GetFuncClass()
+{
+    static MonoMethod* method;
+    MonoException* exc = NULL;
+
+    if (!method)
+        method = mono_class_get_method_from_name(MonoEmbedding::GetClass(), "GetFuncType", -1);
+
+    MonoReflectionType* typeObject = (MonoReflectionType*)mono_runtime_invoke(method, NULL, NULL, (MonoObject**)&exc);
+    MonoType* type = mono_reflection_type_get_type(typeObject);
+    MonoClass* klass = mono_type_get_class(type);
+    return klass;
+}
+
+MonoArray* MonoEmbedding::IEnumerableToArray(MonoObject* ienumerable)
+{
+    static MonoMethod* method;
+    MonoException* exc = NULL;
+
+    if (!method)
+        method = mono_class_get_method_from_name(MonoEmbedding::GetClass(), "IEnumerableToArray", -1);
+
+    void* args[1];
+    args[0] = ienumerable;
+    MonoArray* values = (MonoArray*)mono_runtime_invoke(method, NULL, args, (MonoObject**)&exc);
+    return values;
+}
+
+void MonoEmbedding::ContinueTask(MonoObject* task, MonoObject* state)
+{
+    static MonoMethod* method;
+    MonoException* exc = NULL;
+
+    if (!method)
+        method = mono_class_get_method_from_name(MonoEmbedding::GetClass(), "ContinueTask", -1);
+
+    void* args[2];
+    args[0] = task;
+    args[1] = state;
+    mono_runtime_invoke(method, NULL, args, (MonoObject**)&exc);
 }
 
 // vim: ts=4 sw=4 et: 

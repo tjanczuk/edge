@@ -1,6 +1,7 @@
 #include "edge.h"
 
 #include "mono/metadata/assembly.h"
+#include "mono/metadata/exception.h"
 #include "mono/jit/jit.h"
 
 
@@ -38,7 +39,7 @@ Handle<v8::Function> ClrFunc::Initialize(MonoObject* func)
     ClrFunc* app = new ClrFunc();
     app->func = mono_gchandle_new(func, FALSE);
     ClrFuncWrap* wrap = new ClrFuncWrap;
-    wrap->clrFunc = app;    
+    wrap->clrFunc = app;
     v8::Persistent<v8::Function> funcProxy = v8::Persistent<v8::Function>::New(
         FunctionTemplate::New(clrFuncProxy)->GetFunction());
     funcProxy->Set(v8::String::NewSymbol("_edgeContext"), v8::External::New((void*)wrap));
@@ -59,7 +60,7 @@ Handle<v8::Value> ClrFunc::Initialize(const v8::Arguments& args)
         // reference .NET code through pre-compiled CLR assembly 
         String::Utf8Value assemblyFile(jsassemblyFile);
         String::Utf8Value nativeTypeName(options->Get(String::NewSymbol("typeName")));
-        String::Utf8Value nativeMethodName(options->Get(String::NewSymbol("methodName")));  
+        String::Utf8Value nativeMethodName(options->Get(String::NewSymbol("methodName")));
         MonoException* exc = NULL;
         MonoObject* func = MonoEmbedding::GetClrFuncReflectionWrapFunc(*assemblyFile, *nativeTypeName, *nativeMethodName, &exc);
         if(exc)
@@ -98,13 +99,6 @@ Handle<v8::Value> ClrFunc::Initialize(const v8::Arguments& args)
     return scope.Close(result);
 }
 
-//void edgeAppCompletedOnCLRThread(Task<System::Object^>^ task, System::Object^ state)
-//{
-//    DBG("edgeAppCompletedOnCLRThread");
-//    ClrFuncInvokeContext^ context = (ClrFuncInvokeContext^)state;
-//    context->CompleteOnCLRThread(task);
-//}
-
 Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata)
 {
     HandleScope scope;
@@ -116,33 +110,43 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata)
     }
 
     static MonoClass* guid_class;
+    static MonoClass* decimal_class;
+    static MonoClass* idictionary_class;
+    static MonoClass* ienumerable_class;
+    static MonoClass* func_class;
     if (!guid_class)
         guid_class = mono_class_from_name (mono_get_corlib(), "System", "Guid");
+    if (!decimal_class)
+        decimal_class = mono_class_from_name (mono_get_corlib(), "System", "Decimal");
+    if (!idictionary_class)
+        idictionary_class = mono_class_from_name (mono_get_corlib(), "System.Collections", "IDictionary");
+    if (!ienumerable_class)
+        ienumerable_class = mono_class_from_name (mono_get_corlib(), "System.Collections", "IEnumerable");
 
     //try 
     //{
-        MonoClass* klass = mono_object_get_class(netdata);
-        if (klass == mono_get_string_class())
-        {
-            jsdata = stringCLR2V8((MonoString*)netdata);
-        }
-        else if (klass == mono_get_char_class())
-        {
-            //jsdata = stringCLR2V8(((System::Char^)netdata)->ToString());
-            ABORT_TODO();
-        }
-        else if (klass == mono_get_boolean_class())
-        {
-            jsdata = v8::Boolean::New((bool)*(bool*)mono_object_unbox(netdata));
-        }
-        else if (klass == guid_class)
-        {
-            static MonoMethod* method;
-            if (!method)
-                method = mono_class_get_method_from_name(guid_class, "ToString", 0);
-            MonoString* str = (MonoString*)mono_runtime_invoke(method, netdata, NULL, NULL);
-            jsdata = stringCLR2V8(str);
-        }
+    MonoClass* klass = mono_object_get_class(netdata);
+    if (klass == mono_get_string_class())
+    {
+        jsdata = stringCLR2V8((MonoString*)netdata);
+    }
+    else if (klass == mono_get_char_class())
+    {
+        //jsdata = stringCLR2V8(((System::Char^)netdata)->ToString());
+        ABORT_TODO();
+    }
+    else if (klass == mono_get_boolean_class())
+    {
+        jsdata = v8::Boolean::New((bool)*(bool*)mono_object_unbox(netdata));
+    }
+    else if (klass == guid_class)
+    {
+        static MonoMethod* method;
+        if (!method)
+            method = mono_class_get_method_from_name(guid_class, "ToString", 0);
+        MonoString* str = (MonoString*)mono_runtime_invoke(method, netdata, NULL, NULL);
+        jsdata = stringCLR2V8(str);
+    }
     //    else if (type == System::DateTime::typeid)
     //    {
     //        jsdata = stringCLR2V8(netdata->ToString());
@@ -155,91 +159,99 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata)
     //    {
     //        jsdata = stringCLR2V8(netdata->ToString());
     //    }
-        else if (klass == mono_get_int32_class())
+    else if (klass == mono_get_int32_class())
+    {
+        jsdata = v8::Integer::New(*(int*)mono_object_unbox(netdata));
+    }
+    else if (klass == mono_get_int64_class())
+    {
+        ABORT_TODO();
+        //jsdata = v8::Number::New(((System::IConvertible^)netdata)->ToDouble(nullptr));
+    }
+    else if (klass == mono_get_double_class())
+    {
+        jsdata = v8::Number::New(*(double*)mono_object_unbox(netdata));
+    }
+    else if (klass == mono_get_single_class())
+    {
+        jsdata = v8::Number::New(*(float*)mono_object_unbox(netdata));
+    }
+    else if (/*type->IsPrimitive ||*/ klass == decimal_class)
+    {
+        ABORT_TODO();
+        /*System::IConvertible^ convertible = dynamic_cast<System::IConvertible^>(netdata);
+        if (convertible != nullptr)
         {
-            jsdata = v8::Integer::New(*(int*)mono_object_unbox(netdata));
+        jsdata = stringCLR2V8(convertible->ToString());
         }
-        else if (klass == mono_get_int64_class())
+        else
         {
-            ABORT_TODO();
-            //jsdata = v8::Number::New(((System::IConvertible^)netdata)->ToDouble(nullptr));
+        jsdata = stringCLR2V8(netdata->ToString());
+        }*/
+    }
+    else if (mono_class_is_enum(klass))
+    {
+        ABORT_TODO();
+        //jsdata = stringCLR2V8(netdata->ToString());
+    }
+    else if (mono_class_get_rank(klass) > 0 && mono_class_get_element_class(klass) == mono_get_byte_class())
+    {
+        MonoArray* buffer = (MonoArray*)netdata;
+        size_t length = mono_array_length(buffer);
+        uint8_t* pinnedBuffer = mono_array_addr(buffer, uint8_t, 0);
+        node::Buffer* slowBuffer = node::Buffer::New(length);
+        memcpy(node::Buffer::Data(slowBuffer), pinnedBuffer, length);
+        Handle<v8::Value> args[] = { 
+            slowBuffer->handle_, 
+            v8::Integer::New(length), 
+            v8::Integer::New(0) 
+        };
+        jsdata = bufferConstructor->NewInstance(3, args);
+    }
+    else if (mono_class_is_assignable_from (idictionary_class, klass))
+    {
+        ABORT_TODO();
+        //Handle<v8::Object> result = v8::Object::New();
+        //for each (System::Collections::DictionaryEntry^ entry in (System::Collections::IDictionary^)netdata)
+        //{
+        //    if (dynamic_cast<System::String^>(entry->Key) != nullptr)
+        //    result->Set(stringCLR2V8((System::String^)entry->Key), ClrFunc::MarshalCLRToV8(entry->Value));
+        //}
+
+        //jsdata = result;
+    }
+    else if (mono_class_is_assignable_from (ienumerable_class, klass))
+    {
+        Handle<v8::Array> result = v8::Array::New();
+        MonoArray* values = MonoEmbedding::IEnumerableToArray(netdata);
+        size_t length = mono_array_length(values);
+        unsigned int i = 0;
+        for (i = 0; i < length; i++)
+        {
+            MonoObject* value = mono_array_get(values, MonoObject*, i);
+            result->Set(i, ClrFunc::MarshalCLRToV8(value));
         }
-    //    else if (type == double::typeid)
-    //    {
-    //        jsdata = v8::Number::New((double)netdata);
-    //    }
-    //    else if (type == float::typeid)
-    //    {
-    //        jsdata = v8::Number::New((float)netdata);
-    //    }
-    //    else if (type->IsPrimitive || type == System::Decimal::typeid)
-    //    {
-    //        System::IConvertible^ convertible = dynamic_cast<System::IConvertible^>(netdata);
-    //        if (convertible != nullptr)
-    //        {
-    //            jsdata = stringCLR2V8(convertible->ToString());
-    //        }
-    //        else
-    //        {
-    //            jsdata = stringCLR2V8(netdata->ToString());
-    //        }
-    //    }
-    //    else if (type->IsEnum)
-    //    {
-    //        jsdata = stringCLR2V8(netdata->ToString());
-    //    }
-    //    else if (type == cli::array<byte>::typeid)
-    //    {
-    //        cli::array<byte>^ buffer = (cli::array<byte>^)netdata;
-    //        pin_ptr<unsigned char> pinnedBuffer = &buffer[0];
-    //        node::Buffer* slowBuffer = node::Buffer::New(buffer->Length);
-    //        memcpy(node::Buffer::Data(slowBuffer), pinnedBuffer, buffer->Length);
-    //        Handle<v8::Value> args[] = { 
-    //            slowBuffer->handle_, 
-    //            v8::Integer::New(buffer->Length), 
-    //            v8::Integer::New(0) 
-    //        };
-    //        jsdata = bufferConstructor->NewInstance(3, args);    
-    //    }
-    //    else if (dynamic_cast<System::Collections::IDictionary^>(netdata) != nullptr)
-    //    {
-    //        Handle<v8::Object> result = v8::Object::New();
-    //        for each (System::Collections::DictionaryEntry^ entry in (System::Collections::IDictionary^)netdata)
-    //        {
-    //            if (dynamic_cast<System::String^>(entry->Key) != nullptr)
-    //            result->Set(stringCLR2V8((System::String^)entry->Key), ClrFunc::MarshalCLRToV8(entry->Value));
-    //        }
 
-    //        jsdata = result;
-    //    }
-    //    else if (dynamic_cast<System::Collections::IEnumerable^>(netdata) != nullptr)
-    //    {
-    //        Handle<v8::Array> result = v8::Array::New();
-    //        unsigned int i = 0;
-    //        for each (System::Object^ entry in (System::Collections::IEnumerable^)netdata)
-    //        {
-    //            result->Set(i++, ClrFunc::MarshalCLRToV8(entry));
-    //        }
-
-    //        jsdata = result;
-    //    }
-    //    else if (type == System::Func<System::Object^,Task<System::Object^>^>::typeid)
-    //    {
-    //        jsdata = ClrFunc::Initialize((System::Func<System::Object^,Task<System::Object^>^>^)netdata);
-    //    }
-    //    else
-    //    {
-    //        jsdata = ClrFunc::MarshalCLRObjectToV8(netdata);
-    //    }
+        jsdata = result;
+    }
+    else if (klass == MonoEmbedding::GetFuncClass())
+    {
+        ABORT_TODO();
+        //jsdata = ClrFunc::Initialize((System::Func<System::Object^,Task<System::Object^>^>^)netdata);
+    }
+    else
+    {
+        jsdata = ClrFunc::MarshalCLRObjectToV8(netdata);
+    }
     //}
     //catch (System::Exception^ e)
     //{
     //    return scope.Close(throwV8Exception(e));
     //}
-        else
-        {
-            ABORT_TODO();
-        }
+    //else
+    //{
+    //    ABORT_TODO();
+    //}
 
     return scope.Close(jsdata);
 }
@@ -248,45 +260,60 @@ Handle<v8::Value> ClrFunc::MarshalCLRObjectToV8(MonoObject* netdata)
 {
     HandleScope scope;
     Handle<v8::Object> result = v8::Object::New();
-    ABORT_TODO();
-   /* System::Type^ type = netdata->GetType();
+    MonoClass* klass = mono_object_get_class(netdata);
+    MonoClassField* field;
+    void* iter = NULL;
 
-    for each (FieldInfo^ field in type->GetFields(BindingFlags::Public | BindingFlags::Instance))
+    while (field = mono_class_get_fields(klass, &iter))
     {
+        // ignore statics. magic number
+        if (mono_field_get_flags(field) & 0x0010)
+            continue;
+        const char* name = mono_field_get_name(field);
+        MonoObject* value = mono_field_get_value_object(mono_domain_get(), field, netdata);
         result->Set(
-            stringCLR2V8(field->Name), 
-            ClrFunc::MarshalCLRToV8(field->GetValue(netdata)));
+            v8::String::New(name), 
+            ClrFunc::MarshalCLRToV8(value));
     }
 
-    for each (PropertyInfo^ property in type->GetProperties(BindingFlags::GetProperty | BindingFlags::Public | BindingFlags::Instance))
-    {
-        if (enableScriptIgnoreAttribute)
-        {
-            if (property->IsDefined(System::Web::Script::Serialization::ScriptIgnoreAttribute::typeid, true))
-            {
-                continue;
-            }
+    //System::Type^ type = netdata->GetType();
 
-            System::Web::Script::Serialization::ScriptIgnoreAttribute^ attr =
-                (System::Web::Script::Serialization::ScriptIgnoreAttribute^)System::Attribute::GetCustomAttribute(
-                    property, 
-                    System::Web::Script::Serialization::ScriptIgnoreAttribute::typeid,
-                    true);
+    //for each (FieldInfo^ field in type->GetFields(BindingFlags::Public | BindingFlags::Instance))
+    //{
+    //    result->Set(
+    //        stringCLR2V8(field->Name), 
+    //        ClrFunc::MarshalCLRToV8(field->GetValue(netdata)));
+    //}
 
-            if (attr != nullptr && attr->ApplyToOverrides)
-            {
-                continue;
-            }
-        }
+    //for each (PropertyInfo^ property in type->GetProperties(BindingFlags::GetProperty | BindingFlags::Public | BindingFlags::Instance))
+    //{
+    //    if (enableScriptIgnoreAttribute)
+    //    {
+    //        if (property->IsDefined(System::Web::Script::Serialization::ScriptIgnoreAttribute::typeid, true))
+    //        {
+    //            continue;
+    //        }
 
-        MethodInfo^ getMethod = property->GetGetMethod();
-        if (getMethod != nullptr && getMethod->GetParameters()->Length <= 0)
-        {
-            result->Set(
-                stringCLR2V8(property->Name), 
-                ClrFunc::MarshalCLRToV8(getMethod->Invoke(netdata, nullptr)));
-        }
-    }*/
+    //        System::Web::Script::Serialization::ScriptIgnoreAttribute^ attr =
+    //            (System::Web::Script::Serialization::ScriptIgnoreAttribute^)System::Attribute::GetCustomAttribute(
+    //            property, 
+    //            System::Web::Script::Serialization::ScriptIgnoreAttribute::typeid,
+    //            true);
+
+    //        if (attr != nullptr && attr->ApplyToOverrides)
+    //        {
+    //            continue;
+    //        }
+    //    }
+
+    //    MethodInfo^ getMethod = property->GetGetMethod();
+    //    if (getMethod != nullptr && getMethod->GetParameters()->Length <= 0)
+    //    {
+    //        result->Set(
+    //            stringCLR2V8(property->Name), 
+    //            ClrFunc::MarshalCLRToV8(getMethod->Invoke(netdata, nullptr)));
+    //    }
+    //}
 
     return scope.Close(result);
 }
@@ -297,12 +324,8 @@ MonoObject* ClrFunc::MarshalV8ToCLR(ClrFuncInvokeContext* context, Handle<v8::Va
 
     if (jsdata->IsFunction() && context != NULL)
     {
-        MonoObject* netfunc = NULL;
-        //NodejsFunc^ functionContext = gcnew NodejsFunc(context, Handle<v8::Function>::Cast(jsdata));
-        //System::Func<System::Object^,Task<System::Object^>^>^ netfunc = 
-        //    gcnew System::Func<System::Object^,Task<System::Object^>^>(
-        //        functionContext, &NodejsFunc::FunctionWrapper);
-        ABORT_TODO();
+        NodejsFunc* functionContext = new NodejsFunc(context, Handle<v8::Function>::Cast(jsdata));
+        MonoObject* netfunc = functionContext->GetFunc();
 
         return netfunc;
     }
@@ -378,6 +401,7 @@ Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> cal
 {
     DBG("ClrFunc::Call instance");
     HandleScope scope;
+    MonoException* exc = NULL;
 
     ClrFuncInvokeContext* c = new ClrFuncInvokeContext(callback);
     c->Payload(ClrFunc::MarshalV8ToCLR(c, payload));
@@ -386,10 +410,14 @@ Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> cal
     void* params[1];
     params[0] = c->Payload();
     MonoMethod* invoke = mono_class_get_method_from_name(mono_object_get_class(func), "Invoke", -1);
-    MonoObject* task = mono_runtime_invoke(invoke, func, params, NULL);
+    MonoObject* task = mono_runtime_invoke(invoke, func, params, (MonoObject**)&exc);
+    if (exc)
+        return scope.Close(throwV8Exception(exc));
 
     MonoProperty* prop = mono_class_get_property_from_name(mono_object_get_class(task), "IsCompleted");
-    MonoObject* isCompletedObject = mono_property_get_value(prop, task, NULL, NULL);
+    MonoObject* isCompletedObject = mono_property_get_value(prop, task, NULL, (MonoObject**)&exc);
+    if (exc)
+        return scope.Close(throwV8Exception(exc));
     bool isCompleted = *(bool*)mono_object_unbox(isCompletedObject);
     if(isCompleted)
     {
@@ -397,39 +425,16 @@ Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> cal
         c->Task(task);
         return scope.Close(c->CompleteOnV8Thread(true));
     }
+    else if (c->Sync())
+    {
+        return scope.Close(throwV8Exception(mono_get_exception_invalid_operation("The JavaScript function was called synchronously "
+            "but the underlying CLR function returned without completing the Task. Call the "
+            "JavaScript function asynchronously.")));
+    }
     else
     {
-        ABORT_TODO();
+        MonoEmbedding::ContinueTask(task, c->GetMonoObject());
     }
-    //try 
-    //{
-    //    ClrFuncInvokeContext^ context = gcnew ClrFuncInvokeContext(callback);
-    //    context->Payload = ClrFunc::MarshalV8ToCLR(context, payload);
-    //    Task<System::Object^>^ task = this->func(context->Payload);
-    //    if (task->IsCompleted)
-    //    {
-    //        // Completed synchronously. Return a value or invoke callback based on call pattern.
-    //        context->Task = task;
-    //        return scope.Close(context->CompleteOnV8Thread(true));
-    //    }
-    //    else if (context->Sync)
-    //    {
-    //        // Will complete asynchronously but was called as a synchronous function.
-    //        throw gcnew System::InvalidOperationException("The JavaScript function was called synchronously "
-    //            + "but the underlying CLR function returned without completing the Task. Call the "
-    //            + "JavaScript function asynchronously.");
-    //    }
-    //    else 
-    //    {
-    //        // Will complete asynchronously. Schedule continuation to finish processing.
-    //        task->ContinueWith(gcnew System::Action<Task<System::Object^>^,System::Object^>(
-    //            edgeAppCompletedOnCLRThread), context);
-    //    }
-    //}
-    //catch (System::Exception^ e)
-    //{
-    //    return scope.Close(throwV8Exception(e));
-    //}
 
     return scope.Close(Undefined());    
 }
