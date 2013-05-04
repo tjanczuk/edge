@@ -18,10 +18,11 @@ See the [Edge.js overview](http://tjanczuk.github.com/edge).
 [How to: call node.js from C#](https://github.com/tjanczuk/edge#how-to-call-nodejs-from-c)  
 [How to: export C# function to node.js](https://github.com/tjanczuk/edge#how-to-export-c-function-to-nodejs)  
 [How to: script Python in a node.js application](https://github.com/tjanczuk/edge#how-to-script-python-in-a-nodejs-application)  
+[How to: script PowerShell in a node.js application](https://github.com/tjanczuk/edge#how-to-script-powershell-in-a-nodejs-application)  
 [How to: support for other CLR languages](https://github.com/tjanczuk/edge#how-to-support-for-other-clr-languages)  
 [How to: exceptions](https://github.com/tjanczuk/edge#how-to-exceptions)  
 [How to: debugging](https://github.com/tjanczuk/edge#how-to-debugging)  
-[Building](https://github.com/tjanczuk/edge#building)  
+[Building](https://github.com/tjanczuk/edge#building) 
 [Running tests](https://github.com/tjanczuk/edge#running-tests)  
 [Contribution and derived work](https://github.com/tjanczuk/edge#contribution-and-derived-work)  
 
@@ -556,6 +557,79 @@ console.log(hello('Node.js', true));
 ```
 
 The `sync: true` property in the call to `edge.func` tells edge.js to execute Python code on the V8 thread as opposed to creating a new thread to run Python script on. The `true` parameter in the call to `hello` requests that edge.js does in fact call the `hello` function synchronously, i.e. return the result as opposed to calling a callback function. 
+
+## How to: script PowerShell in a node.js application
+
+Edge.js enables you to run PowerShell and node.js in-process. [Edge-PS](https://github.com/dfinke/edge-ps) connects the PowerShell ecosystem with 24k+ npm modules and more.
+
+You need Windows, [node.js](http://nodejs.org) (any stable version 0.6.x or later), [.NET 4.5](http://www.microsoft.com/en-us/download/details.aspx?id=30653), and [PowerShell 3.0](http://www.microsoft.com/en-us/download/details.aspx?id=34595) to proceed.
+
+### Hello, world
+
+Install edge and edge-ps modules:
+
+``` 
+npm install edge
+npm install edge-ps
+```
+
+In your server.js:
+
+```javascript
+var edge = require('edge');
+
+var hello = edge.func('ps', function () {/*
+"PowerShell welcomes $inputFromJS on $(Get-Date)"
+*/});
+
+hello('Node.js', function (error, result) {
+    if (error) throw error;
+    console.log(result[0]);
+});
+```
+
+Run and enjoy:
+
+```
+C:\testEdgeps>node server
+PowerShell welcomes Node.js on 05/04/2013 09:38:40
+```
+
+### Tapping into PowerShell's ecosystem
+
+Rather than embedding PowerShell directly, you can use PowerShell files, dot source them and even use *Import-Module*.
+
+What you can do in native PowerShell works in node.js.
+
+### Interop PowerShell and Python
+
+Here you can reach out to IronPython from PowerShell from within node.js. This holds true for working with JavaScript frameworks and C#.
+
+```javascript
+var edge = require('edge');
+
+var helloPowerShell = edge.func('ps', function () {/*
+	"PowerShell welcomes $inputFromJS"
+*/});
+
+var helloPython = edge.func('py', function () {/*
+    def hello(input):
+        return "Python welcomes " + input
+
+    lambda x: hello(x)
+*/});
+
+
+helloPython('Node.js', function(error, result){
+	if(error) throw error;
+
+	helloPowerShell(result, function(error, result){
+		if(error) throw error;
+		console.log(result[0]);
+	});
+});
+```
+
 
 ## How to: support for other CLR languages
 
