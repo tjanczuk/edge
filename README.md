@@ -629,7 +629,149 @@ helloPython('Node.js', function(error, result){
 	});
 });
 ```
+## How to: interact with Excel from PowerShell in node.js
+PowerShell makes it really easy to work with a live instance of Microsoft Excel. Plus, Excel is more then just worksheets.
+This example calls three Excel Worksheet functions, in Excel 2010 there 348. From JavaScript, an array having 100 items numbered 1 to 100, is pass to the PowerShell script, Excel is launched and the worksheet functions *Median*, *StDev* and *Var* invoked. These results are returned and Excel is terminated.
 
+```javascript
+var edge = require('edge');
+
+var excelPS = edge.func('ps', function () {/*
+    
+    $data = $inputFromJS | Invoke-Expression
+    
+    $xl = New-Object -ComObject Excel.Application    
+    $wf = $xl.WorksheetFunction    
+
+    New-Object PSObject -Property @{
+        Median = $wf.Median($data)
+        StDev  = $wf.StDev($data)
+        Var    = $wf.Var($data)
+    } | ConvertTo-Json
+
+    $xlProcess = Get-Process excel
+    $xlProcess.kill()   
+*/});
+
+// Invoke PowerShell, it start Excel, gets a WorksheetFunction and then calls
+// Medianm StDev and Var on the array of data passed in.
+// Here we are passing an array of 1 to 100
+excelPS('1..100', function(error, result){
+    
+    if(error) throw error;
+    
+    console.log(result[0]);
+});
+```
+
+```
+{
+    "Median":  50.5,
+    "StDev":  29.011491975882016,
+    "Var":  841.66666666666663
+}
+```
+
+## How to: marshal data between PowerShell and node.js
+
+Edge.js can marshal any JSON-serializable value between .NET and node.js. Edge also supports marshaling between node.js `Buffer` instance and a .NET `byte[]` array to help you efficiently pass binary data.
+
+You can call .NET from node.js and pass in a complex JavaScript object as follows:
+
+```javascript
+var edge = require('edge');
+
+var powershellFunction = edge.func('ps', function () {/*
+@"
+anInteger=$($inputFromJS.anInteger)
+aNumber=$($inputFromJS.aNumber)
+aString=$($inputFromJS.aString)
+aBoolean=$($inputFromJS.aBoolean)
+aBuffer=$($inputFromJS.aBuffer)
+anArray=$($inputFromJS.anArray)
+anObject.a=$($inputFromJS.anObject.a)
+anObject.b=$($inputFromJS.anObject.b)
+"@
+*/});
+
+var payload = {
+    anInteger: 1,
+    aNumber: 3.1415,
+    aString: 'foo',
+    aBoolean: true,
+    aBuffer: new Buffer(10),
+    anArray: [ 1, 'foo' ],
+    anObject: { a: 'foo', b: 12 }
+};
+
+powershellFunction(payload, function(error, result){
+    if(error) throw error;
+    console.log(result[0]);
+});
+```
+
+```
+anInteger=1
+aNumber=3.1415
+aString=foo
+aBoolean=True
+aBuffer=0 0 0 0 0 0 0 0 0 0
+anArray=1 foo
+anObject.a=foo
+anObject.b=12
+```
+
+You can go from PowerShell to node.js. Here we advantage of PowerShell evaluating commands.
+
+```javascript
+var edge = require('edge');
+
+var getPSData = edge.func('ps', function () {/*
+[PSCustomObject] @{
+    anInterger=1
+    aNumber=3.1415
+    aString ='foo'
+    aBoolean = $true
+    anArray = 1, 'foo'
+    aHashtable = @{ a='foo'; b=12 }
+    anObject = [PSCustomObject]@{ c='bar'; GetChildItem=(ls *.js).name }
+    aCalculation = 1+1
+    aBuffer = New-Object byte[] 20
+} | ConvertTo-Json
+*/});
+
+getPSData('', function(error, result){
+    if(error) throw error;
+    console.log(result[0]);
+});
+```
+
+```
+PS C:\> node marshalFromPS
+{
+    "anInterger":  1,
+    "aNumber":  3.1415,
+    "aString":  "foo",
+    "aBoolean":  true,
+    "anArray":  [
+                    1,
+                    "foo"
+                ],
+    "aHashtable":  {
+                       "a":  "foo",
+                       "b":  12
+                   },
+    "anObject":  {
+                     "c":  "bar",
+                     "GetChildItem":  [ "marshalFromPS.js", "server.js" ]
+                 },
+    "aCalculation":  2,
+    "aBuffer":  {
+                    "value":  [ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 ],
+                    "Count":  20
+                }
+}
+```
 
 ## How to: support for other CLR languages
 
