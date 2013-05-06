@@ -19,6 +19,7 @@ See the [Edge.js overview](http://tjanczuk.github.com/edge).
 [How to: export C# function to node.js](https://github.com/tjanczuk/edge#how-to-export-c-function-to-nodejs)  
 [How to: script Python in a node.js application](https://github.com/tjanczuk/edge#how-to-script-python-in-a-nodejs-application)  
 [How to: script PowerShell in a node.js application](https://github.com/tjanczuk/edge#how-to-script-powershell-in-a-nodejs-application)  
+[How to: script F# in a node.js application](https://github.com/tjanczuk/edge#how-to-script-f-in-a-nodejs-application)  
 [How to: support for other CLR languages](https://github.com/tjanczuk/edge#how-to-support-for-other-clr-languages)  
 [How to: exceptions](https://github.com/tjanczuk/edge#how-to-exceptions)  
 [How to: debugging](https://github.com/tjanczuk/edge#how-to-debugging)  
@@ -28,9 +29,9 @@ See the [Edge.js overview](http://tjanczuk.github.com/edge).
 
 ## Introduction 
 
-Edge.js allows you to run .NET and node.js code in one process. You can call .NET functions from node.js and node.js functions from .NET. Edge.js takes care of marshaling data between CLR and V8. Edge.js also reconciles threading models of single threaded V8 and multi-threaded CLR. Edge.js ensures correct lifetime of objects on V8 and CLR heaps. The CLR code can be pre-compiled or specified as C# or Python source: edge.js can execute C# or IronPython script at runtime. Edge allows CLR languages other than C# or IronPython to be plugged in.
+Edge.js allows you to run .NET and node.js code in one process. You can call .NET functions from node.js and node.js functions from .NET. Edge.js takes care of marshaling data between CLR and V8. Edge.js also reconciles threading models of single threaded V8 and multi-threaded CLR. Edge.js ensures correct lifetime of objects on V8 and CLR heaps. The CLR code can be pre-compiled or specified as C#, F#, Python, or PowerShell source: edge.js can run CLR scripts at runtime. Edge can be extended to support other CLR languages.
 
-![Python C# Node.js](https://f.cloud.github.com/assets/822369/332372/da7e53ea-9c24-11e2-9fd4-a24f62c7115c.png)
+![F# Python C# Node.js](https://f.cloud.github.com/assets/822369/468830/a293c728-b6a3-11e2-9fb3-99c7bf2bf6ed.png)
 
 Edge.js provides a basic, prescriptive model and implementation for interoperability between .NET and node.js in-process. You can built upon and extended this basic mechanism to support more specific scenarios, for example:
 * implementing express.js handlers and connect middleware for node.js application using .NET 4.5 ([read more](http://tomasz.janczuk.org/2013/02/hosting-net-code-in-nodejs-applications.html)),  
@@ -47,6 +48,7 @@ Read more about the background and motivations of the project [here](http://toma
 * node.js 0.6.x or later (developed and tested with v0.6.20, v0.8.22, and v0.10.0, both x32 and x64 architectures)  
 * [.NET 4.5](http://www.microsoft.com/en-us/download/details.aspx?id=30653)  
 * to use Python, you also need [IronPython 2.7.3 or later](http://ironpython.codeplex.com/releases/view/81726)  
+* to use F#, read [Dave Thomas blog post](http://7sharpnine.com/posts/i-node-something/)
 
 ## How to: C# hello, world
 
@@ -630,6 +632,24 @@ helloPython('Node.js', function(error, result){
 });
 ```
 
+## How to: script F# in a node.js application
+
+This section is coming up. In the meantime please refer to [Dave Thomas blog post](http://7sharpnine.com/posts/i-node-something/).
+
+```javascript
+var edge = require('edge');
+
+var helloFs = edge.func('fs', function () {/*
+    fun input -> async { 
+        return "F# welcomes " + input.ToString()
+    }
+*/});
+
+helloFs('Node.js', function (error, result) {
+    if (error) throw error;
+    console.log(result);
+});
+```
 
 ## How to: support for other CLR languages
 
