@@ -16,35 +16,44 @@
  */
 #include "edge.h"
 
-DWORD V8SynchronizationContext::v8ThreadId = 0;
-uv_edge_async_t* V8SynchronizationContext::uv_edge_async = 0;
-HANDLE V8SynchronizationContext::funcWaitHandle = 0;
-
 void continueOnV8Thread(uv_async_t* handle, int status)
 {
     // This executes on V8 thread
 
     DBG("continueOnV8Thread");
     HandleScope handleScope;
-    uv_edge_async_t* uv_edge_async = CONTAINING_RECORD(handle, uv_edge_async_t, uv_async);
-    //System::Action^ action = uv_edge_async->action;
-    //MonoObject* action = mono_gc_handle_get_target (uv_edge_async->action);
+    uv_edge_async_t* uv_edge_async = (uv_edge_async_t*)handle;
+    uv_async_edge_cb action = uv_edge_async->action;
+    void* data = uv_edge_async->data;
     V8SynchronizationContext::CancelAction(uv_edge_async);
-
-    //action();
-    //mono_runtime_invoke (action, NULL);
+    action(data);
 }
+
+unsigned long V8SynchronizationContext::v8ThreadId;
+#ifdef USE_WIN32_SYNCHRONIZATION
+    HANDLE V8SynchronizationContext::funcWaitHandle;
+#else
+    uv_sem_t* V8SynchronizationContext::funcWaitHandle;
+#endif
+uv_edge_async_t* V8SynchronizationContext::uv_edge_async;
+
 
 void V8SynchronizationContext::Initialize() 
 {
     // This executes on V8 thread
 
     DBG("V8SynchronizationContext::Initialize");
-    V8SynchronizationContext::uv_edge_async = new uv_edge_async_t();
+    V8SynchronizationContext::uv_edge_async = new uv_edge_async_t;
+    uv_edge_async->singleton = TRUE;
     uv_async_init(uv_default_loop(), &V8SynchronizationContext::uv_edge_async->uv_async, continueOnV8Thread);
     V8SynchronizationContext::Unref(V8SynchronizationContext::uv_edge_async);
-    V8SynchronizationContext::funcWaitHandle = CreateEvent(NULL, FALSE, FALSE, NULL);
-    V8SynchronizationContext::v8ThreadId = GetCurrentThreadId();
+#ifdef USE_WIN32_SYNCHRONIZATION
+    V8SynchronizationContext::funcWaitHandle = CreateSemaphore(NULL, 1, INT_MAX, NULL);
+#else    
+    V8SynchronizationContext::funcWaitHandle = new uv_sem_t;
+    uv_sem_init(V8SynchronizationContext::funcWaitHandle, 1);
+#endif
+    V8SynchronizationContext::v8ThreadId = V8SynchronizationContext::GetCurrentThreadId();
 }
 
 void V8SynchronizationContext::Unref(uv_edge_async_t* uv_edge_async)
@@ -57,17 +66,19 @@ void V8SynchronizationContext::Unref(uv_edge_async_t* uv_edge_async)
 #endif  
 }
 
-uv_edge_async_t* V8SynchronizationContext::RegisterAction(MonoObject* action)
+uv_edge_async_t* V8SynchronizationContext::RegisterAction(uv_async_edge_cb action, void* data)
 {
     DBG("V8SynchronizationContext::RegisterAction");
 
-    if (GetCurrentThreadId() == V8SynchronizationContext::v8ThreadId)
+    if (V8SynchronizationContext::GetCurrentThreadId() == V8SynchronizationContext::v8ThreadId)
     {
         // This executes on V8 thread.
         // Allocate new uv_edge_async.
 
-        uv_edge_async_t* uv_edge_async = new uv_edge_async_t();
-        uv_edge_async->action = mono_gchandle_new(action, FALSE);
+        uv_edge_async_t* uv_edge_async = new uv_edge_async_t;
+        uv_edge_async->action = action;
+        uv_edge_async->data = data;
+        uv_edge_async->singleton = FALSE;
         uv_async_init(uv_default_loop(), &uv_edge_async->uv_async, continueOnV8Thread);
         return uv_edge_async;
     }
@@ -76,9 +87,13 @@ uv_edge_async_t* V8SynchronizationContext::RegisterAction(MonoObject* action)
         // This executes on CLR thread. 
         // Acquire exlusive access to uv_edge_async previously initialized on V8 thread.
 
+#ifdef USE_WIN32_SYNCHRONIZATION
         WaitForSingleObject(V8SynchronizationContext::funcWaitHandle, INFINITE);
-        //V8SynchronizationContext::funcWaitHandle->WaitOne();
-        V8SynchronizationContext::uv_edge_async->action = mono_gchandle_new(action, FALSE);
+#else
+        uv_sem_wait(V8SynchronizationContext::funcWaitHandle);
+#endif
+        V8SynchronizationContext::uv_edge_async->action = action;
+        V8SynchronizationContext::uv_edge_async->data = data;
         return V8SynchronizationContext::uv_edge_async;
     }
 }
@@ -87,31 +102,43 @@ void V8SynchronizationContext::ExecuteAction(uv_edge_async_t* uv_edge_async)
 {
     DBG("V8SynchronizationContext::ExecuteAction");
     // Transfer control to completeOnV8hread method executing on V8 thread
-    BOOL ret = PostQueuedCompletionStatus(
-        uv_default_loop()->iocp, 
-        0, 
-        (ULONG_PTR)NULL, 
-        &uv_edge_async->uv_async.async_req.overlapped); 
+    uv_async_send(&uv_edge_async->uv_async);
+}
+
+void close_uv_edge_async_cb(uv_handle_t* handle) {
+    uv_edge_async_t* uv_edge_async = (uv_edge_async_t*)handle;
+    delete uv_edge_async;
 }
 
 void V8SynchronizationContext::CancelAction(uv_edge_async_t* uv_edge_async)
 {
     DBG("V8SynchronizationContext::CancelAction");
-    if (uv_edge_async == V8SynchronizationContext::uv_edge_async)
+    if (uv_edge_async->singleton)
     {
-        // This is a cancellation of an action registered in RegisterActionFromCLRThread.
+        // This is a cancellation of an action registered on CLR thread.
         // Release the wait handle to allow the uv_edge_async reuse by another CLR thread.
         uv_edge_async->action = NULL;
-        //V8SynchronizationContext::funcWaitHandle->Set();
-        SetEvent(V8SynchronizationContext::funcWaitHandle);
+        uv_edge_async->data = NULL;
+#ifdef USE_WIN32_SYNCHRONIZATION
+        ReleaseSemaphore(V8SynchronizationContext::funcWaitHandle, 1, NULL);
+#else        
+        uv_sem_post(V8SynchronizationContext::funcWaitHandle);
+#endif
     }
     else
     {
-        // This is a cancellation of an action registered in RegisterActionFromV8Thread.
+        // This is a cancellation of an action registered on V8 thread.
         // Unref the handle to stop preventing the process from exiting.
-        V8SynchronizationContext::Unref(uv_edge_async);
-        delete uv_edge_async;
+        // V8SynchronizationContext::Unref(uv_edge_async);
+        uv_close((uv_handle_t*)&uv_edge_async->uv_async, close_uv_edge_async_cb);
     }
 }
 
-// vim: ts=4 sw=4 et: 
+unsigned long V8SynchronizationContext::GetCurrentThreadId()
+{
+#ifdef _WIN32
+    return (unsigned long)::GetCurrentThreadId();
+#else
+    return (unsigned long)pthread_self();
+#endif
+}

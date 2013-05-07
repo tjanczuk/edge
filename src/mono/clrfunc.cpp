@@ -161,7 +161,7 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata)
     //    }
     else if (klass == mono_get_int32_class())
     {
-        jsdata = v8::Integer::New(*(int*)mono_object_unbox(netdata));
+        jsdata = v8::Integer::New(*(int32_t*)mono_object_unbox(netdata));
     }
     else if (klass == mono_get_int64_class())
     {
@@ -234,10 +234,9 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata)
 
         jsdata = result;
     }
-    else if (klass == MonoEmbedding::GetFuncClass())
+    else if (MonoEmbedding::GetFuncClass() == klass)
     {
-        ABORT_TODO();
-        //jsdata = ClrFunc::Initialize((System::Func<System::Object^,Task<System::Object^>^>^)netdata);
+        jsdata = ClrFunc::Initialize(netdata);
     }
     else
     {
@@ -262,17 +261,68 @@ Handle<v8::Value> ClrFunc::MarshalCLRObjectToV8(MonoObject* netdata)
     Handle<v8::Object> result = v8::Object::New();
     MonoClass* klass = mono_object_get_class(netdata);
     MonoClassField* field;
+    MonoProperty* prop;
     void* iter = NULL;
 
     while (field = mono_class_get_fields(klass, &iter))
     {
-        // ignore statics. magic number
-        if (mono_field_get_flags(field) & 0x0010)
+        // magic numbers
+        static uint32_t field_attr_static = 0x0010;
+        static uint32_t field_attr_public = 0x0006;
+        if (mono_field_get_flags(field) & field_attr_static)
+            continue;
+        if (!(mono_field_get_flags(field) & field_attr_public))
             continue;
         const char* name = mono_field_get_name(field);
         MonoObject* value = mono_field_get_value_object(mono_domain_get(), field, netdata);
         result->Set(
             v8::String::New(name), 
+            ClrFunc::MarshalCLRToV8(value));
+    }
+
+    iter = NULL;
+    while(prop = mono_class_get_properties(klass, &iter))
+    {
+        // magic numbers
+        static uint32_t method_attr_static = 0x0010;
+        static uint32_t method_attr_public = 0x0006;
+        MonoMethod* getMethod = mono_property_get_get_method(prop);
+        if (!getMethod)
+            continue;
+        if (mono_method_get_flags(getMethod, NULL) & method_attr_static)
+            continue;
+        if (!(mono_method_get_flags(getMethod, NULL) & method_attr_public))
+            continue;
+
+        // TODO check signature for no paramters
+
+
+        if (enableScriptIgnoreAttribute)
+        {
+        //        if (property->IsDefined(System::Web::Script::Serialization::ScriptIgnoreAttribute::typeid, true))
+        //        {
+        //            continue;
+        //        }
+
+        //        System::Web::Script::Serialization::ScriptIgnoreAttribute^ attr =
+        //            (System::Web::Script::Serialization::ScriptIgnoreAttribute^)System::Attribute::GetCustomAttribute(
+        //            property, 
+        //            System::Web::Script::Serialization::ScriptIgnoreAttribute::typeid,
+        //            true);
+
+        //        if (attr != nullptr && attr->ApplyToOverrides)
+        //        {
+        //            continue;
+        //        }
+        }
+
+        const char* name = mono_property_get_name(prop);
+        MonoException* exc = NULL;
+        MonoObject* value = mono_runtime_invoke(getMethod, netdata, NULL, (MonoObject**)&exc);
+        if (exc)
+            return scope.Close(throwV8Exception(exc));
+        result->Set(
+            v8::String::New(name),
             ClrFunc::MarshalCLRToV8(value));
     }
 

@@ -38,7 +38,8 @@ ClrFuncInvokeContext::ClrFuncInvokeContext(Handle<v8::Value> callbackOrSync) : _
 
     MonoObject* obj = mono_object_new(mono_domain_get(), GetClrFuncInvokeContextClass());
 
-    mono_field_set_value(obj, field, this);
+    ClrFuncInvokeContext* thisPointer = this;
+    mono_field_set_value(obj, field, &thisPointer);
     this->_this = mono_gchandle_new(obj, FALSE);
 
     DBG("ClrFuncInvokeContext::ClrFuncInvokeContext");
@@ -54,7 +55,10 @@ ClrFuncInvokeContext::ClrFuncInvokeContext(Handle<v8::Value> callbackOrSync) : _
     }
 
     MonoMethod* getAction = mono_class_get_method_from_name(GetClrFuncInvokeContextClass(), "GetCompleteOnV8ThreadAsynchronousAction", -1);
-    this->uv_edge_async = V8SynchronizationContext::RegisterAction(mono_runtime_invoke(getAction, obj, NULL, NULL));
+    
+    ClrActionContext* data = new ClrActionContext;
+    data->action = mono_gchandle_new(mono_runtime_invoke(getAction, obj, NULL, NULL), FALSE);
+    this->uv_edge_async = V8SynchronizationContext::RegisterAction(ClrActionContext::ActionCallback, data);
 }
 
 void ClrFuncInvokeContext::DisposeCallback()

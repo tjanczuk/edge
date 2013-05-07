@@ -66,17 +66,29 @@ public:
     static void ContinueTask(MonoObject* task, MonoObject* state);
 };
 
+typedef void (*uv_async_edge_cb)(void* data);
+
 typedef struct uv_edge_async_s {
     uv_async_t uv_async;
-    GCHandle action;
+    uv_async_edge_cb action;
+    void* data;
+    bool singleton;
 } uv_edge_async_t;
+
+typedef struct clrActionContext {
+    GCHandle action;
+    static void ActionCallback(void* data);
+} ClrActionContext;
+
+#if defined(_WIN32) && (UV_VERSION_MAJOR == 0) && (UV_VERSION_MINOR < 8)
+#    define USE_WIN32_SYNCHRONIZATION
+#endif
 
 class V8SynchronizationContext {
 private:
-#ifdef EDGE_PLATFORM_WINDOWS
-    static DWORD v8ThreadId;
-#else
-#endif
+
+    static unsigned long v8ThreadId;
+    static unsigned long GetCurrentThreadId();
 
 public:
 
@@ -90,14 +102,16 @@ public:
     // It also means that existence of .NET proxies to JavaScript functions in the CLR does not prevent the 
     // process from exiting.
     // In this model, JavaScript owns the lifetime of the process.
-#ifdef EDGE_PLATFORM_WINDOWS
+
     static uv_edge_async_t* uv_edge_async;
+#ifdef USE_WIN32_SYNCHRONIZATION
     static HANDLE funcWaitHandle;
 #else
+    static uv_sem_t* funcWaitHandle;
 #endif
 
     static void Initialize();
-    static uv_edge_async_t* RegisterAction(MonoObject* action);
+    static uv_edge_async_t* RegisterAction(uv_async_edge_cb action, void* data);
     static void ExecuteAction(uv_edge_async_t* uv_edge_async);
     static void CancelAction(uv_edge_async_t* uv_edge_async);
     static void Unref(uv_edge_async_t* uv_edge_async);
