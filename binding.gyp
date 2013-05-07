@@ -139,7 +139,14 @@
           'outputs': [
             'src/mono/monoembedding.exe'
           ],
-          'action': ['csc', '-target:exe', '-out:../src/mono/MonoEmbedding.exe', 'src/mono/MonoEmbedding.cs']
+          'conditions': [
+            ['OS=="win"', {
+              'action': ['csc', '-target:exe', '-out:../src/mono/MonoEmbedding.exe', 'src/mono/MonoEmbedding.cs']
+              }, {
+              'action': ['dmcs', '-sdk:4.5', '-target:exe', '-out:src/mono/MonoEmbedding.exe', 'src/mono/MonoEmbedding.cs']
+              }
+            ]
+          ]
         }
       ]
     }
