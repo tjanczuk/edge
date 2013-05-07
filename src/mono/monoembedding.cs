@@ -67,14 +67,15 @@ class ClrFuncInvokeContext
     //ClrFuncInvokeContext(Handle<v8::Value> callbackOrSync);
 
     [MethodImplAttribute(MethodImplOptions.InternalCall)]
-    extern void CompleteOnCLRThreadICall(IntPtr ptr);
+    static extern void CompleteOnCLRThreadICall(IntPtr ptr, Task<object> task);
 
     internal void CompleteOnCLRThread(Task<object> task)
     {
+        CompleteOnCLRThreadICall(native, task);
     }
 
     [MethodImplAttribute(MethodImplOptions.InternalCall)]
-    extern void CompleteOnV8ThreadAsynchronousICall(IntPtr ptr);
+    static extern void CompleteOnV8ThreadAsynchronousICall(IntPtr ptr);
 
     void CompleteOnV8ThreadAsynchronous()
     {
