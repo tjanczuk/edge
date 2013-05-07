@@ -82,7 +82,7 @@ MonoClass* MonoEmbedding::GetFuncClass()
 
     MonoReflectionType* typeObject = (MonoReflectionType*)mono_runtime_invoke(method, NULL, NULL, (MonoObject**)&exc);
     MonoType* type = mono_reflection_type_get_type(typeObject);
-    MonoClass* klass = mono_type_get_class(type);
+    MonoClass* klass = mono_class_from_mono_type(type);
     return klass;
 }
 
