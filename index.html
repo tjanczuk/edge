@@ -248,6 +248,22 @@ var helloClass = edge.func(function () {/*
         </section>        
 
         <section>
+          <h2>References and namespaces</h2>
+          <p><small>Reference libraries and import namespaces within script</small></p>
+            <pre><code>
+var accessSql = edge.func(function () {/*
+    #r "System.Data.dll"
+
+    using System.Data;
+    
+    async (intput) => {
+        ...
+    }
+*/});
+            </code></pre>      
+        </section>              
+
+        <section>
           <h2>Sync vs async</h2>
           <p><small>Call CLR functions synchronously or asynchronously</small></p>
             <pre><code>
@@ -413,8 +429,8 @@ sql('select top 2 * from Products', function (error, result) {
           <h2>Access SQL from node.js, continued</h2>
           <p><small>sql.csx:</small></p>
           <pre><code class="C#">
-//#r "System.Data.dll"
-//#r ...
+#r "System.Data.dll"
+#r ...
 
 using System.Data;
 using ...
