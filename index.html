@@ -227,7 +227,7 @@ var helloPs = edge.func('ps', ...); // PowerShell
         </section>        
 
         <section>
-          <h2>Two representations</h2>
+          <h2>Two C# representations</h2>
           <p><small>Source code may be an async lambda expression or class library</small></p>
             <pre><code>
 var helloLambda = edge.func(function () {/*
@@ -245,7 +245,25 @@ var helloClass = edge.func(function () {/*
 */});
             </code></pre>      
             <a href="https://github.com/tjanczuk/edge#how-to-integrate-c-code-into-nodejs-code"><small>how to integrate CLR code</small></a>
-        </section>              
+        </section>        
+
+        <section>
+          <h2>Sync vs async</h2>
+          <p><small>Call CLR functions synchronously or asynchronously</small></p>
+            <pre><code>
+var hello = edge.func(...);
+
+// Make asynchronous call
+hello('Node.js', function (error, result) {
+  ...
+});
+
+// Make synchronous call
+// Requires CLR function to return completed Task&lt;object&gt;
+var result = hello('Node.js', true);
+            </code></pre>      
+            <a href="https://github.com/tjanczuk/edge#how-to-integrate-c-code-into-nodejs-code"><small>how to integrate CLR code</small></a>
+        </section>                 
 
         <section>
           <h2>Debugging</h2>
