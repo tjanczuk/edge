@@ -56,7 +56,7 @@
         <section>
             <h2>Edge.js connects</h2>
             <p><small>24k+ npm modules with 11k+ nuget packages</small></p>
-            <p><small>JavaScript with C# with Python</small></p>
+            <p><small>JavaScript with C#, F#, Python, and PowerShell</small></p>
             <p><small>loose typing with strong typing</small></p>
             <p><small>IO-bound single threaded with CPU-bound multi-threaded</small></p>
             <p><small>cool with awesome</small></p>
@@ -69,9 +69,11 @@
           <pre><code>
 var edge = require('edge');
 
-var hello = edge.func(
-    'async (input) => { return ".NET welcomes " + input.ToString(); }'
-);
+var hello = edge.func(function () {/*
+    async (input) => { 
+        return "CSharp welcomes " + input.ToString(); 
+    }
+*/});
 
 hello('Node.js', function (error, result) {
     if (error) throw error;
@@ -81,9 +83,33 @@ hello('Node.js', function (error, result) {
           <a href="https://github.com/tjanczuk/edge/blob/master/samples/101_hello_lambda.js"><small>see full code</small></a>
           <pre><code>
 c:\projects\edgedemo> node sample.js
-.NET welcomes Node.js
+CSharp welcomes Node.js
           </code></pre>                  
         </section>
+
+        <section>
+          <h2>F# welcomes Node.js</h2>
+          <p><small>Call F# async workflows from node.js</small></p>
+          <pre><code>
+var edge = require('edge');
+
+var hello = edge.func('fs', function () {/*
+    fun input -> async { 
+        return "FSharp welcomes " + input.ToString() 
+    }
+*/});
+
+hello('Node.js', function (error, result) {
+    if (error) throw error;
+    console.log(result);
+});
+          </code></pre>     
+          <a href="https://github.com/tjanczuk/edge#how-to-script-f-in-a-nodejs-application"><small>how to F# in node.js</small></a>
+          <pre><code>
+c:\projects\edgedemo> node sample.js
+FSharp welcomes Node.js
+          </code></pre>                  
+        </section>        
 
         <section>
           <h2>Python welcomes Node.js</h2>
@@ -108,7 +134,29 @@ hello('Node.js', function (error, result) {
 c:\projects\edgedemo> node sample.js
 Python welcomes Node.js
           </code></pre>                  
-        </section>
+        </section>        
+
+        <section>
+          <h2>PowerShell welcomes Node.js</h2>
+          <p><small>Call PowerShell scripts asynchronously from node.js</small></p>
+          <pre><code>
+var edge = require('edge');
+
+var hello = edge.func('ps', function () {/*
+    "PowerShell welcomes $inputFromJS"
+*/});
+
+hello('Node.js', function (error, result) {
+    if (error) throw error;
+    console.log(result);
+});
+          </code></pre>     
+          <a href="https://github.com/tjanczuk/edge#how-to-script-powershell-in-a-nodejs-application"><small>how to PowerShell in node.js</small></a>
+          <pre><code>
+c:\projects\edgedemo> node sample.js
+PowerShell welcomes Node.js
+          </code></pre>                  
+        </section>                
 
         <section>
           <h2>Interop model</h2>
@@ -117,81 +165,92 @@ Python welcomes Node.js
         </section>          
 
         <section>
-          <h2>C# grows multi-line</h2>
-          <p><small>Embed multi-line C# in a node.js file</small></p>
+          <h2>Bind to library</h2>
+          <p><small>Call a method from existing CLR library</small></p>
             <pre><code>
-var hello = require('edge').func(function () {/*
-    async (input) => {
-        return ".NET welcomes " + input.ToString(); 
-    }
-*/});
+var hello = require('edge').func({
+    assemblyFile: 'My.Edge.Samples.dll',
+    typeName: 'Samples.FooBar.MyType',
+    methodName: 'MyMethod' // Func&lt;object,Task&lt;object&gt;&gt;
+}});
 
 hello('Node.js', function (error, result) { ... });
-            </code></pre>         
-            <a href="https://github.com/tjanczuk/edge/blob/master/samples/102_hello_function.js"><small>see full code</small></a>
+            </code></pre>      
+            <a href="https://github.com/tjanczuk/edge#how-to-integrate-c-code-into-nodejs-code"><small>how to integrate CLR code</small></a>
         </section>
+
+        <section>
+          <h2>Bind to code</h2>
+          <p><small>Compile source code on the fly</small></p>
+            <pre><code>
+var hello = edge.func(
+    'async (input) => { return "C# welcomes " + input.ToString(); }'
+);
+            </code></pre>      
+            <a href="https://github.com/tjanczuk/edge#how-to-integrate-c-code-into-nodejs-code"><small>how to integrate CLR code</small></a>
+        </section>
+
+        <section>
+          <h2>Bind to multiline code</h2>
+          <p><small>Embed multi-line source code inline</small></p>
+            <pre><code>
+var hello = edge.func(function () {/*
+    async (input) => { 
+        return "C# welcomes " + input.ToString(); 
+    }
+*/});
+            </code></pre>      
+            <a href="https://github.com/tjanczuk/edge#how-to-integrate-c-code-into-nodejs-code"><small>how to integrate CLR code</small></a>
+        </section>
+
+        <section>
+          <h2>Bind to source file</h2>
+          <p><small>Compile source code from a file</small></p>
+            <pre><code>
+var hello = edge.func('mysample.cs');
+            </code></pre>      
+            <a href="https://github.com/tjanczuk/edge#how-to-integrate-c-code-into-nodejs-code"><small>how to integrate CLR code</small></a>
+        </section>
+
+
+        <section>
+          <h2>Multiple languages</h2>
+          <p><small>Compile code for many CLR languages through extensibility</small></p>
+            <pre><code>
+var helloCs = edge.func(...); // C# is the default
+var helloFs = edge.func('fs', ...); // F#
+var helloPy = edge.func('py', ...); // Python
+var helloPs = edge.func('ps', ...); // PowerShell
+...
+            </code></pre>      
+            <a href="https://github.com/tjanczuk/edge#how-to-support-for-other-clr-languages"><small>how to support other CLR languages</small></a>
+        </section>        
+
+        <section>
+          <h2>Two representations</h2>
+          <p><small>Source code may be an async lambda expression or class library</small></p>
+            <pre><code>
+var helloLambda = edge.func(function () {/*
+    async (input) => { return "C# welcomes " + input.ToString(); }
+*/});
+
+var helloClass = edge.func(function () {/*
+  using System.Threading.Tasks;
+
+  public class Startup {
+    public async Task&lt;object&gt; Invoke(object input) {
+      return ".NET welcomes " + input.ToString();
+    }
+  }
+*/});
+            </code></pre>      
+            <a href="https://github.com/tjanczuk/edge#how-to-integrate-c-code-into-nodejs-code"><small>how to integrate CLR code</small></a>
+        </section>              
 
         <section>
           <h2>Debugging</h2>
           <p><small>Use Visual Studio to debug C# code running in node.exe</small></p>
            <img src="https://f.cloud.github.com/assets/822369/326781/923d870c-9b4a-11e2-8f45-201a6431afbf.PNG" alt="edge.js debugging" /> 
-        </section> 
-
-        <section>
-          <h2>C# in its own file</h2>
-          <p><small>Call C# in a file from node.js</small></p>        
-          <p><a href="https://github.com/tjanczuk/edge/blob/master/samples/103_hello_file.js"><small>sample.js:</small></a></p>    
-            <pre><code>
-var hello = require('edge').func('hello.csx');
-
-hello('Node.js', function (error, result) { ... });
-            </code></pre> 
-            <p><a href="https://github.com/tjanczuk/edge/blob/master/samples/103_hello_file.csx"><small>hello.csx:</small></a></p>
-            <pre><code>
-async (input) => { return ".NET welcomes " + input.ToString(); }
-            </code></pre>                   
-        </section>
-
-        <section>
-          <h2>Beyond async lambda</h2>
-          <p><small>Invoke a method of a C# class from node.js</small></p>
-          <pre><code>
-var add7 = require('edge').func(function () {/*
-  using System.Threading.Tasks;
-
-  public class Startup {
-    public async Task&lt;object&gt; Invoke(object input) {
-      return (int)input + 7;
-    }
-  }
-*/});
-
-add7(12, function (error, result) { ... });
-          </code></pre>
-          <a href="https://github.com/tjanczuk/edge/blob/master/samples/104_add7_class.js"><small>see full code</small></a>
-        </section>
-
-        <section>
-          <h2>CLR class libraries</h2>
-          <p><small>Invoke a method of a C# class from a DLL</small></p>
-          <p><a href="https://github.com/tjanczuk/edge/blob/master/samples/105_add7_dll.js"><small>sample.js:</small></a></p>
-          <pre><code>
-var add7 = require('edge').func('My.Sample.dll');
-
-add7(12, function (error, result) { ... }
-          </code></pre>
-          <p><a href="https://github.com/tjanczuk/edge/blob/master/samples/Sample105.cs"><small>sample.cs:</small></a></p>
-          <pre><code>
-using System.Threading.Tasks;
-
-namespace My.Sample {
-  public class Startup {
-    public async Task&lt;object&gt; Invoke(object input) {
-      return (int)input + 7;
-    }
-  }
-}   
-          </code></pre>         
         </section>
 
         <section>
@@ -313,21 +372,6 @@ console.log(counter(null, true)); // prints 14
           </code></pre>         
           <a href="https://github.com/tjanczuk/edge/blob/master/samples/110_clr_instance.js"><small>see full example</small></a>
         </section>   
-
-        <section>
-          <h2>F# coming soon to node.js</h2>
-          <p><small>Bring any CLR language as edge.js extension</small></p>
-          <pre><code class="javascript">
-var hello = require('edge').func('fsharp', function() {/*
-    async {
-        return async.Return("F# welcomes " + input)
-    }
-*/});
-
-hello('Node.js', function (error, result) { ... });
-          </code></pre>         
-          <a href="https://github.com/tjanczuk/edge/issues/32"><small>get engaged</small></a>
-        </section>
 
         <section>
           <h2>Let's build something...</h2>
