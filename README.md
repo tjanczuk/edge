@@ -23,6 +23,7 @@ See the [Edge.js overview](http://tjanczuk.github.com/edge).
 [How to: support for other CLR languages](https://github.com/tjanczuk/edge#how-to-support-for-other-clr-languages)  
 [How to: exceptions](https://github.com/tjanczuk/edge#how-to-exceptions)  
 [How to: debugging](https://github.com/tjanczuk/edge#how-to-debugging)  
+[Performance](https://github.com/tjanczuk/edge#performance)  
 [Building](https://github.com/tjanczuk/edge#building) 
 [Running tests](https://github.com/tjanczuk/edge#running-tests)  
 [Contribution and derived work](https://github.com/tjanczuk/edge#contribution-and-derived-work)  
@@ -802,6 +803,12 @@ var hello = edge.func('async (input) => { return 2 * (int)input; }');
 After setting `EDGE_CS_DEBUG=1` environment variable before starting node.exe and attaching the managed debugger to the node.exe process, you can set breakpoints in C# code (which may appear as a JavaScript comment), or use `System.Diagnostics.Debugger.Break()` to break into the debugger from .NET code. 
 
 ![debug-inline](https://f.cloud.github.com/assets/822369/326781/923d870c-9b4a-11e2-8f45-201a6431afbf.PNG)
+
+## Performance
+
+Read more about [performance of edge.js on the wiki](https://github.com/tjanczuk/edge/wiki/Performance). Here is the gist of the latency (smaller is better):
+
+![edgejs-performance1](https://f.cloud.github.com/assets/822369/486393/645f696a-b920-11e2-8a20-9fa6932bb092.png)
 
 ## Building
 
