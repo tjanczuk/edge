@@ -1,17 +1,25 @@
-var callCount = process.env.EDGE_CALL_COUNT || 100000;
+var callCount = process.env.EDGE_CALL_COUNT || 10000;
 
 var measure = function (func) {
 	var start = Date.now();
-	for (var i = 0; i < callCount; i++) {
-		func(null, function (error, result) {
-			// empty
+	var i = 0;
+
+	function one() {
+		func(null, function (error, callbck) {
+			if (error) throw error;
+			if (++i < callCount) process.nextTick(one);
+			else finish();
 		});
 	}
 
-	var delta = Date.now() - start;
-	var result = process.memoryUsage();
-	result.latency = delta / callCount;
-	console.log(result)
+	function finish() {
+		var delta = Date.now() - start;
+		var result = process.memoryUsage();
+		result.latency = delta / callCount;
+		console.log(result);
+	}
+
+	one();
 };
 
 var baseline = function () {
@@ -55,9 +63,27 @@ var clr2v8 = function () {
 	*/}));
 };
 
+var crossProcess = function () {
+	var http = require('http');
+	measure(function (input, callback) {
+		http.get("http://localhost:31415/api/book", function(res) {
+			if (res.statusCode !== 200) {
+				return callback(new Error('Status code: ' + res.statusCode));
+			}
+
+			var body = '';
+			res.on('data', function (chunk) { body += chunk; });
+			res.on('end', function () {
+				callback(null, JSON.parse(body));
+			})
+		}).on('error', callback);
+	});
+};
+
 var cases = {
-	baseline: baseline,
-	clr2v8: clr2v8
+	js: baseline,
+	edge: clr2v8,
+	xproc: crossProcess
 };
 
 if (!cases[process.argv[2]]) {
