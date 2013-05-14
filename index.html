@@ -520,6 +520,26 @@ convertImageToJpg('.\\edge.png', function (error) { ... });
         </section>    
 
         <section>
+          <h2>WebSockets in .NET</h2>
+          <p><small>Expose WebSockets to .NET using Edge.js, including on Windows Server 2008 or Windows 7</small></p>
+          <pre><code class="javscript">
+var createMyNetWebSocket = require('edge').func(function () {/*
+  // .NET WebSocket application in C# - see full code 
+*/})
+
+var wss = new require('ws').Server(...);
+
+wss.on('connection', function(ws) {
+    var onMessage = createMyNetWebSocket(ws.send, true);
+    ws.on('message', onMessage);
+});
+
+wss.listen(8080);
+         </code></pre>
+         <a href="https://github.com/tjanczuk/edge/blob/master/samples/209_websocket.js"><small>see full code</small></a>
+        </section>    
+
+        <section>
           <h2>Express.js handler in C#</h2>
           <p><small>Plug in .NET OWIN apps as connect middleware or express handlers</small></p>
           <pre><code class="javscript">
