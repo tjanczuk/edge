@@ -1,7 +1,7 @@
-Edge.js: run .NET and node.js code in-process
+Edge.js: run .NET and Node.js code in-process
 ====
 
-An edge connects two nodes. This edge connects node.js and .NET. V8 and CLR. Node.js, Python, and C# - in process.
+An edge connects two nodes. This edge connects Node.js and .NET. V8 and CLR. Node.js, Python, and C# - in process.
 
 ## Before you dive in
 
@@ -12,14 +12,14 @@ See the [Edge.js overview](http://tjanczuk.github.com/edge).
 [Introduction](https://github.com/tjanczuk/edge#introduction)  
 [What you need](https://github.com/tjanczuk/edge#what-you-need)  
 [How to: C# hello, world](https://github.com/tjanczuk/edge#how-to-c-hello-world)  
-[How to: integrate C# code into node.js code](https://github.com/tjanczuk/edge#how-to-integrate-c-code-into-nodejs-code)  
+[How to: integrate C# code into Node.js code](https://github.com/tjanczuk/edge#how-to-integrate-c-code-into-nodejs-code)  
 [How to: specify additional CLR assembly references in C# code](https://github.com/tjanczuk/edge#how-to-specify-additional-clr-assembly-references-in-c-code)  
-[How to: marshal data between C# and node.js](https://github.com/tjanczuk/edge#how-to-marshal-data-between-c-and-nodejs)  
-[How to: call node.js from C#](https://github.com/tjanczuk/edge#how-to-call-nodejs-from-c)  
-[How to: export C# function to node.js](https://github.com/tjanczuk/edge#how-to-export-c-function-to-nodejs)  
-[How to: script Python in a node.js application](https://github.com/tjanczuk/edge#how-to-script-python-in-a-nodejs-application)  
-[How to: script PowerShell in a node.js application](https://github.com/tjanczuk/edge#how-to-script-powershell-in-a-nodejs-application)  
-[How to: script F# in a node.js application](https://github.com/tjanczuk/edge#how-to-script-f-in-a-nodejs-application)  
+[How to: marshal data between C# and Node.js](https://github.com/tjanczuk/edge#how-to-marshal-data-between-c-and-nodejs)  
+[How to: call Node.js from C#](https://github.com/tjanczuk/edge#how-to-call-nodejs-from-c)  
+[How to: export C# function to Node.js](https://github.com/tjanczuk/edge#how-to-export-c-function-to-nodejs)  
+[How to: script Python in a Node.js application](https://github.com/tjanczuk/edge#how-to-script-python-in-a-nodejs-application)  
+[How to: script PowerShell in a Node.js application](https://github.com/tjanczuk/edge#how-to-script-powershell-in-a-nodejs-application)  
+[How to: script F# in a Node.js application](https://github.com/tjanczuk/edge#how-to-script-f-in-a-nodejs-application)  
 [How to: support for other CLR languages](https://github.com/tjanczuk/edge#how-to-support-for-other-clr-languages)  
 [How to: exceptions](https://github.com/tjanczuk/edge#how-to-exceptions)  
 [How to: debugging](https://github.com/tjanczuk/edge#how-to-debugging)  
@@ -30,14 +30,14 @@ See the [Edge.js overview](http://tjanczuk.github.com/edge).
 
 ## Introduction 
 
-Edge.js allows you to run .NET and node.js code in one process. You can call .NET functions from node.js and node.js functions from .NET. Edge.js takes care of marshaling data between CLR and V8. Edge.js also reconciles threading models of single threaded V8 and multi-threaded CLR. Edge.js ensures correct lifetime of objects on V8 and CLR heaps. The CLR code can be pre-compiled or specified as C#, F#, Python, or PowerShell source: edge.js can run CLR scripts at runtime. Edge can be extended to support other CLR languages.
+Edge.js allows you to run .NET and Node.js code in one process. You can call .NET functions from Node.js and Node.js functions from .NET. Edge.js takes care of marshaling data between CLR and V8. Edge.js also reconciles threading models of single threaded V8 and multi-threaded CLR. Edge.js ensures correct lifetime of objects on V8 and CLR heaps. The CLR code can be pre-compiled or specified as C#, F#, Python, or PowerShell source: edge.js can run CLR scripts at runtime. Edge can be extended to support other CLR languages.
 
 ![F# Python C# Node.js](https://f.cloud.github.com/assets/822369/468830/a293c728-b6a3-11e2-9fb3-99c7bf2bf6ed.png)
 
-Edge.js provides a basic, prescriptive model and implementation for interoperability between .NET and node.js in-process. You can built upon and extended this basic mechanism to support more specific scenarios, for example:
-* implementing express.js handlers and connect middleware for node.js application using .NET 4.5 ([read more](http://tomasz.janczuk.org/2013/02/hosting-net-code-in-nodejs-applications.html)),  
-* implementing CPU-bound computations in .NET and running them in-process with node.js application without blocking the event loop ([read more](http://tomasz.janczuk.org/2013/02/cpu-bound-workers-for-nodejs.html)),  
-* using C# and IronPython and .NET instead of writing native node.js extensions in C/C++ and Win32 to access Windows specific functionality from a node.js application ([read more](http://tomasz.janczuk.org/2013/02/access-ms-sql-from-nodejs-application.html)). 
+Edge.js provides a basic, prescriptive model and implementation for interoperability between .NET and Node.js in-process. You can built upon and extended this basic mechanism to support more specific scenarios, for example:
+* implementing express.js handlers and connect middleware for Node.js application using .NET 4.5 ([read more](http://tomasz.janczuk.org/2013/02/hosting-net-code-in-nodejs-applications.html)),  
+* implementing CPU-bound computations in .NET and running them in-process with Node.js application without blocking the event loop ([read more](http://tomasz.janczuk.org/2013/02/cpu-bound-workers-for-nodejs.html)),  
+* using C# and IronPython and .NET instead of writing native Node.js extensions in C/C++ and Win32 to access Windows specific functionality from a Node.js application ([read more](http://tomasz.janczuk.org/2013/02/access-ms-sql-from-nodejs-application.html)). 
 
 Read more about the background and motivations of the project [here](http://tomasz.janczuk.org/2013/02/hosting-net-code-in-nodejs-applications.html). 
 
