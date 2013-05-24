@@ -64,7 +64,7 @@ Handle<v8::Value> ClrFunc::Initialize(const v8::Arguments& args)
             String::Utf8Value nativeMethodName(options->Get(String::NewSymbol("methodName")));  
             typeName = gcnew System::String(*nativeTypeName);
             methodName = gcnew System::String(*nativeMethodName);      
-            assembly = Assembly::LoadFrom(gcnew System::String(*assemblyFile));
+            assembly = Assembly::UnsafeLoadFrom(gcnew System::String(*assemblyFile));
             ClrFuncReflectionWrap^ wrap = ClrFuncReflectionWrap::Create(assembly, typeName, methodName);
             result = ClrFunc::Initialize(
                 gcnew System::Func<System::Object^,Task<System::Object^>^>(
@@ -73,7 +73,7 @@ Handle<v8::Value> ClrFunc::Initialize(const v8::Arguments& args)
         else {
             // reference .NET code throgh embedded source code that needs to be compiled
             String::Utf8Value compilerFile(options->Get(String::NewSymbol("compiler")));
-            assembly = Assembly::LoadFrom(gcnew System::String(*compilerFile));
+            assembly = Assembly::UnsafeLoadFrom(gcnew System::String(*compilerFile));
             System::Type^ compilerType = assembly->GetType("EdgeCompiler", true, true);
             System::Object^ compilerInstance = System::Activator::CreateInstance(compilerType, false);
             MethodInfo^ compileFunc = compilerType->GetMethod("CompileFunc", BindingFlags::Instance | BindingFlags::Public);
