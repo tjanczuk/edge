@@ -272,4 +272,99 @@ describe('edge-cs', function () {
         });
     });
 
+    it('succeeds with dynamic input to async lambda', function (done) {
+        var func = edge.func({
+            source: function () {/* 
+                async (dynamic input) => 
+                {
+                    return input.text + " works";
+                }
+            */}
+        });
+        func({ text: 'Dynamic' }, function (error, result) {
+            assert.ifError(error);
+            assert.equal(result, 'Dynamic works');
+            done();
+        });
+    });
+
+    it('succeeds with nested dynamic input to async lambda', function (done) {
+        var func = edge.func({
+            source: function () {/* 
+                async (dynamic input) => 
+                {
+                    return input.nested.text + " works";
+                }
+            */}
+        });
+        func({ nested: { text: 'Dynamic' } }, function (error, result) {
+            assert.ifError(error);
+            assert.equal(result, 'Dynamic works');
+            done();
+        });
+    });
+
+    it('succeeds with dynamic input to Invoke method', function (done) {
+        var func = edge.func({
+            source: function () {/* 
+                using System.Threading.Tasks;
+
+                public class Startup 
+                {
+                    public async Task<object> Invoke(dynamic input) 
+                    {
+                        return input.text + " works";
+                    }
+                }    
+            */}
+        });
+        func({ text: 'Dynamic' }, function (error, result) {
+            assert.ifError(error);
+            assert.equal(result, 'Dynamic works');
+            done();
+        });
+    });    
+
+    it('succeeds with nested dynamic input to Invoke method', function (done) {
+        var func = edge.func({
+            source: function () {/* 
+                using System.Threading.Tasks;
+
+                public class Startup 
+                {
+                    public async Task<object> Invoke(dynamic input) 
+                    {
+                        return input.nested.text + " works";
+                    }
+                }    
+            */}
+        });
+        func({ nested: { text: 'Dynamic' } }, function (error, result) {
+            assert.ifError(error);
+            assert.equal(result, 'Dynamic works');
+            done();
+        });
+    }); 
+
+    it('succeeds with dictionary input to Invoke method', function (done) {
+        var func = edge.func({
+            source: function () {/* 
+                using System.Threading.Tasks;
+                using System.Collections.Generic;
+
+                public class Startup 
+                {
+                    public async Task<object> Invoke(IDictionary<string,object> input) 
+                    {
+                        return ((IDictionary<string,object>)input["nested"])["text"] + " works";
+                    }
+                }    
+            */}
+        });
+        func({ nested: { text: 'Dictionary' } }, function (error, result) {
+            assert.ifError(error);
+            assert.equal(result, 'Dictionary works');
+            done();
+        });
+    });    
 });
