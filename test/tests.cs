@@ -25,10 +25,10 @@ namespace Edge.Tests
 {
     public class Startup
     {
-        string ValidateMarshalNodeJsToNet(object input, bool expectFunction) 
+        string ValidateMarshalNodeJsToNet(dynamic input, bool expectFunction)
         {
             string result = "yes"; 
-            IDictionary<string, object> data = input as IDictionary<string, object>;
+            var data = (IDictionary<string, object>)input;
             try 
             {
                 int a = (int)data["a"];
@@ -61,21 +61,53 @@ namespace Edge.Tests
                 result = e.ToString();
             }
 
+            try
+            {
+                int a = input.a;
+                if (a != 1) throw new Exception("dynamic a is not 1");
+                double b = input.b;
+                if (b != 3.1415) throw new Exception("dynamic b is not 3.1415");
+                string c = input.c;
+                if (c != "foo") throw new Exception("dynamic c is not foo");
+                bool d = input.d;
+                if (d != true) throw new Exception("dynamic d is not true");
+                bool e = input.e;
+                if (e != false) throw new Exception("dynamic e is not false");
+                byte[] f = input.f;
+                if (f.Length != 10) throw new Exception("dynamic f.length is not 10");
+                dynamic[] g = input.g;
+                if (g.Length != 2) throw new Exception("dynamic g.length is not 2");
+                if ((int)g[0] != 1) throw new Exception("dynamic g[0] is not 1");
+                if ((string)g[1] != "foo") throw new Exception("dynamic g[1] is not foo");
+                dynamic h = input.h;
+                if ((string)h.a != "foo") throw new Exception("dynamic h.a is not foo");
+                if ((int)h.b != 12) throw new Exception("dynamic h.b is not 12");
+                if (expectFunction)
+                {
+                    var i = input.i as Func<object, Task<object>>;
+                    if (i == null) throw new Exception("dynamic i is not a Func<object,Task<object>>");
+                }
+            }
+            catch (Exception e)
+            {
+                result = e.ToString();
+            }
+
             return result;
         }
 
-        public Task<object> Invoke(object input)
+        public Task<object> Invoke(dynamic input)
         {
-            return Task.FromResult<object>(".NET welcomes " + input.ToString());
+            return Task.FromResult<object>(".NET welcomes " + input);
         }
 
-        public Task<object> MarshalIn(object input)
+        public Task<object> MarshalIn(dynamic input)
         {
             string result = ValidateMarshalNodeJsToNet(input, true);
             return Task.FromResult<object>(result);
         }
 
-        public Task<object> MarshalBack(object input)
+        public Task<object> MarshalBack(dynamic input)
         {
             var result = new {
                 a = 1,
@@ -92,12 +124,12 @@ namespace Edge.Tests
             return Task.FromResult<object>(result);
         }       
 
-        public Task<object> NetExceptionTaskStart(object input)
+        public Task<object> NetExceptionTaskStart(dynamic input)
         {
             throw new Exception("Test .NET exception");
         }                   
 
-        public Task<object> NetExceptionCLRThread(object input)
+        public Task<object> NetExceptionCLRThread(dynamic input)
         {
             Task<object> task = new Task<object>(() =>
             {
@@ -109,16 +141,14 @@ namespace Edge.Tests
             return task;            
         }                   
 
-        public async Task<object> InvokeBack(object input)
+        public async Task<object> InvokeBack(dynamic input)
         {
-            Func<object, Task<object>> hello = (Func<object, Task<object>>)(((IDictionary<string, object>)input)["hello"]);
-            var result = await hello(".NET");
+            var result = await input.hello(".NET");
             return result;
         }
 
-        public async Task<object> MarshalInFromNet(object input)
+        public async Task<object> MarshalInFromNet(dynamic input)
         {
-            Func<object, Task<object>> hello = (Func<object, Task<object>>)(((IDictionary<string, object>)input)["hello"]);
             var payload = new {
                 a = 1,
                 b = 3.1415,
@@ -130,25 +160,23 @@ namespace Edge.Tests
                 h = new { a = "foo", b = 12 },
                 i = (Func<object,Task<object>>)(async (i) => { return i; })
             };          
-            var result = await hello(payload);
+            var result = await input.hello(payload);
             return result;
         }
 
-        public async Task<object> MarshalBackToNet(object input)
+        public async Task<object> MarshalBackToNet(dynamic input)
         {
-            Func<object, Task<object>> hello = (Func<object, Task<object>>)(((IDictionary<string, object>)input)["hello"]);     
-            var payload = await hello(null);
+            var payload = await input.hello(null);
             string result = ValidateMarshalNodeJsToNet(payload, false);
             return result;
         }        
 
-        public async Task<object> MarshalException(object input)
+        public async Task<object> MarshalException(dynamic input)
         {
             string result = "No exception was thrown";
-            Func<object, Task<object>> hello = (Func<object, Task<object>>)(((IDictionary<string, object>)input)["hello"]); 
             try 
             {   
-                await hello(null);
+                await input.hello(null);
             }
             catch (Exception e) 
             {
@@ -159,11 +187,11 @@ namespace Edge.Tests
         }       
 
         private WeakReference weakRefToNodejsFunc;
-        public Task<object> InvokeBackAfterCLRCallHasFinished(object input)
+        public Task<object> InvokeBackAfterCLRCallHasFinished(dynamic input)
         {
             var trace = new List<string>();
             trace.Add("InvokeBackAfterCLRCallHasFinished#EnteredCLR");
-            Func<object, Task<object>> callback = (Func<object, Task<object>>)(((IDictionary<string, object>)input)["eventCallback"]);
+            Func<object, Task<object>> callback = input.eventCallback;
 
             // The target of the callback function is the ref to the NodejsFunc acting as
             // the proxy for the JS function to call.
@@ -186,7 +214,7 @@ namespace Edge.Tests
             return result.Task;
         }
 
-        public Task<object> EnsureNodejsFuncIsCollected(object input) {
+        public Task<object> EnsureNodejsFuncIsCollected(dynamic input) {
 
             var succeed = false;
             GC.Collect();

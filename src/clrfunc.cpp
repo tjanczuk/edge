@@ -1,5 +1,7 @@
 #include "edge.h"
 
+#using <System.Core.dll>
+
 ClrFunc::ClrFunc()
 {
     // empty
@@ -304,7 +306,7 @@ System::Object^ ClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata)
     }
     else if (jsdata->IsObject()) 
     {
-        Dictionary<System::String^,System::Object^>^ netobject = gcnew Dictionary<System::String^,System::Object^>();
+        IDictionary<System::String^,System::Object^>^ netobject = gcnew System::Dynamic::ExpandoObject();
         Handle<v8::Object> jsobject = Handle<v8::Object>::Cast(jsdata);
         Handle<v8::Array> propertyNames = jsobject->GetPropertyNames();
         for (unsigned int i = 0; i < propertyNames->Length(); i++)
