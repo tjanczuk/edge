@@ -248,6 +248,26 @@ var helloClass = edge.func(function () {/*
         </section>        
 
         <section>
+          <h2>Dynamics</h2>
+          <p><small>Use C# dynamics to access objects passed from JavaScript</small></p>
+            <pre><code>
+var hello = edge.func(function () {/*
+    async (dynamic input) => { 
+        return input.nested.text + " work!"; 
+    }
+*/});
+
+var input = {
+    nested: {
+        text: "Dynamics"
+    }
+};
+
+hello(input, function (error, callback) { ... });
+            </code></pre>      
+        </section>        
+
+        <section>
           <h2>References and namespaces</h2>
           <p><small>Reference libraries and import namespaces within script</small></p>
             <pre><code>
