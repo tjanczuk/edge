@@ -500,10 +500,10 @@ heavyLifting('Node.js', function (error, result) { ... });
           <pre><code class="javscript">
 var zip = require('edge').func(function() {/*
   class Startup {
-    public async Task&lt;object&gt; Invoke(IDictionary&lt;string,object&gt; p) {
+    public async Task&lt;object&gt; Invoke(dynamic p) {
       await Task.Run(async () => {
         System.IO.Compression.ZipFile.CreateFromDirectory(
-          (string)p["src"], (string)p["dest"]);
+          (string)p.src, (string)p.dest);
       });
       return null;
     }
