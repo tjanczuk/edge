@@ -55,7 +55,7 @@
 
         <section>
             <h2>Edge.js connects</h2>
-            <p><small>24k+ npm modules with 11k+ nuget packages</small></p>
+            <p><small>30k+ npm modules with 11k+ nuget packages</small></p>
             <p><small>JavaScript with C#, F#, Python, and PowerShell</small></p>
             <p><small>loose typing with strong typing</small></p>
             <p><small>IO-bound single threaded with CPU-bound multi-threaded</small></p>
@@ -377,10 +377,9 @@ addAndMultiplyBy2(payload, function (error, result) { ... });
 var addAndMultiplyBy2 = require('edge').func(function () {/*
   using ...;
 
-  async (data) => {
-    var input = (IDictionary&lt;string,object&gt;)data;
-    int sum = (int)(data["a"]) + (int)(data["b"]);
-    var timesTwo = (Func&lt;object,Task&lt;object&gt;&gt;)data["timesTwo"];
+  async (dynamic data) => {
+    int sum = (int)data.a + (int)data.b;
+    var timesTwo = (Func&lt;object,Task&lt;object&gt;&gt;)data.timesTwo;
     return await timesTwo(sum);
   }
 */});
