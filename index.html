@@ -495,6 +495,29 @@ heavyLifting('Node.js', function (error, result) { ... });
         </section>    
 
         <section>
+          <h2>Windows authentication</h2>
+          <p><small>Use Windows authentication to authenticate calls to your Node.js HTTP server</small></p>
+          <pre><code class="javascript">
+var authenticate = require('edge').func(function() {/*
+  class Startup {
+    [DllImport("advapi32.dll")] static extern bool LogonUser(...);
+
+    public async Task&lt;object&gt; Invoke(dynamic i) {
+      IntPtr t;
+      return Startup.LogonUser(i.user, null, i.password, 3, 0, out t)) 
+    }
+  }
+*/});
+
+authenticate({ 
+  user: 'tjanczuk@redmond.corp.microsoft.com',
+  password: 'foobar' 
+}, function (error, result) { ... });
+         </code></pre>
+         <a href="https://github.com/tjanczuk/edge/blob/master/samples/210_windows_authentication.js"><small>see full code</small></a>
+        </section>    
+
+        <section>
           <h2>ZIP compression</h2>
           <p><small>Compress files and folders using .NET 4.5 ZIP compression</small></p>
           <pre><code class="javscript">
