@@ -5,7 +5,9 @@ An edge connects two nodes. This edge connects Node.js and .NET. V8 and CLR. Nod
 
 ## Before you dive in
 
-See the [Edge.js overview](http://tjanczuk.github.com/edge).
+See the [Edge.js overview](http://tjanczuk.github.com/edge).  
+Read the [Edge.js introduction on InfoQ](http://www.infoq.com/articles/the_edge_of_net_and_node).  
+Listen to the [Edge.js podcast on Herdingcode](http://herdingcode.com/herding-code-166-tomasz-janczuk-on-edge-js/). 
 
 ## Contents
 
