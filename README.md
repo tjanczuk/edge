@@ -22,12 +22,12 @@ Listen to the [Edge.js podcast on Herdingcode](http://herdingcode.com/herding-co
 [How to: script Python in a Node.js application](https://github.com/tjanczuk/edge#how-to-script-python-in-a-nodejs-application)  
 [How to: script PowerShell in a Node.js application](https://github.com/tjanczuk/edge#how-to-script-powershell-in-a-nodejs-application)  
 [How to: script F# in a Node.js application](https://github.com/tjanczuk/edge#how-to-script-f-in-a-nodejs-application)  
-[How to: script T-SQL in a node.js application](https://github.com/tjanczuk/edge#how-to-script-tsql-in-a-nodejs-application)  
+[How to: script T-SQL in a node.js application](https://github.com/tjanczuk/edge#how-to-script-t-sql-in-a-nodejs-application)  
 [How to: support for other CLR languages](https://github.com/tjanczuk/edge#how-to-support-for-other-clr-languages)  
 [How to: exceptions](https://github.com/tjanczuk/edge#how-to-exceptions)  
 [How to: debugging](https://github.com/tjanczuk/edge#how-to-debugging)  
 [Performance](https://github.com/tjanczuk/edge#performance)  
-[Building](https://github.com/tjanczuk/edge#building) 
+[Building](https://github.com/tjanczuk/edge#building)  
 [Running tests](https://github.com/tjanczuk/edge#running-tests)  
 [Contribution and derived work](https://github.com/tjanczuk/edge#contribution-and-derived-work)  
 
@@ -663,11 +663,11 @@ You need Windows, [node.js](http://nodejs.org) (any stable version 0.6.x or late
 
 ### Hello, world
 
-Install edge and edge-py modules:
+Install edge and edge-sql modules:
 
 ```
 npm install edge
-npm install edge-py
+npm install edge-sql
 ```
 
 Set the connection string as an enironment variable (your connection string may be different):
