@@ -22,6 +22,7 @@ Listen to the [Edge.js podcast on Herdingcode](http://herdingcode.com/herding-co
 [How to: script Python in a Node.js application](https://github.com/tjanczuk/edge#how-to-script-python-in-a-nodejs-application)  
 [How to: script PowerShell in a Node.js application](https://github.com/tjanczuk/edge#how-to-script-powershell-in-a-nodejs-application)  
 [How to: script F# in a Node.js application](https://github.com/tjanczuk/edge#how-to-script-f-in-a-nodejs-application)  
+[How to: script T-SQL in a node.js application](https://github.com/tjanczuk/edge#how-to-script-tsql-in-a-nodejs-application)  
 [How to: support for other CLR languages](https://github.com/tjanczuk/edge#how-to-support-for-other-clr-languages)  
 [How to: exceptions](https://github.com/tjanczuk/edge#how-to-exceptions)  
 [How to: debugging](https://github.com/tjanczuk/edge#how-to-debugging)  
@@ -649,6 +650,106 @@ var helloFs = edge.func('fs', function () {/*
 */});
 
 helloFs('Node.js', function (error, result) {
+    if (error) throw error;
+    console.log(result);
+});
+```
+
+## How to: script T-SQL in a node.js application
+
+The edge-sql extension of edge.js allows for accessing MS SQL databases by scripting T-SQL inside the Node.js application. The edge-sql extension uses async ADO.NET SQL client to access MS SQL. 
+
+You need Windows, [node.js](http://nodejs.org) (any stable version 0.6.x or later), and [.NET 4.5](http://www.microsoft.com/en-us/download/details.aspx?id=30653). To run the sample code below you also need a connection string to the sample Northwind database that ships with MS SQL. 
+
+### Hello, world
+
+Install edge and edge-py modules:
+
+```
+npm install edge
+npm install edge-py
+```
+
+Set the connection string as an enironment variable (your connection string may be different):
+
+```
+set EDGE_SQL_CONNECTION_STRING=Data Source=localhost;Initial Catalog=Northwind;Integrated Security=True
+```
+
+In your server.js:
+
+```javascript
+var edge = require('edge');
+
+var getTop10Products = edge.func('sql', function () {/*
+    select top 10 * from Products 
+*/});
+
+getTop10Product(null, function (error, result) {
+    if (error) throw error;
+    console.log(result);
+});
+```
+
+Run and enjoy:
+
+```
+C:\projects\edge\samples>node server.js
+[ [ 'ProductID',
+    'ProductName',
+    'SupplierID',
+    'CategoryID',
+    'QuantityPerUnit',
+    'UnitPrice',
+    'UnitsInStock',
+    'UnitsOnOrder',
+    'ReorderLevel',
+    'Discontinued' ],
+  [ 10,
+    'New Ikura',
+    4,
+    8,
+    '12 - 200 ml jars',
+    '31.0000',
+    '31',
+    '0',
+    '0',
+    false ],
+    ...
+```
+
+### Parameterized queries
+
+You can construct a parameterized query once and provide parameter values on a per-call basis:
+
+```javascript
+var edge = require('edge');
+
+var getProduct = edge.func('sql', function () {/*
+    select * from Products 
+    where ProductId = @myProductId
+*/});
+
+getProduct({ myProductId: 10 }, function (error, result) {
+    if (error) throw error;
+    console.log(result);
+});
+```
+
+### Basic CRUD support: select, update, insert, delete
+
+The four basic CRUD operations are supported. For example, here is how an update can look like:
+
+```javascript
+var edge = require('edge');
+
+var updateProductName = edge.func('sql', function () {/*
+    update Products
+    set ProductName = @newName 
+    where ProductId = @myProductId
+*/});
+
+updateProductName({ myProductId: 10, newName: 'New Ikura' }, function (error, result) {
     if (error) throw error;
     console.log(result);
 });
