@@ -137,6 +137,24 @@ Python welcomes Node.js
         </section>        
 
         <section>
+          <h2>T-SQL welcomes Node.js</h2>
+          <p><small>Access MS SQL from node.js using in-process ADO.NET</small></p>
+          <pre><code>
+var update = require('edge').func('sql', function () {/*
+    update Products
+    set ProductName = @newName 
+    where ProductId = @id
+*/});
+
+update({ id: 10, newName: 'New Ikura' }, function (error, result) {
+    if (error) throw error;
+    console.log(result);
+});
+          </code></pre>     
+          <a href="https://github.com/tjanczuk/edge#how-to-script-t-sql-in-a-nodejs-application"><small>how to T-SQL in node.js</small></a>                 
+        </section>                
+
+        <section>
           <h2>PowerShell welcomes Node.js</h2>
           <p><small>Call PowerShell scripts asynchronously from node.js</small></p>
           <pre><code>
