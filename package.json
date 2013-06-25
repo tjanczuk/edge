@@ -5,7 +5,7 @@
     "url": "http://tomasz.janczuk.org",
     "twitter": "tjanczuk"
   },
-  "version": "0.7.12-pre",
+  "version": "0.7.12",
   "description": "Edge.js: run .NET and node.js code in-process",
   "tags": [
     "owin",
@@ -28,7 +28,7 @@
     }
   ],
   "dependencies": {
-    "edge-cs": "0.2.3"
+    "edge-cs": "0.2.4"
   },
   "devDependencies": {
     "mocha": "1.8.1",
