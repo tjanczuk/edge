@@ -181,15 +181,28 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(System::Object^ netdata)
     else if (type == cli::array<byte>::typeid)
     {
         cli::array<byte>^ buffer = (cli::array<byte>^)netdata;
-        pin_ptr<unsigned char> pinnedBuffer = &buffer[0];
         node::Buffer* slowBuffer = node::Buffer::New(buffer->Length);
-        memcpy(node::Buffer::Data(slowBuffer), pinnedBuffer, buffer->Length);
+        if (buffer->Length > 0)
+        {
+            pin_ptr<unsigned char> pinnedBuffer = &buffer[0];
+            memcpy(node::Buffer::Data(slowBuffer), pinnedBuffer, buffer->Length);
+        }
         Handle<v8::Value> args[] = { 
             slowBuffer->handle_, 
             v8::Integer::New(buffer->Length), 
             v8::Integer::New(0) 
         };
         jsdata = bufferConstructor->NewInstance(3, args);    
+    }
+    else if (dynamic_cast<System::Collections::Generic::IDictionary<System::String^,System::Object^>^>(netdata) != nullptr)
+    {
+        Handle<v8::Object> result = v8::Object::New();
+        for each (System::Collections::Generic::KeyValuePair<System::String^,System::Object^>^ pair in (System::Collections::Generic::IDictionary<System::String^,System::Object^>^)netdata)
+        {
+            result->Set(stringCLR2V8(pair->Key), ClrFunc::MarshalCLRToV8(pair->Value));
+        }
+
+        jsdata = result;
     }
     else if (dynamic_cast<System::Collections::IDictionary^>(netdata) != nullptr)
     {
@@ -288,8 +301,11 @@ System::Object^ ClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata)
     {
         Handle<v8::Object> jsbuffer = jsdata->ToObject();
         cli::array<byte>^ netbuffer = gcnew cli::array<byte>((int)node::Buffer::Length(jsbuffer));
-        pin_ptr<byte> pinnedNetbuffer = &netbuffer[0];
-        memcpy(pinnedNetbuffer, node::Buffer::Data(jsbuffer), netbuffer->Length);
+        if (netbuffer->Length > 0) 
+        {
+            pin_ptr<byte> pinnedNetbuffer = &netbuffer[0];
+            memcpy(pinnedNetbuffer, node::Buffer::Data(jsbuffer), netbuffer->Length);
+        }
 
         return netbuffer;
     }
