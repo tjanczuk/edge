@@ -201,6 +201,17 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(System::Object^ netdata)
         };
         jsdata = bufferConstructor->NewInstance(3, args);    
     }
+    else if (dynamic_cast<System::Collections::Generic::IDictionary<System::String^,System::Object^>^>(netdata) != nullptr)
+    {
+        Handle<v8::Object> result = v8::Object::New();
+        for each (System::Collections::Generic::KeyValuePair<System::String^,System::Object^>^ pair 
+            in (System::Collections::Generic::IDictionary<System::String^,System::Object^>^)netdata)
+        {
+            result->Set(stringCLR2V8(pair->Key), ClrFunc::MarshalCLRToV8(pair->Value));
+        }
+
+        jsdata = result;
+    }    
     else if (dynamic_cast<System::Collections::IDictionary^>(netdata) != nullptr)
     {
         Handle<v8::Object> result = v8::Object::New();

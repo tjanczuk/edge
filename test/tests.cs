@@ -16,6 +16,7 @@
  */
 using System;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -111,18 +112,17 @@ namespace Edge.Tests
 
         public Task<object> MarshalBack(dynamic input)
         {
-            var result = new {
-                a = 1,
-                b = 3.1415,
-                c = "foo",
-                d = true,
-                e = false,
-                f = new byte[10],
-                g = new object[] { 1, "foo" },
-                h = new { a = "foo", b = 12 },
-                i = (Func<object,Task<object>>)(async (i) => { return i; }),
-                j = new DateTime(2013, 08, 30)
-            };
+            dynamic result = new ExpandoObject();
+            result.a = 1;
+            result.b = 3.1415;
+            result.c = "foo";
+            result.d = true;
+            result.e = false;
+            result.f = new byte[10];
+            result.g = new object[] { 1, "foo" };
+            result.h = new { a = "foo", b = 12 };
+            result.i = (Func<object,Task<object>>)(async (i) => { return i; });
+            result.j = new DateTime(2013, 08, 30);
 
             return Task.FromResult<object>(result);
         }       
@@ -152,18 +152,18 @@ namespace Edge.Tests
 
         public async Task<object> MarshalInFromNet(dynamic input)
         {
-            var payload = new {
-                a = 1,
-                b = 3.1415,
-                c = "foo",
-                d = true,
-                e = false,
-                f = new byte[10],
-                g = new object[] { 1, "foo" },
-                h = new { a = "foo", b = 12 },
-                i = (Func<object,Task<object>>)(async (i) => { return i; }),
-                j = new DateTime(2013, 08, 30)
-            };          
+            dynamic payload = new ExpandoObject();
+            payload.a = 1;
+            payload.b = 3.1415;
+            payload.c = "foo";
+            payload.d = true;
+            payload.e = false;
+            payload.f = new byte[10];
+            payload.g = new object[] { 1, "foo" };
+            payload.h = new { a = "foo", b = 12 };
+            payload.i = (Func<object,Task<object>>)(async (i) => { return i; });
+            payload.j = new DateTime(2013, 08, 30);
+
             var result = await input.hello(payload);
             return result;
         }
