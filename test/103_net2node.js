@@ -61,6 +61,8 @@ describe('async call from .net to node.js', function () {
 				assert.ok(result.h.a === 'foo');
 				assert.ok(result.h.b === 12);
 				assert.equal(typeof result.i, 'function');
+				assert.equal(typeof result.j, 'object');
+				assert.ok(result.j.valueOf() === Date.UTC(2013, 07, 30));
 
 				callback(null, 'yes');
 			}
@@ -87,7 +89,8 @@ describe('async call from .net to node.js', function () {
 					e: false,
 					f: new Buffer(10),
 					g: [ 1, 'foo' ],
-					h: { a: 'foo', b: 12 }
+					h: { a: 'foo', b: 12 },
+					j: new Date(Date.UTC(2013, 07, 30))
 				};
 				callback(null, payload);
 			}

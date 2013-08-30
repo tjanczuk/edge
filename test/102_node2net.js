@@ -27,7 +27,8 @@ describe('async call from node.js to .net', function () {
 			f: new Buffer(10),
 			g: [ 1, 'foo' ],
 			h: { a: 'foo', b: 12 },
-			i: function (payload, callback) { }
+			i: function (payload, callback) { },
+			j: new Date(Date.UTC(2013, 07, 30))
 		};
 		func(payload, function (error, result) {
 			assert.ifError(error);
@@ -60,6 +61,8 @@ describe('async call from node.js to .net', function () {
 			assert.ok(result.h.a === 'foo');
 			assert.ok(result.h.b === 12);
 			assert.equal(typeof result.i, 'function');
+			assert.equal(typeof result.j, 'object');
+			assert.ok(result.j.valueOf() === Date.UTC(2013, 07, 30));
 			done();
 		});
 	});

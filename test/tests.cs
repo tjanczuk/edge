@@ -55,6 +55,7 @@ namespace Edge.Tests
                     var i = data["i"] as Func<object, Task<object>>;
                     if (i == null) throw new Exception("i is not a Func<object,Task<object>>");
                 }
+                if ((DateTime)data["j"] != new DateTime(2013, 08, 30)) throw new Exception("j is not DateTime(2013,08,30)");
             }
             catch (Exception e)
             {
@@ -87,6 +88,7 @@ namespace Edge.Tests
                     var i = input.i as Func<object, Task<object>>;
                     if (i == null) throw new Exception("dynamic i is not a Func<object,Task<object>>");
                 }
+                if ((DateTime)input.j != new DateTime(2013, 08, 30)) throw new Exception("dynamic j is not DateTime(2013,08,30)");
             }
             catch (Exception e)
             {
@@ -118,7 +120,8 @@ namespace Edge.Tests
                 f = new byte[10],
                 g = new object[] { 1, "foo" },
                 h = new { a = "foo", b = 12 },
-                i = (Func<object,Task<object>>)(async (i) => { return i; })
+                i = (Func<object,Task<object>>)(async (i) => { return i; }),
+                j = new DateTime(2013, 08, 30)
             };
 
             return Task.FromResult<object>(result);
@@ -158,7 +161,8 @@ namespace Edge.Tests
                 f = new byte[10],
                 g = new object[] { 1, "foo" },
                 h = new { a = "foo", b = 12 },
-                i = (Func<object,Task<object>>)(async (i) => { return i; })
+                i = (Func<object,Task<object>>)(async (i) => { return i; }),
+                j = new DateTime(2013, 08, 30)
             };          
             var result = await input.hello(payload);
             return result;

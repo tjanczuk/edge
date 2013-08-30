@@ -40,7 +40,8 @@ describe('sync call from node.js to .net', function () {
 			f: new Buffer(10),
 			g: [ 1, 'foo' ],
 			h: { a: 'foo', b: 12 },
-			i: function (payload, callback) { }
+			i: function (payload, callback) { },
+			j: new Date(Date.UTC(2013,07,30))
 		};
 		var result = func(payload, true);
 		assert.equal(result, 'yes');
