@@ -138,7 +138,22 @@ describe('async call from .net to node.js', function () {
 			assert.ok(result.indexOf('Sample Node.js exception') > 0);
 			done();
 		});
-	});				
+	});		
+
+	it('successfuly marshals empty buffer', function (done) {
+		var func = edge.func(function () {/*
+			async (object input) => {
+				return new byte[] {};
+			}
+		*/});
+
+		func(null, function (error, result) {
+			assert.ifError(error);
+			assert.ok(Buffer.isBuffer(result));
+			assert.ok(result.length === 0)
+			done();
+		})
+	});
 });
 
 describe('delayed call from node.js to .net', function () {

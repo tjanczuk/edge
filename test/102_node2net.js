@@ -90,4 +90,18 @@ describe('async call from node.js to .net', function () {
 			done();
 		});
 	});
+
+	it('successfuly marshals empty buffer', function (done) {
+		var func = edge.func(function () {/*
+			async (object input) => {
+				return ((byte[])input).Length == 0;
+			}
+		*/});
+
+		func(new Buffer(0), function (error, result) {
+			assert.ifError(error);
+			assert.ok(result === true);
+			done();
+		})
+	});
 });
