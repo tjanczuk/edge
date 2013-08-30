@@ -364,7 +364,7 @@ Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> cal
         {
             // Completed synchronously. Return a value or invoke callback based on call pattern.
             context->Task = task;
-            return scope.Close(context->CompleteOnV8Thread(true));
+            return scope.Close(context->CompleteOnV8Thread());
         }
         else if (context->Sync)
         {
@@ -375,6 +375,10 @@ Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> cal
         }
         else 
         {
+            // Create a GC root around the ClrFuncInvokeContext to ensure it is not garbage collected
+            // while the CLR function executes asynchronously. 
+            context->InitializeAsyncOperation();
+
             // Will complete asynchronously. Schedule continuation to finish processing.
             task->ContinueWith(gcnew System::Action<Task<System::Object^>^,System::Object^>(
                 edgeAppCompletedOnCLRThread), context);

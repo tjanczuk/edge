@@ -118,7 +118,8 @@ public:
 
     void CompleteOnCLRThread(System::Threading::Tasks::Task<System::Object^>^ task);
     void CompleteOnV8ThreadAsynchronous();
-    Handle<v8::Value> CompleteOnV8Thread(bool completedSynchronously);
+    Handle<v8::Value> CompleteOnV8Thread();
+    void InitializeAsyncOperation();
 };
 
 ref class NodejsFunc {

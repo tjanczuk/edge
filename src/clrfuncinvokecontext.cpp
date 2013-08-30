@@ -30,9 +30,7 @@ ClrFuncInvokeContext::ClrFuncInvokeContext(Handle<v8::Value> callbackOrSync)
         this->Sync = callbackOrSync->BooleanValue();
     }
 
-    ClrActionContext* data = new ClrActionContext;
-    data->action = gcnew System::Action(this, &ClrFuncInvokeContext::CompleteOnV8ThreadAsynchronous);
-    this->uv_edge_async = V8SynchronizationContext::RegisterAction(ClrActionContext::ActionCallback, data);
+    this->uv_edge_async = NULL;
 }
 
 void ClrFuncInvokeContext::DisposeCallback()
@@ -54,20 +52,31 @@ void ClrFuncInvokeContext::CompleteOnCLRThread(System::Threading::Tasks::Task<Sy
     V8SynchronizationContext::ExecuteAction(this->uv_edge_async);
 }
 
-void ClrFuncInvokeContext::CompleteOnV8ThreadAsynchronous()
+void ClrFuncInvokeContext::InitializeAsyncOperation()
 {
-    this->CompleteOnV8Thread(false);
+    // Create a uv_edge_async instance representing V8 async operation that will complete 
+    // when the CLR function completes. The ClrActionContext is used to ensure the ClrFuncInvokeContext
+    // remains GC-rooted while the CLR function executes.
+
+    ClrActionContext* data = new ClrActionContext;
+    data->action = gcnew System::Action(this, &ClrFuncInvokeContext::CompleteOnV8ThreadAsynchronous);
+    this->uv_edge_async = V8SynchronizationContext::RegisterAction(ClrActionContext::ActionCallback, data);
 }
 
-Handle<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread(bool completedSynchronously)
+void ClrFuncInvokeContext::CompleteOnV8ThreadAsynchronous()
+{
+    HandleScope scope;
+    this->CompleteOnV8Thread();
+}
+
+Handle<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread()
 {
     DBG("ClrFuncInvokeContext::CompleteOnV8Thread");
 
     HandleScope handleScope;
-    if (completedSynchronously)
-    {
-        V8SynchronizationContext::CancelAction(this->uv_edge_async);
-    }
+
+    // The uv_edge_async was already cleaned up in V8SynchronizationContext::ExecuteAction
+    this->uv_edge_async = NULL;
 
     if (!this->Sync && !this->callback)
     {
