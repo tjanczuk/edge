@@ -136,7 +136,14 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(System::Object^ netdata)
     }
     else if (type == System::DateTime::typeid)
     {
-        jsdata = stringCLR2V8(netdata->ToString());
+        System::DateTime ^dt = (System::DateTime^)netdata;
+        if (dt->Kind == System::DateTimeKind::Local)
+            dt = dt->ToUniversalTime();
+        else if (dt->Kind == System::DateTimeKind::Unspecified)
+            dt = gcnew System::DateTime(dt->Ticks, System::DateTimeKind::Utc);
+        long long MinDateTimeTicks = 621355968000000000; // new DateTime(1970, 1, 1, 0, 0, 0).Ticks;
+        long long value = ((dt->Ticks - MinDateTimeTicks) / 10000);
+        jsdata = v8::Date::New((double)value);
     }
     else if (type == System::DateTimeOffset::typeid)
     {
@@ -303,6 +310,14 @@ System::Object^ ClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata)
         }
 
         return netarray;
+    }
+    else if (jsdata->IsDate())
+    {
+        Handle<v8::Date> jsdate = Handle<v8::Date>::Cast(jsdata);
+        long long  ticks = (long long)jsdate->NumberValue();
+        long long MinDateTimeTicks = 621355968000000000;// (new DateTime(1970, 1, 1, 0, 0, 0)).Ticks;
+        System::DateTime ^netobject = gcnew System::DateTime(ticks * 10000 + MinDateTimeTicks, System::DateTimeKind::Utc);
+        return netobject;
     }
     else if (jsdata->IsObject()) 
     {
