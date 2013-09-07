@@ -480,7 +480,7 @@ Python welcomes Node.js
 
 ### The interop model
 
-Your Python script must evaluate to a lamda expression that accepts a single parameter. The parameter represents marshalled input from the node.js code. The return value of the lambda expression is passed back as the result to node.js code. The Python script can contain constructs (e.g. Python functions) that are used in the closure of the lambda expression. The instance of the script with associated state is created when `edge.func` is called in node.js. Each call to the function referes to that instance.
+Your Python script must evaluate to a lambda expression that accepts a single parameter. The parameter represents marshalled input from the node.js code. The return value of the lambda expression is passed back as the result to node.js code. The Python script can contain constructs (e.g. Python functions) that are used in the closure of the lambda expression. The instance of the script with associated state is created when `edge.func` is called in node.js. Each call to the function referes to that instance.
 
 The simplest *echo* Python script you can embed in node.js looks like this:
 
