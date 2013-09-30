@@ -17,17 +17,17 @@ Handle<v8::Value> clrFuncProxy(const v8::Arguments& args)
     return scope.Close(clrFunc->Call(args[0], args[1]));
 }
 
-void clrFuncProxyNearDeath(v8::Persistent<v8::Value> object, void* parameters)
+void clrFuncProxyNearDeath(Isolate *isolate, Persistent<Function>* object, void* parameters)
 {
     DBG("clrFuncProxyNearDeath");
     ClrFuncWrap* wrap = (ClrFuncWrap*)parameters;
-    object.Dispose();
-    object.Clear();
+    object->Dispose();
+    object->Clear();
     wrap->clrFunc = nullptr;
     delete wrap;
 }
 
-Handle<v8::Function> ClrFunc::Initialize(System::Func<System::Object^,Task<System::Object^>^>^ func)
+Handle<v8::Function> ClrFunc::Initialize(System::Func<System::Object^, Task<System::Object^>^>^ func)
 {
     DBG("ClrFunc::Initialize Func<object,Task<object>> wrapper");
 
@@ -37,11 +37,15 @@ Handle<v8::Function> ClrFunc::Initialize(System::Func<System::Object^,Task<Syste
     app->func = func;
     ClrFuncWrap* wrap = new ClrFuncWrap;
     wrap->clrFunc = app;    
-    v8::Persistent<v8::Function> funcProxy = v8::Persistent<v8::Function>::New(
-        FunctionTemplate::New(clrFuncProxy)->GetFunction());
-    funcProxy->Set(v8::String::NewSymbol("_edgeContext"), v8::External::New((void*)wrap));
+
+    v8::Persistent<v8::Function> funcProxy;
+    funcProxy.Reset(v8::Isolate::GetCurrent(), FunctionTemplate::New(clrFuncProxy)->GetFunction());
+    
+    ToLocal<v8::Function>(&funcProxy)->Set(v8::String::NewSymbol("_edgeContext"), v8::External::New((void*)wrap));
+
     funcProxy.MakeWeak((void*)wrap, clrFuncProxyNearDeath);
-    return scope.Close(funcProxy);
+
+    return scope.Close(Handle<Function>::New(v8::Isolate::GetCurrent(), funcProxy));
 }
 
 Handle<v8::Value> ClrFunc::Initialize(const v8::Arguments& args)
@@ -188,18 +192,18 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(System::Object^ netdata)
     else if (type == cli::array<byte>::typeid)
     {
         cli::array<byte>^ buffer = (cli::array<byte>^)netdata;
-        node::Buffer* slowBuffer = node::Buffer::New(buffer->Length);
+        v8::Local<v8::Object> slowBuffer = node::Buffer::New(buffer->Length);
         if (buffer->Length > 0)
         {
             pin_ptr<unsigned char> pinnedBuffer = &buffer[0];
             memcpy(node::Buffer::Data(slowBuffer), pinnedBuffer, buffer->Length);
         }
         Handle<v8::Value> args[] = { 
-            slowBuffer->handle_, 
+            slowBuffer, 
             v8::Integer::New(buffer->Length), 
             v8::Integer::New(0) 
         };
-        jsdata = bufferConstructor->NewInstance(3, args);    
+        jsdata = ToLocal<Function>(&bufferConstructor)->NewInstance(3, args);    
     }
     else if (dynamic_cast<System::Collections::Generic::IDictionary<System::String^,System::Object^>^>(netdata) != nullptr)
     {

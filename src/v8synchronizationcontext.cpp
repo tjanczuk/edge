@@ -59,7 +59,7 @@ void V8SynchronizationContext::Initialize()
 void V8SynchronizationContext::Unref(uv_edge_async_t* uv_edge_async)
 {
     DBG("V8SynchronizationContext::Unref");
-#if UV_VERSION_MAJOR==0 && UV_VERSION_MINOR<8
+#if defined(UV_VERSION_MAJOR) && defined(UV_VERSION_MINOR) && UV_VERSION_MAJOR==0 && UV_VERSION_MINOR<8
     uv_unref(uv_default_loop());
 #else
     uv_unref((uv_handle_t*)&uv_edge_async->uv_async);

@@ -75,7 +75,7 @@ void NodejsFuncInvokeContext::CallFuncOnV8Thread()
         callback->Set(v8::String::NewSymbol("_edgeContext"), v8::External::New((void*)this->wrap));
         Handle<v8::Value> argv[] = { jspayload, callback };
         TryCatch tryCatch;
-        (*(this->functionContext->Func))->Call(v8::Context::GetCurrent()->Global(), 2, argv);
+        ToLocal<Function>(this->functionContext->Func)->Call(v8::Context::GetCurrent()->Global(), 2, argv);
         if (tryCatch.HasCaught()) 
         {
             this->wrap->context = nullptr;
