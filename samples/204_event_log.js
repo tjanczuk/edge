@@ -6,11 +6,10 @@ var writeEventLog = edge.func(function() {/*
     using System.Collections.Generic;
     using System.Diagnostics;
 
-    async (input) => 
+    async (dynamic parameters) => 
     {
-        var parameters = (IDictionary<string,object>)input;
-        var source = (string)parameters["source"];
-        var log = (string)parameters["log"];
+        var source = (string)parameters.source;
+        var log = (string)parameters.log;
         if (!EventLog.SourceExists(source))
         {
             EventLog.CreateEventSource(source, log);
@@ -18,10 +17,10 @@ var writeEventLog = edge.func(function() {/*
 
         EventLog.WriteEntry(
             source,
-            (string)parameters["message"],
+            (string)parameters.message,
             (EventLogEntryType)Enum.Parse(
-                typeof(EventLogEntryType), (string)parameters["type"]),
-            (int)parameters["id"]
+                typeof(EventLogEntryType), (string)parameters.type),
+            (int)parameters.id
         );
 
         return null;

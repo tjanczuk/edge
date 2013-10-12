@@ -1,26 +1,22 @@
 var edge = require('../lib/edge');
 
 var writeRegistery = edge.func(function () {/*
-		using System.Collections.Generic;
-		using Microsoft.Win32;
+	using Microsoft.Win32;
 
-		async (data) =>
-		{
-			var input = (IDictionary<string,object>)data;
-			var keyName = (string)input["keyName"];
-			var valueName = (string)input["valueName"];
-			var value = input["value"];
+	async (dynamic input) =>
+	{
+		Registry.SetValue((string)input.keyName, (string)input.valueName, input.value);
+		return null;
+	}
+*/});
 
-			Registry.SetValue(keyName, valueName, value);
-
-			return null;
-		}
-	*/}
-);
-
-writeRegistery({keyName: 'HKEY_CURRENT_USER\\Environment', valueName: 'MyCustomValue', value: 1050 }, function (err) {
+writeRegistery({
+	keyName: 'HKEY_CURRENT_USER\\Environment', 
+	valueName: 'MyCustomValue', 
+	value: 1050 
+}, function (err) {
 	if (err) {
-		throw new Error(err);
+		throw err;
 	}
 
 	console.log('Done!');

@@ -5,14 +5,12 @@ var edge = require('../lib/edge');
 var zipDirectory = edge.func(function() {/*
     #r "System.IO.Compression.FileSystem.dll"
 
-    using System.Collections.Generic;
     using System.IO.Compression;
 
-    async (data) =>
+    async (dynamic input) =>
     {
-        var input = (IDictionary<string,object>)data;
         await Task.Run(async () => {
-            ZipFile.CreateFromDirectory((string)input["source"], (string)input["destination"]);
+            ZipFile.CreateFromDirectory((string)input.source, (string)input.destination);
         });
 
         return null;

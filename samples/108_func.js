@@ -5,11 +5,10 @@ var edge = require('../lib/edge');
 var addAndMultiplyBy2 = edge.func(function () {/*
 	using System.Collections.Generic;
 
-	async (data) => 	
+	async (dynamic data) => 	
 	{
-		var input = (IDictionary<string,object>)data;
-		int sum = (int)(input["a"]) + (int)(input["b"]);
-		var multiplyBy2 = (Func<object,Task<object>>)input["multiplyBy2"];
+		int sum = (int)data.a + (int)data.b;
+		var multiplyBy2 = (Func<object,Task<object>>)data.multiplyBy2;
 		return await multiplyBy2(sum);
 	}
 */});

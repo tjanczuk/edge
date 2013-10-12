@@ -8,12 +8,11 @@ var listCertificates = edge.func(function() {/*
     using System.Collections.Generic;
     using System.Security.Cryptography.X509Certificates;
 
-    async (data) =>
+    async (dynamic data) =>
     {
-        var input = (IDictionary<string,object>)data;
         X509Store store = new X509Store(
-            (string)input["storeName"], 
-            (StoreLocation)Enum.Parse(typeof(StoreLocation), (string)input["storeLocation"]));
+            (string)data.storeName, 
+            (StoreLocation)Enum.Parse(typeof(StoreLocation), (string)data.storeLocation));
         store.Open(OpenFlags.ReadOnly);
         try
         {
@@ -32,5 +31,5 @@ var listCertificates = edge.func(function() {/*
     }
 */});
 
-var result = listCertificates({ storeName: 'My', storeLocation: 'CurrentUser' }, true);
+var result = listCertificates({ storeName: 'My', storeLocation: 'LocalMachine' }, true);
 console.log(result);
