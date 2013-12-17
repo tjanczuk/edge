@@ -3,15 +3,31 @@
 Handle<v8::String> stringCLR2V8(System::String^ text)
 {
     HandleScope scope;
-    pin_ptr<const wchar_t> message = PtrToStringChars(text);
-    return scope.Close(v8::String::New((uint16_t*)message));  
+    if (text->Length > 0)
+    {
+        array<unsigned char>^ utf8 = System::Text::Encoding::UTF8->GetBytes(text);
+        pin_ptr<unsigned char> ch = &utf8[0];
+        return scope.Close(v8::String::New((char*)ch));
+    }
+    else
+    {
+        return scope.Close(v8::String::Empty());
+    }
 }
 
 System::String^ stringV82CLR(Handle<v8::String> text)
 {
     HandleScope scope;
     String::Utf8Value utf8text(text);
-    return gcnew System::String(*utf8text);    
+    if (*utf8text)
+    {
+        return gcnew System::String(
+            *utf8text, 0, utf8text.length(), System::Text::Encoding::UTF8);
+    }
+    else
+    {
+        return System::String::Empty;
+    }
 }
 
 System::String^ exceptionV82stringCLR(Handle<v8::Value> exception)
