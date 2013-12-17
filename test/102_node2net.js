@@ -104,4 +104,34 @@ describe('async call from node.js to .net', function () {
 			done();
 		})
 	});
+
+	it('successfuly roundtrips unicode characters', function (done) {
+		var func = edge.func(function () {/*
+			async (input) => {
+				return input;
+			}
+		*/});
+
+		var k = "ñòóôõöøùúûüýÿ";
+		func(k, function (error, result) {
+			assert.ifError(error);
+			assert.ok(result === k);
+			done();
+		})
+	});
+
+	it('successfuly roundtrips empty string', function (done) {
+		var func = edge.func(function () {/*
+			async (input) => {
+				return input;
+			}
+		*/});
+
+		var k = "";
+		func(k, function (error, result) {
+			assert.ifError(error);
+			assert.ok(result === k);
+			done();
+		})
+	});
 });
