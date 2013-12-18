@@ -682,12 +682,14 @@ In your server.js:
 var edge = require('edge');
 
 var getTop10Products = edge.func('sql', function () {/*
-    select top 10 * from Products 
+    select top 10 * from Products
 */});
 
 getTop10Products(null, function (error, result) {
     if (error) throw error;
     console.log(result);
+    console.log(result[0].Name);
+    console.log(result[1].Price);
 });
 ```
 
