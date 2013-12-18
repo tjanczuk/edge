@@ -689,7 +689,7 @@ getTop10Products(null, function (error, result) {
     if (error) throw error;
     console.log(result);
     console.log(result[0].Name);
-    console.log(result[1].Price);
+    console.log(result[1].ReorderLevel);
 });
 ```
 
@@ -697,27 +697,20 @@ Run and enjoy:
 
 ```
 C:\projects\edge\samples>node server.js
-[ [ 'ProductID',
-    'ProductName',
-    'SupplierID',
-    'CategoryID',
-    'QuantityPerUnit',
-    'UnitPrice',
-    'UnitsInStock',
-    'UnitsOnOrder',
-    'ReorderLevel',
-    'Discontinued' ],
-  [ 10,
-    'New Ikura',
-    4,
-    8,
-    '12 - 200 ml jars',
-    '31.0000',
-    '31',
-    '0',
-    '0',
-    false ],
+[ { ProductID: 10,
+    ProductName: 'New Ikura',
+    SupplierID: 4,
+    CategoryID: 8,
+    QuantityPerUnit: '12 - 200 ml jars',
+    UnitPrice: '31.000',
+    UnitsInStock: 31,
+    UnitsOnOrder: 0,
+    ReorderLevel: 0,
+    Discontinued: false },
     ...
+]
+New Ikura
+12
 ```
 
 ### Parameterized queries
