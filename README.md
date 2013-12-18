@@ -685,7 +685,7 @@ var getTop10Products = edge.func('sql', function () {/*
     select top 10 * from Products 
 */});
 
-getTop10Product(null, function (error, result) {
+getTop10Products(null, function (error, result) {
     if (error) throw error;
     console.log(result);
 });
