@@ -22,7 +22,7 @@ ClrFuncInvokeContext::ClrFuncInvokeContext(Handle<v8::Value> callbackOrSync)
     if (callbackOrSync->IsFunction())
     {
         this->callback = new Persistent<Function>;
-        *(this->callback) = Persistent<Function>::New(Handle<Function>::Cast(callbackOrSync));
+        this->callback->Reset(v8::Isolate::GetCurrent(), Handle<Function>::Cast(callbackOrSync));
         this->Sync = false;
     }
     else 
@@ -118,7 +118,7 @@ Handle<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread()
     {
         // complete the asynchronous call to C# by invoking a callback in JavaScript
         TryCatch try_catch;
-        (*(this->callback))->Call(v8::Context::GetCurrent()->Global(), argc, argv);
+        ToLocal<Function>(this->callback)->Call(v8::Context::GetCurrent()->Global(), argc, argv);
         this->DisposeCallback();
         if (try_catch.HasCaught()) 
         {

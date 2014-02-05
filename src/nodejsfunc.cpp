@@ -20,7 +20,7 @@ NodejsFunc::NodejsFunc(Handle<Function> function)
 {
     DBG("NodejsFunc::NodejsFunc");
     this->Func = new Persistent<Function>;
-    *(this->Func) = Persistent<Function>::New(function);
+    this->Func->Reset(v8::Isolate::GetCurrent(), function);
 }
 
 NodejsFunc::~NodejsFunc()
