@@ -43,7 +43,6 @@
     "url": "http://github.com/tjanczuk/edge/issues"
   },
   "scripts": {
-    "install": "tools\\install.bat",
     "test": "test\\test.bat",
     "jshint": "node ./tools/runJsHint.js"
   }

@@ -20,20 +20,46 @@
       'target_name': 'edge',
       'sources': [ ],
       'conditions': [
-      	['OS=="win"', {
-      	  'sources+': [ 
-            'src/edge.cpp', 
-            'src/utils.cpp', 
-            'src/clrfunc.cpp',
-            'src/clrfuncinvokecontext.cpp',
-            'src/nodejsfunc.cpp',
-            'src/nodejsfuncinvokecontext.cpp',
-            'src/persistentdisposecontext.cpp',
-            'src/v8synchronizationcontext.cpp',
-            'src/clrfuncreflectionwrap.cpp',
-            'src/clractioncontext.cpp'
-          ]
-      	}]
+      	['OS=="win"'
+      	, {
+	      	  'sources+': [ 
+	            'src/edge.cpp', 
+	            'src/utils.cpp', 
+	            'src/clrfunc.cpp',
+	            'src/clrfuncinvokecontext.cpp',
+	            'src/nodejsfunc.cpp',
+	            'src/nodejsfuncinvokecontext.cpp',
+	            'src/persistentdisposecontext.cpp',
+	            'src/v8synchronizationcontext.cpp',
+	            'src/clrfuncreflectionwrap.cpp',
+	            'src/clractioncontext.cpp'
+	          ]
+	      	}
+      	, {
+		        'sources+': [
+		          'src/mono/clractioncontext.cpp',
+		          'src/mono/clrfunc.cpp',
+		          'src/mono/clrfuncinvokecontext.cpp',
+		          'src/mono/edge.cpp',
+		          'src/mono/edge.h',
+		          'src/mono/monoembed.cpp',
+		          'src/mono/monotask.cpp',
+		          'src/mono/nodejsfunc.cpp',
+		          'src/mono/nodejsfuncinvokecontext.cpp',
+		          'src/mono/persistentdisposecontext.cpp',
+		          'src/mono/utils.cpp',
+		          'src/mono/v8synchronizationcontext.cpp',
+		        ]
+		      , 'include_dirs': [
+		          '<!@(pkg-config mono-2 --cflags-only-I | sed s/-I//g)'
+		        ]
+		      , 'link_settings': {
+		          'libraries': [
+		            '<!@(pkg-config mono-2 --libs)'
+		          ],
+		        }
+		      }
+  			]
       ],
       'configurations': {
         'Release': {
@@ -69,6 +95,22 @@
           }
         }
       }
+    }
+  , {
+      'target_name': 'rebuild'
+   	, 'type': 'none'
+   	, 'dependencies': [ 'edge' ]
+   	, 'conditions': [[
+   			'OS!="win"'
+   		, {
+          'inputs': [
+            'src/mono/monoembedding.cs'
+          ]
+        , 'outputs': [
+            'src/mono/monoembedding.exe'
+          ]
+        , 'action': ['dmcs', '-sdk:4.5', '-target:exe', '-out:src/mono/MonoEmbedding.exe', 'src/mono/MonoEmbedding.cs']
+      }, {}]]
     }
   ]
 }
