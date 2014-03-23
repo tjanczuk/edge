@@ -7,7 +7,7 @@ MonoAssembly* MonoEmbedding::assembly = NULL;
 
 void MonoEmbedding::Initialize()
 {
-    const char* fullPath = "C:\\Users\\Jonathan\\Development\\edge\\src\\mono\\MonoEmbedding.exe";
+    const char* fullPath = ".\\MonoEmbedding.exe";
     mono_jit_init (fullPath);
     assembly = mono_domain_assembly_open (mono_domain_get(), fullPath);
     MonoClass* klass = mono_class_from_name(mono_assembly_get_image(assembly), "", "MonoEmbedding");
