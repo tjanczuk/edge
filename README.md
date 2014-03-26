@@ -27,7 +27,8 @@ Listen to the [Edge.js podcast on Herdingcode](http://herdingcode.com/herding-co
 [How to: exceptions](https://github.com/tjanczuk/edge#how-to-exceptions)  
 [How to: debugging](https://github.com/tjanczuk/edge#how-to-debugging)  
 [Performance](https://github.com/tjanczuk/edge#performance)  
-[Building](https://github.com/tjanczuk/edge#building)  
+[Building on Windows](https://github.com/tjanczuk/edge#building-on-windows)
+[Building on OSX](https://github.com/tjanczuk/edge#building-on-osx)  
 [Running tests](https://github.com/tjanczuk/edge#running-tests)  
 [Contribution and derived work](https://github.com/tjanczuk/edge#contribution-and-derived-work)  
 
@@ -908,7 +909,7 @@ Read more about [performance of edge.js on the wiki](https://github.com/tjanczuk
 
 ![edgejs-performance1](https://f.cloud.github.com/assets/822369/486393/645f696a-b920-11e2-8a20-9fa6932bb092.png)
 
-## Building
+## Building on Windows
 
 You must have Visual Studio 2012 toolset, Python 2.7.x, and node-gyp installed for building.
 
@@ -975,6 +976,34 @@ Lastly, you can run jshint on the project with:
 
 ```
 npm run jshint
+```
+
+## Building on OSX
+
+**NOTE** This is pre-alpha functionality. 
+
+First, uninstall previous installs of Mono using instructions from [here](
+http://mono-project.com/Mono:OSX#Uninstalling_Mono_on_Mac_OS_X). 
+
+Store @paulcbetts [Homebrew recipe](https://github.com/tjanczuk/edge/issues/3#issuecomment-17304188) in `/usr/local/Library/Formula/mono.rb`.
+
+Then run these steps:
+
+```bash
+brew install pkg-config
+brew install mono
+
+# at this point I fried an omelette on the lid of my Mac Book Air which was running hot 
+# for about 15 minutes, compiling and installing Mono 64bit; 
+# it was delicious (the omelette, not the MacBook)
+
+git checkout mono
+npm install # (after 5 mins it appeared to hang, so I terminated with Ctrl-C)
+sudo npm install node-gyp -g
+node-gyp configure build #success with a few warnings
+sudo npm install mocha -g
+export EDGE_NATIVE=/Users/tomek/edge-mono/build/Release/edge.node
+mocha # fails some tests
 ```
 
 ## Contribution and derived work
