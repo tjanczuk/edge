@@ -1,13 +1,25 @@
+#include <dlfcn.h>
+#include <limits.h>
+#include <libgen.h>
 #include "edge.h"
 
 #include "mono/metadata/assembly.h"
 #include "mono/jit/jit.h"
 
+
 MonoAssembly* MonoEmbedding::assembly = NULL;
 
 void MonoEmbedding::Initialize()
 {
-    const char* fullPath = ".\\MonoEmbedding.exe";
+    // Construct the absolute file path to MonoEmbedding.exe assuming
+    // it is located next to edge.node
+    Dl_info dlinfo;
+    char fullPath[PATH_MAX];
+    dladdr((void*)&MonoEmbedding::Initialize, &dlinfo);
+    strcpy(fullPath, dlinfo.dli_fname);
+    strcpy(fullPath, dirname(fullPath));
+    strcat(fullPath, "/MonoEmbedding.exe");
+
     mono_jit_init (fullPath);
     assembly = mono_domain_assembly_open (mono_domain_get(), fullPath);
     MonoClass* klass = mono_class_from_name(mono_assembly_get_image(assembly), "", "MonoEmbedding");

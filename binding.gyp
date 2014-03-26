@@ -97,20 +97,28 @@
       }
     }
   , {
-      'target_name': 'rebuild'
-   	, 'type': 'none'
-   	, 'dependencies': [ 'edge' ]
-   	, 'conditions': [[
-   			'OS!="win"'
-   		, {
+      'target_name': 'build_managed',
+      'type': 'none',
+      'dependencies': [ 'edge' ],
+      'actions': [
+        {
+          'action_name': 'compile_mono_embed',
           'inputs': [
             'src/mono/monoembedding.cs'
-          ]
-        , 'outputs': [
+          ],
+          'outputs': [
             'src/mono/monoembedding.exe'
+          ],
+          'conditions': [
+            ['OS=="win"', {
+              'action': ['csc', '-target:exe', '-out:build/$(BUILDTYPE)/MonoEmbedding.exe', 'src/mono/MonoEmbedding.cs']
+              }, {
+              'action': ['dmcs', '-sdk:4.5', '-target:exe', '-out:build/$(BUILDTYPE)/MonoEmbedding.exe', 'src/mono/MonoEmbedding.cs']
+              }
+            ]
           ]
-        , 'action': ['dmcs', '-sdk:4.5', '-target:exe', '-out:src/mono/MonoEmbedding.exe', 'src/mono/MonoEmbedding.cs']
-      }, {}]]
-    }
+        }
+      ]
+    }    
   ]
 }
