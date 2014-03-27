@@ -44,7 +44,7 @@
   },
   "scripts": {
   	"install": "node tools/install.js",
-    "test": "test\\test.bat",
+    "test": "node tools/test.js",
     "jshint": "node ./tools/runJsHint.js"
   }
 }
