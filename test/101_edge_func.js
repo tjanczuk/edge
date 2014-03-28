@@ -1,6 +1,8 @@
-var edge = require('../lib/edge.js'), assert = require('assert');
-
-var edgeTestDll = __dirname + '\\Edge.Tests.dll';
+var edge = require('../')
+  , assert = require('assert')
+  , path = require('path')
+	, edgeTestDll = path.resolve(__dirname, 'Edge.Tests.dll')
+	;
 
 describe('edge.func', function () {
 
