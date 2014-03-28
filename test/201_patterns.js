@@ -1,4 +1,10 @@
-var edge = require('../lib/edge.js'), assert = require('assert');
+var edge = require('../')
+  , assert = require('assert')
+  , path = require('path')
+	, edgeTestDll = path.resolve(__dirname, 'Edge.Tests.dll')
+	;
+
+return
 
 describe('call patterns', function () {
 
