@@ -60,7 +60,8 @@ public:
     static MonoImage* GetImage();
     static MonoClass* GetClass();
     static MonoObject* GetClrFuncReflectionWrapFunc(const char* assembly, const char* typeName, const char* methodName, MonoException ** exc);
-    static MonoObject* CreateDictionary();
+    static MonoObject* CreateDateTime(double ticks);
+    static MonoObject* CreateExpandoObject();
     static MonoClass* GetFuncClass();
     static MonoArray* IEnumerableToArray(MonoObject* ienumerable);
     static void ContinueTask(MonoObject* task, MonoObject* state);

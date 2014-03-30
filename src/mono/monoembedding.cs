@@ -1,4 +1,5 @@
 using System;
+using System.Dynamic;
 using System.Threading.Tasks;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -6,6 +7,8 @@ using System.Collections.Generic;
 
 public static class MonoEmbedding
 {
+    static Int64 MinDateTimeTicks = 621355968000000000; // (new DateTime(1970, 1, 1, 0, 0, 0)).Ticks;
+
     // dummy Main so we can exec from mono
     static public int Main()
     {
@@ -19,9 +22,14 @@ public static class MonoEmbedding
         return new Func<Object, Task<Object>>(wrap.Call);
     }
 
-    static public Dictionary<string, object> CreateDictionary()
+    static public DateTime CreateDateTime(object ticks) 
     {
-        return new Dictionary<string, object>();
+        return new DateTime((Int64)((double)ticks * 10000 + MinDateTimeTicks), DateTimeKind.Utc);
+    }
+
+    static public ExpandoObject CreateExpandoObject()
+    {
+        return new ExpandoObject();
     }
 
     static public object[] IEnumerableToArray(System.Collections.IEnumerable enumerable)

@@ -398,9 +398,15 @@ MonoObject* ClrFunc::MarshalV8ToCLR(ClrFuncInvokeContext* context, Handle<v8::Va
 
         return (MonoObject*)netarray;
     }
+    else if (jsdata->IsDate())
+    {
+        Handle<v8::Date> jsdate = Handle<v8::Date>::Cast(jsdata);
+        double ticks = jsdate->NumberValue();
+        return MonoEmbedding::CreateDateTime(ticks);
+    }    
     else if (jsdata->IsObject()) 
     {
-        MonoObject* netobject = MonoEmbedding::CreateDictionary();
+        MonoObject* netobject = MonoEmbedding::CreateExpandoObject();
         Handle<v8::Object> jsobject = Handle<v8::Object>::Cast(jsdata);
         Handle<v8::Array> propertyNames = jsobject->GetPropertyNames();
         for (unsigned int i = 0; i < propertyNames->Length(); i++)

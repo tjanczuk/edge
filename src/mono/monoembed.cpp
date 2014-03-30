@@ -70,14 +70,32 @@ MonoObject* MonoEmbedding::GetClrFuncReflectionWrapFunc(const char* assemblyFile
     return action;
 }
 
-MonoObject* MonoEmbedding::CreateDictionary()
+MonoObject* MonoEmbedding::CreateDateTime(double ticks) 
 {
     static MonoMethod* method;
     MonoException* exc = NULL;
 
     if (!method)
     {
-        method = mono_class_get_method_from_name(MonoEmbedding::GetClass(), "CreateDictionary", -1);
+        method = mono_class_get_method_from_name(MonoEmbedding::GetClass(), "CreateDateTime", -1);
+    }
+
+    void* args[1];
+    args[0] = mono_value_box(mono_domain_get(), mono_get_double_class(), &ticks);    
+    MonoObject* ret = mono_runtime_invoke(method, NULL, args, (MonoObject**)&exc);
+
+    return ret;
+
+}
+
+MonoObject* MonoEmbedding::CreateExpandoObject()
+{
+    static MonoMethod* method;
+    MonoException* exc = NULL;
+
+    if (!method)
+    {
+        method = mono_class_get_method_from_name(MonoEmbedding::GetClass(), "CreateExpandoObject", -1);
     }
     MonoObject* dictionary = mono_runtime_invoke(method, NULL, NULL, (MonoObject**)&exc);
 
