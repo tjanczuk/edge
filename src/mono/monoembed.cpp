@@ -80,12 +80,10 @@ MonoObject* MonoEmbedding::CreateDateTime(double ticks)
         method = mono_class_get_method_from_name(MonoEmbedding::GetClass(), "CreateDateTime", -1);
     }
 
-    void* args[1];
-    args[0] = mono_value_box(mono_domain_get(), mono_get_double_class(), &ticks);    
+    void* args[] = { &ticks };
     MonoObject* ret = mono_runtime_invoke(method, NULL, args, (MonoObject**)&exc);
 
     return ret;
-
 }
 
 MonoObject* MonoEmbedding::CreateExpandoObject()

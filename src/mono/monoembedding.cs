@@ -22,9 +22,9 @@ public static class MonoEmbedding
         return new Func<Object, Task<Object>>(wrap.Call);
     }
 
-    static public DateTime CreateDateTime(object ticks) 
+    static public DateTime CreateDateTime(double ticks) 
     {
-        return new DateTime((Int64)((double)ticks * 10000 + MinDateTimeTicks), DateTimeKind.Utc);
+        return new DateTime((Int64)ticks * 10000 + MinDateTimeTicks, DateTimeKind.Utc);
     }
 
     static public ExpandoObject CreateExpandoObject()
