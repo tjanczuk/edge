@@ -110,30 +110,43 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata)
     }
 
     static MonoClass* guid_class;
-    static MonoClass* decimal_class;
     static MonoClass* idictionary_class;
+    static MonoClass* idictionary_string_object_class;
     static MonoClass* ienumerable_class;
     static MonoClass* func_class;
+    static MonoClass* datetime_class;
+    static MonoClass* uri_class;
+    static MonoClass* datetimeoffset_class;
+
     if (!guid_class)
         guid_class = mono_class_from_name (mono_get_corlib(), "System", "Guid");
-    if (!decimal_class)
-        decimal_class = mono_class_from_name (mono_get_corlib(), "System", "Decimal");
     if (!idictionary_class)
         idictionary_class = mono_class_from_name (mono_get_corlib(), "System.Collections", "IDictionary");
+    if (!idictionary_string_object_class) 
+        idictionary_string_object_class = MonoEmbedding::GetIDictionaryStringObjectClass();
     if (!ienumerable_class)
         ienumerable_class = mono_class_from_name (mono_get_corlib(), "System.Collections", "IEnumerable");
+    if (!datetime_class)
+        datetime_class = mono_class_from_name (mono_get_corlib(), "System", "DateTime");
+    if (!uri_class) 
+        uri_class = MonoEmbedding::GetUriClass();
+    if (!datetimeoffset_class)
+        datetimeoffset_class = mono_class_from_name (mono_get_corlib(), "System", "DateTimeOffset");
 
     //try 
     //{
     MonoClass* klass = mono_object_get_class(netdata);
+    MonoString* primitive = NULL;
+
+// printf("CLR->V8 class: %s\n", mono_class_get_name(klass));
+
     if (klass == mono_get_string_class())
     {
         jsdata = stringCLR2V8((MonoString*)netdata);
     }
     else if (klass == mono_get_char_class())
     {
-        //jsdata = stringCLR2V8(((System::Char^)netdata)->ToString());
-        ABORT_TODO();
+        jsdata = stringCLR2V8(MonoEmbedding::ToString(netdata));
     }
     else if (klass == mono_get_boolean_class())
     {
@@ -141,32 +154,28 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata)
     }
     else if (klass == guid_class)
     {
-        static MonoMethod* method;
-        if (!method)
-            method = mono_class_get_method_from_name(guid_class, "ToString", 0);
-        MonoString* str = (MonoString*)mono_runtime_invoke(method, netdata, NULL, NULL);
-        jsdata = stringCLR2V8(str);
+        jsdata = stringCLR2V8(MonoEmbedding::ToString(netdata));
     }
-    //    else if (type == System::DateTime::typeid)
-    //    {
-    //        jsdata = stringCLR2V8(netdata->ToString());
-    //    }
-    //    else if (type == System::DateTimeOffset::typeid)
-    //    {
-    //        jsdata = stringCLR2V8(netdata->ToString());
-    //    }
-    //    else if (type == System::Uri::typeid)
-    //    {
-    //        jsdata = stringCLR2V8(netdata->ToString());
-    //    }
+    else if (klass == datetime_class)
+    {
+        double value = MonoEmbedding::GetDateValue(netdata);
+        jsdata = v8::Date::New(value);
+    }
+    else if (klass == datetimeoffset_class)
+    {
+        jsdata = stringCLR2V8(MonoEmbedding::ToString(netdata));
+    }
+    else if (mono_class_is_assignable_from(uri_class, klass))
+    {
+        jsdata = stringCLR2V8(MonoEmbedding::ToString(netdata));
+    }
     else if (klass == mono_get_int32_class())
     {
         jsdata = v8::Integer::New(*(int32_t*)mono_object_unbox(netdata));
     }
     else if (klass == mono_get_int64_class())
     {
-        ABORT_TODO();
-        //jsdata = v8::Number::New(((System::IConvertible^)netdata)->ToDouble(nullptr));
+        jsdata = v8::Number::New(MonoEmbedding::Int64ToDouble(netdata));
     }
     else if (klass == mono_get_double_class())
     {
@@ -176,23 +185,13 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata)
     {
         jsdata = v8::Number::New(*(float*)mono_object_unbox(netdata));
     }
-    else if (/*type->IsPrimitive ||*/ klass == decimal_class)
+    else if (NULL != (primitive = MonoEmbedding::TryConvertPrimitiveOrDecimal(netdata)))
     {
-        ABORT_TODO();
-        /*System::IConvertible^ convertible = dynamic_cast<System::IConvertible^>(netdata);
-        if (convertible != nullptr)
-        {
-        jsdata = stringCLR2V8(convertible->ToString());
-        }
-        else
-        {
-        jsdata = stringCLR2V8(netdata->ToString());
-        }*/
+        jsdata = stringCLR2V8(primitive);
     }
     else if (mono_class_is_enum(klass))
     {
-        ABORT_TODO();
-        //jsdata = stringCLR2V8(netdata->ToString());
+        jsdata = stringCLR2V8(MonoEmbedding::ToString(netdata));
     }
     else if (mono_class_get_rank(klass) > 0 && mono_class_get_element_class(klass) == mono_get_byte_class())
     {
@@ -208,17 +207,23 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata)
         };
         jsdata = bufferConstructor->NewInstance(3, args);
     }
-    else if (mono_class_is_assignable_from (idictionary_class, klass))
+    else if (mono_class_is_assignable_from (idictionary_string_object_class, klass)
+             || mono_class_is_assignable_from (idictionary_class, klass))
     {
-        ABORT_TODO();
-        //Handle<v8::Object> result = v8::Object::New();
-        //for each (System::Collections::DictionaryEntry^ entry in (System::Collections::IDictionary^)netdata)
-        //{
-        //    if (dynamic_cast<System::String^>(entry->Key) != nullptr)
-        //    result->Set(stringCLR2V8((System::String^)entry->Key), ClrFunc::MarshalCLRToV8(entry->Value));
-        //}
+        Handle<v8::Object> result = v8::Object::New();
 
-        //jsdata = result;
+        MonoArray* kvs = MonoEmbedding::IDictionaryToFlatArray(netdata);
+        size_t length = mono_array_length(kvs);
+        for (unsigned int i = 0; i < length; i += 2)
+        {
+            MonoString* k = (MonoString*)mono_array_get(kvs, MonoObject*, i);
+            MonoObject* v = mono_array_get(kvs, MonoObject*, i + 1);
+            result->Set(
+                stringCLR2V8(k),
+                ClrFunc::MarshalCLRToV8(v));
+        }
+
+        jsdata = result;
     }
     else if (mono_class_is_assignable_from (ienumerable_class, klass))
     {
@@ -325,45 +330,6 @@ Handle<v8::Value> ClrFunc::MarshalCLRObjectToV8(MonoObject* netdata)
             v8::String::New(name),
             ClrFunc::MarshalCLRToV8(value));
     }
-
-    //System::Type^ type = netdata->GetType();
-
-    //for each (FieldInfo^ field in type->GetFields(BindingFlags::Public | BindingFlags::Instance))
-    //{
-    //    result->Set(
-    //        stringCLR2V8(field->Name), 
-    //        ClrFunc::MarshalCLRToV8(field->GetValue(netdata)));
-    //}
-
-    //for each (PropertyInfo^ property in type->GetProperties(BindingFlags::GetProperty | BindingFlags::Public | BindingFlags::Instance))
-    //{
-    //    if (enableScriptIgnoreAttribute)
-    //    {
-    //        if (property->IsDefined(System::Web::Script::Serialization::ScriptIgnoreAttribute::typeid, true))
-    //        {
-    //            continue;
-    //        }
-
-    //        System::Web::Script::Serialization::ScriptIgnoreAttribute^ attr =
-    //            (System::Web::Script::Serialization::ScriptIgnoreAttribute^)System::Attribute::GetCustomAttribute(
-    //            property, 
-    //            System::Web::Script::Serialization::ScriptIgnoreAttribute::typeid,
-    //            true);
-
-    //        if (attr != nullptr && attr->ApplyToOverrides)
-    //        {
-    //            continue;
-    //        }
-    //    }
-
-    //    MethodInfo^ getMethod = property->GetGetMethod();
-    //    if (getMethod != nullptr && getMethod->GetParameters()->Length <= 0)
-    //    {
-    //        result->Set(
-    //            stringCLR2V8(property->Name), 
-    //            ClrFunc::MarshalCLRToV8(getMethod->Invoke(netdata, nullptr)));
-    //    }
-    //}
 
     return scope.Close(result);
 }

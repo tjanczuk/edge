@@ -61,10 +61,17 @@ public:
     static MonoClass* GetClass();
     static MonoObject* GetClrFuncReflectionWrapFunc(const char* assembly, const char* typeName, const char* methodName, MonoException ** exc);
     static MonoObject* CreateDateTime(double ticks);
+    static MonoClass* GetIDictionaryStringObjectClass();
+    static MonoClass* GetUriClass();
     static MonoObject* CreateExpandoObject();
     static MonoClass* GetFuncClass();
     static MonoArray* IEnumerableToArray(MonoObject* ienumerable);
+    static MonoArray* IDictionaryToFlatArray(MonoObject* dictionary);
     static void ContinueTask(MonoObject* task, MonoObject* state);
+    static double GetDateValue(MonoObject* dt);
+    static MonoString* ToString(MonoObject* o);
+    static double Int64ToDouble(MonoObject* i64);
+    static MonoString* TryConvertPrimitiveOrDecimal(MonoObject* obj);
 };
 
 typedef void (*uv_async_edge_cb)(void* data);
