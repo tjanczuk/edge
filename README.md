@@ -988,19 +988,28 @@ http://mono-project.com/Mono:OSX#Uninstalling_Mono_on_Mac_OS_X).
 Then run these steps:
 
 ```bash
+# install prerequisities
+
+sudo npm install node-gyp -g
+sudo npm install mocha -g
 brew install pkg-config
+
+# build and install Mono 64 bit
+
 brew install https://raw.githubusercontent.com/tjanczuk/edge/mono/tools/mono.rb
 
 # at this point I fried an omelette on the lid of my Mac Book Air which was running hot 
 # for about 15 minutes, compiling and installing Mono 64bit; 
 # it was delicious (the omelette, not the MacBook)
 
-git checkout mono
-npm install # (after 5 mins it appeared to hang, so I terminated with Ctrl-C)
-sudo npm install node-gyp -g
-node-gyp configure build #success with a few warnings
-sudo npm install mocha -g
-mocha # fails some tests
+# check out the mono branch of edge.js, install dependencies, and build
+
+git checkout mono #checkout the mono branch from edge if you have not already
+npm install
+
+# run tests
+
+mocha 
 ```
 
 To build a debug build instead of release, you need to:

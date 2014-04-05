@@ -48,10 +48,6 @@ if(process.platform === 'win32') {
 
 	require('./checkplatform')
 } else {
-	var gypPath = path.resolve(__dirname, '../node_modules/node-gyp/bin/node-gyp.js')
-
 	require('child_process')
-		.spawn('node-gyp', ['rebuild'], { stdio: 'inherit' })
+		.spawn('node-gyp', ['configure', 'build'], { stdio: 'inherit' });
 }
-
-
