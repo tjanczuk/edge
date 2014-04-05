@@ -985,13 +985,11 @@ npm run jshint
 First, uninstall previous installs of Mono using instructions from [here](
 http://mono-project.com/Mono:OSX#Uninstalling_Mono_on_Mac_OS_X). 
 
-Store @paulcbetts [Homebrew recipe](https://github.com/tjanczuk/edge/issues/3#issuecomment-17304188) in `/usr/local/Library/Formula/mono.rb`.
-
 Then run these steps:
 
 ```bash
 brew install pkg-config
-brew install mono
+brew install https://raw.githubusercontent.com/tjanczuk/edge/mono/tools/mono.rb
 
 # at this point I fried an omelette on the lid of my Mac Book Air which was running hot 
 # for about 15 minutes, compiling and installing Mono 64bit; 
@@ -1002,8 +1000,14 @@ npm install # (after 5 mins it appeared to hang, so I terminated with Ctrl-C)
 sudo npm install node-gyp -g
 node-gyp configure build #success with a few warnings
 sudo npm install mocha -g
-export EDGE_NATIVE=/Users/tomek/edge-mono/build/Release/edge.node
 mocha # fails some tests
+```
+
+To build a debug build instead of release, you need to:
+
+```bash
+node-gyp configure build -debug
+export EDGE_NATIVE=/Users/tomek/edge/build/Debug/edge.node
 ```
 
 ## Contribution and derived work
