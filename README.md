@@ -1002,14 +1002,14 @@ brew install https://raw.githubusercontent.com/tjanczuk/edge/mono/tools/mono.rb
 # for about 15 minutes, compiling and installing Mono 64bit; 
 # it was delicious (the omelette, not the MacBook)
 
-# check out the mono branch of edge.js, install dependencies, and build
+# check out the mono branch of edge.js, install dependencies, and build Edge
 
 git checkout mono #checkout the mono branch from edge if you have not already
 npm install
 
 # run tests
 
-mocha 
+npm test 
 ```
 
 To build a debug build instead of release, you need to:
