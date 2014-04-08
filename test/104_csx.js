@@ -15,7 +15,7 @@ describe('edge-cs', function () {
     });
 
     it('succeeds with csx file with lambda', function (done) {
-        var func = edge.func(__dirname + '\\hello_lambda.csx');
+        var func = edge.func(path.join(__dirname, 'hello_lambda.csx'));
         func("JavaScript", function (error, result) {
             assert.ifError(error);
             assert.equal(result, 'Hello, JavaScript');
@@ -43,7 +43,7 @@ describe('edge-cs', function () {
     });
 
     it('succeeds with csx file with class', function (done) {
-        var func = edge.func(__dirname + '\\hello_class.csx');
+        var func = edge.func(path.join(__dirname, 'hello_class.csx'));
         func("JavaScript", function (error, result) {
             assert.ifError(error);
             assert.equal(result, 'Hello, JavaScript');
@@ -52,7 +52,7 @@ describe('edge-cs', function () {
     });
 
     it('succeeds with cs file with class', function (done) {
-        var func = edge.func(__dirname + '\\hello_class.cs');
+        var func = edge.func(path.join(__dirname, 'hello_class.cs'));
         func("JavaScript", function (error, result) {
             assert.ifError(error);
             assert.equal(result, 'Hello, JavaScript');
