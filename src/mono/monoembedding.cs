@@ -143,17 +143,9 @@ public static class MonoEmbedding
 class ClrFuncInvokeContext
 {
     IntPtr native;
-    //Persistent<Function>* callback;
-    //uv_edge_async_t* uv_edge_async;
-
-    //void DisposeCallback();
-
-
     Object Payload;
     Task<Object> Task;
     bool Sync;
-
-    //ClrFuncInvokeContext(Handle<v8::Value> callbackOrSync);
 
     [MethodImplAttribute(MethodImplOptions.InternalCall)]
     static extern void CompleteOnCLRThreadICall(IntPtr ptr, Task<object> task);
@@ -175,15 +167,27 @@ class ClrFuncInvokeContext
     {
         return new Action(CompleteOnV8ThreadAsynchronous);
     }
-
-    //Handle<v8::Value> CompleteOnV8Thread(bool completedSynchronously);
 };
 
 class NodejsFunc
 {
-    IntPtr native;
-    //~NodejsFunc();
-    //!NodejsFunc();
+    public IntPtr NativeNodejsFunc { get; set; }
+
+    public NodejsFunc(IntPtr native)
+    {
+        this.NativeNodejsFunc = native;
+    }
+
+    ~NodejsFunc()
+    {
+        IntPtr native = this.NativeNodejsFunc;
+        ExecuteActionOnV8Thread(() => {
+            Release(native);
+        });
+    }
+
+    [MethodImplAttribute(MethodImplOptions.InternalCall)]
+    static extern void Release(IntPtr nativeNodejsFunc); 
 
     Func<object, Task<object>> GetFunc()
     {
@@ -192,7 +196,61 @@ class NodejsFunc
 
     Task<object> FunctionWrapper(object payload)
     {
-        return null;
+        NodejsFuncInvokeContext ctx = new NodejsFuncInvokeContext(this, payload);
+        ExecuteActionOnV8Thread(ctx.CallFuncOnV8Thread);
+
+        return ctx.TaskCompletionSource.Task;
+    }
+
+    [MethodImplAttribute(MethodImplOptions.InternalCall)]
+    static extern void ExecuteActionOnV8Thread(Action action);    
+};
+
+class NodejsFuncInvokeContext {
+    public IntPtr NativeNodejsFuncInvokeContext { get; set; }
+    NodejsFunc functionContext;
+    object payload;
+
+    public TaskCompletionSource<object> TaskCompletionSource { get; set; }
+
+    public NodejsFuncInvokeContext(NodejsFunc functionContext, object payload)
+    {
+        this.functionContext = functionContext;
+        this.payload = payload;
+        this.TaskCompletionSource = new TaskCompletionSource<object>();
+    }
+
+    [MethodImplAttribute(MethodImplOptions.InternalCall)]
+    static extern void ReleaseNodejsFuncInvokeContext(IntPtr NativeNodejsFuncInvokeContext);        
+
+    public void CallFuncOnV8Thread()
+    {
+        // This function must run on V8 thread
+        string exc = null;
+        this.NativeNodejsFuncInvokeContext = CallFuncOnV8ThreadInternal(
+            this, this.functionContext.NativeNodejsFunc, this.payload, out exc);
+        if (!string.IsNullOrEmpty(exc))
+        {
+            throw new Exception(exc);
+        }
+    }
+
+    [MethodImplAttribute(MethodImplOptions.InternalCall)]
+    static extern IntPtr CallFuncOnV8ThreadInternal(NodejsFuncInvokeContext _this, IntPtr nativeNodejsFunc, object payload, out string exc);        
+
+    public void Complete(string exception, object result)
+    {
+        this.NativeNodejsFuncInvokeContext = IntPtr.Zero;
+        Task.Run(() => {
+            if (!string.IsNullOrEmpty(exception))
+            {
+                this.TaskCompletionSource.SetException(new Exception(exception));
+            }
+            else
+            {
+                this.TaskCompletionSource.SetResult(result);
+            }
+        });
     }
 };
 

@@ -1,19 +1,3 @@
-/**
- * Portions Copyright (c) Microsoft Corporation. All rights reserved. 
- * 
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *  http://www.apache.org/licenses/LICENSE-2.0  
- *
- * THIS CODE IS PROVIDED *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS
- * OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION 
- * ANY IMPLIED WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR 
- * PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT. 
- *
- * See the Apache Version 2.0 License for specific language governing 
- * permissions and limitations under the License.
- */
 #ifndef __EDGE_H
 #define __EDGE_H
 
@@ -184,51 +168,24 @@ class NodejsFunc {
 public:
     Persistent<Function>* Func;
 
-    NodejsFunc(ClrFuncInvokeContext* appInvokeContext, Handle<Function> function);
-    //~NodejsFunc();
-    //!NodejsFunc();
+    NodejsFunc(Handle<Function> function);
+    ~NodejsFunc();
 
-    // helper
-    MonoObject* GetFunc();
+    MonoObject* GetFunc(); // returns Func<object,Task<object>>
+
+    static void __cdecl ExecuteActionOnV8Thread(MonoObject* action);
+    static void __cdecl Release(NodejsFunc* _this);
 };
 
-//ref class PersistentDisposeContext {
-//private:
-//    System::IntPtr ptr;
-//public:
-//    PersistentDisposeContext(Persistent<Value>* handle);
-//    void CallDisposeOnV8Thread();
-//};
-//
-//ref class NodejsFuncInvokeContext;
-//
-//typedef struct nodejsFuncInvokeContextWrap {
-//    gcroot<NodejsFuncInvokeContext^> context;
-//} NodejsFuncInvokeContextWrap;
-//
-//ref class NodejsFuncInvokeContext {
-//private:
-//    NodejsFunc^ functionContext;
-//    System::Object^ payload;
-//    System::Exception^ exception;
-//    System::Object^ result;
-//    NodejsFuncInvokeContextWrap* wrap;
-//
-//    void Complete();
-//
-//public:
-//
-//    property TaskCompletionSource<System::Object^>^ TaskCompletionSource;
-//
-//    NodejsFuncInvokeContext(
-//        NodejsFunc^ functionContext, System::Object^ payload);
-//    ~NodejsFuncInvokeContext();
-//    !NodejsFuncInvokeContext();
-//
-//    void CompleteWithError(System::Exception^ exception);
-//    void CompleteWithResult(Handle<v8::Value> result);
-//    void CallFuncOnV8Thread();
-//};
+class NodejsFuncInvokeContext {
+    GCHandle _this;
+public:
+    NodejsFuncInvokeContext(MonoObject* _this);
+    ~NodejsFuncInvokeContext();
+
+    static NodejsFuncInvokeContext* __cdecl CallFuncOnV8Thread(MonoObject* _this, NodejsFunc* nativeNodejsFunc, MonoObject* payload, MonoString** exc);
+    void Complete(MonoString* exception, MonoObject* result);
+};
 
 class ClrFunc {
 private:
@@ -244,7 +201,7 @@ public:
     static Handle<v8::Function> Initialize(/*System::Func<System::Object^,Task<System::Object^>^>^*/ MonoObject* func);
     Handle<v8::Value> Call(Handle<v8::Value> payload, Handle<v8::Value> callback);
     static Handle<v8::Value> MarshalCLRToV8(MonoObject* netdata);
-    static MonoObject* MarshalV8ToCLR(ClrFuncInvokeContext* context, Handle<v8::Value> jsdata);    
+    static MonoObject* MarshalV8ToCLR(Handle<v8::Value> jsdata);    
 };
 
 typedef struct clrFuncWrap {

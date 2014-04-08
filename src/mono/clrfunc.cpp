@@ -84,7 +84,7 @@ Handle<v8::Value> ClrFunc::Initialize(const v8::Arguments& args)
             // exception
         }
         MonoException* exc = NULL;
-        MonoObject* parameters = ClrFunc::MarshalV8ToCLR(NULL, options);
+        MonoObject* parameters = ClrFunc::MarshalV8ToCLR(options);
         MonoArray* methodInfoParams = mono_array_new(mono_domain_get(), mono_get_object_class(), 1);
         mono_array_setref(methodInfoParams, 0, parameters);
         void* params[2];
@@ -113,7 +113,6 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata)
     static MonoClass* idictionary_class;
     static MonoClass* idictionary_string_object_class;
     static MonoClass* ienumerable_class;
-    static MonoClass* func_class;
     static MonoClass* datetime_class;
     static MonoClass* uri_class;
     static MonoClass* datetimeoffset_class;
@@ -269,7 +268,7 @@ Handle<v8::Value> ClrFunc::MarshalCLRObjectToV8(MonoObject* netdata)
     MonoProperty* prop;
     void* iter = NULL;
 
-    while (field = mono_class_get_fields(klass, &iter))
+    while (NULL != (field = mono_class_get_fields(klass, &iter)))
     {
         // magic numbers
         static uint32_t field_attr_static = 0x0010;
@@ -286,7 +285,7 @@ Handle<v8::Value> ClrFunc::MarshalCLRObjectToV8(MonoObject* netdata)
     }
 
     iter = NULL;
-    while(prop = mono_class_get_properties(klass, &iter))
+    while (NULL != (prop = mono_class_get_properties(klass, &iter)))
     {
         // magic numbers
         static uint32_t method_attr_static = 0x0010;
@@ -334,13 +333,13 @@ Handle<v8::Value> ClrFunc::MarshalCLRObjectToV8(MonoObject* netdata)
     return scope.Close(result);
 }
 
-MonoObject* ClrFunc::MarshalV8ToCLR(ClrFuncInvokeContext* context, Handle<v8::Value> jsdata)
+MonoObject* ClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata)
 {
     HandleScope scope;
 
-    if (jsdata->IsFunction() && context != NULL)
+    if (jsdata->IsFunction())
     {
-        NodejsFunc* functionContext = new NodejsFunc(context, Handle<v8::Function>::Cast(jsdata));
+        NodejsFunc* functionContext = new NodejsFunc(Handle<v8::Function>::Cast(jsdata));
         MonoObject* netfunc = functionContext->GetFunc();
 
         return netfunc;
@@ -359,7 +358,7 @@ MonoObject* ClrFunc::MarshalV8ToCLR(ClrFuncInvokeContext* context, Handle<v8::Va
         MonoArray* netarray = mono_array_new(mono_domain_get(), mono_get_object_class(), jsarray->Length());
         for (unsigned int i = 0; i < jsarray->Length(); i++)
         {
-            mono_array_setref(netarray, i, ClrFunc::MarshalV8ToCLR(context, jsarray->Get(i)));
+            mono_array_setref(netarray, i, ClrFunc::MarshalV8ToCLR(jsarray->Get(i)));
         }
 
         return (MonoObject*)netarray;
@@ -379,7 +378,7 @@ MonoObject* ClrFunc::MarshalV8ToCLR(ClrFuncInvokeContext* context, Handle<v8::Va
         {
             Handle<v8::String> name = Handle<v8::String>::Cast(propertyNames->Get(i));
             String::Utf8Value utf8name(name);
-            Dictionary::Add(netobject, *utf8name, ClrFunc::MarshalV8ToCLR(context, jsobject->Get(name)));
+            Dictionary::Add(netobject, *utf8name, ClrFunc::MarshalV8ToCLR(jsobject->Get(name)));
         }
 
         return netobject;
@@ -426,7 +425,7 @@ Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> cal
     MonoException* exc = NULL;
 
     ClrFuncInvokeContext* c = new ClrFuncInvokeContext(callback);
-    c->Payload(ClrFunc::MarshalV8ToCLR(c, payload));
+    c->Payload(ClrFunc::MarshalV8ToCLR(payload));
 
     MonoObject* func = mono_gchandle_get_target(this->func);
     void* params[1];

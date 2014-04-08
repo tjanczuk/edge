@@ -46,7 +46,6 @@
 		          'src/mono/monotask.cpp',
 		          'src/mono/nodejsfunc.cpp',
 		          'src/mono/nodejsfuncinvokecontext.cpp',
-		          'src/mono/persistentdisposecontext.cpp',
 		          'src/mono/utils.cpp',
 		          'src/mono/v8synchronizationcontext.cpp',
 		        ]

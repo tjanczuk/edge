@@ -26,10 +26,13 @@ void MonoEmbedding::Initialize()
     MonoMethod* main = mono_class_get_method_from_name(klass, "Main", -1);
     MonoException* exc;
     MonoArray* args = mono_array_new(mono_domain_get(), mono_get_string_class(), 0);
-    int ret = mono_runtime_exec_main(main, args, (MonoObject**)&exc);
+    mono_runtime_exec_main(main, args, (MonoObject**)&exc);
 
     mono_add_internal_call("ClrFuncInvokeContext::CompleteOnV8ThreadAsynchronousICall", (const void*)&ClrFuncInvokeContext::CompleteOnV8ThreadAsynchronous); 
     mono_add_internal_call("ClrFuncInvokeContext::CompleteOnCLRThreadICall", (const void*)&ClrFuncInvokeContext::CompleteOnCLRThread); 
+    mono_add_internal_call("NodejsFuncInvokeContext::CallFuncOnV8ThreadInternal", (const void*)&NodejsFuncInvokeContext::CallFuncOnV8Thread); 
+    mono_add_internal_call("NodejsFunc::ExecuteActionOnV8Thread", (const void*)&NodejsFunc::ExecuteActionOnV8Thread); 
+    mono_add_internal_call("NodejsFunc::Release", (const void*)&NodejsFunc::Release); 
 }
 
 MonoAssembly* MonoEmbedding::GetAssembly()
