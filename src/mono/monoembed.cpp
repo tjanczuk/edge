@@ -150,6 +150,7 @@ MonoClass* MonoEmbedding::GetFuncClass()
 MonoArray* MonoEmbedding::IEnumerableToArray(MonoObject* ienumerable, MonoException** exc)
 {
     static MonoMethod* method;
+    *exc = NULL;
 
     if (!method)
         method = mono_class_get_method_from_name(MonoEmbedding::GetClass(), "IEnumerableToArray", -1);
@@ -163,6 +164,7 @@ MonoArray* MonoEmbedding::IEnumerableToArray(MonoObject* ienumerable, MonoExcept
 MonoArray* MonoEmbedding::IDictionaryToFlatArray(MonoObject* dictionary, MonoException** exc)
 {
     static MonoMethod* method;
+    *exc = NULL;
 
     if (!method)
         method = mono_class_get_method_from_name(MonoEmbedding::GetClass(), "IDictionaryToFlatArray", -1);
@@ -190,6 +192,7 @@ void MonoEmbedding::ContinueTask(MonoObject* task, MonoObject* state)
 double MonoEmbedding::GetDateValue(MonoObject* dt, MonoException** exc)
 {
     static MonoMethod* method;
+    *exc = NULL;
 
     if (!method)
         method = mono_class_get_method_from_name(MonoEmbedding::GetClass(), "GetDateValue", -1);
@@ -202,6 +205,7 @@ double MonoEmbedding::GetDateValue(MonoObject* dt, MonoException** exc)
 double MonoEmbedding::Int64ToDouble(MonoObject* i64, MonoException** exc)
 {
     static MonoMethod* method;
+    *exc = NULL;
 
     if (!method)
         method = mono_class_get_method_from_name(MonoEmbedding::GetClass(), "Int64ToDouble", -1);
@@ -214,6 +218,7 @@ double MonoEmbedding::Int64ToDouble(MonoObject* i64, MonoException** exc)
 MonoString* MonoEmbedding::ToString(MonoObject* o, MonoException** exc)
 {
     static MonoMethod* method;
+    *exc = NULL;
 
     if (!method)
         method = mono_class_get_method_from_name(MonoEmbedding::GetClass(), "ObjectToString", -1);
@@ -226,6 +231,7 @@ MonoString* MonoEmbedding::ToString(MonoObject* o, MonoException** exc)
 MonoString* MonoEmbedding::TryConvertPrimitiveOrDecimal(MonoObject* obj, MonoException** exc)
 {
     static MonoMethod* method;
+    *exc = NULL;
 
     if (!method)
         method = mono_class_get_method_from_name(MonoEmbedding::GetClass(), "TryConvertPrimitiveOrDecimal", -1);
