@@ -433,12 +433,21 @@ Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> cal
     MonoMethod* invoke = mono_class_get_method_from_name(mono_object_get_class(func), "Invoke", -1);
     MonoObject* task = mono_runtime_invoke(invoke, func, params, (MonoObject**)&exc);
     if (exc)
+    {
+        delete c;
+        c = NULL;
         return scope.Close(throwV8Exception(exc));
+    }
 
     MonoProperty* prop = mono_class_get_property_from_name(mono_object_get_class(task), "IsCompleted");
     MonoObject* isCompletedObject = mono_property_get_value(prop, task, NULL, (MonoObject**)&exc);
     if (exc)
+    {
+        delete c;
+        c = NULL;
         return scope.Close(throwV8Exception(exc));
+    }
+
     bool isCompleted = *(bool*)mono_object_unbox(isCompletedObject);
     if(isCompleted)
     {
@@ -454,6 +463,8 @@ Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> cal
     }
     else
     {
+        c->InitializeAsyncOperation();
+
         MonoEmbedding::ContinueTask(task, c->GetMonoObject());
     }
 

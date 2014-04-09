@@ -59,6 +59,7 @@ NodejsFuncInvokeContext* NodejsFuncInvokeContext::CallFuncOnV8Thread(MonoObject*
     if (tryCatch.HasCaught()) 
     {
         result->Complete(exceptionV82stringCLR(tryCatch.Exception()), NULL);
+        result = NULL;
     }    
 
     return result;

@@ -58,7 +58,7 @@ MonoObject* NodejsFunc::GetFunc()
 void  NodejsFunc::ExecuteActionOnV8Thread(MonoObject* action)
 {
     ClrActionContext* data = new ClrActionContext;
-    data->action = mono_gchandle_new(action, FALSE);
+    data->action = mono_gchandle_new(action, FALSE); // released in ClrActionContext::ActionCallback
     uv_edge_async_t* uv_edge_async = V8SynchronizationContext::RegisterAction(ClrActionContext::ActionCallback, data);
     V8SynchronizationContext::ExecuteAction(uv_edge_async);    
 }

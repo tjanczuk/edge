@@ -25,3 +25,5 @@ _ReSharper*
 Edge.Tests.*
 node.exe
 Sample105.*
+
+.DS_Store

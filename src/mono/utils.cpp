@@ -3,7 +3,9 @@
 Handle<v8::String> stringCLR2V8(MonoString* text)
 {
     HandleScope scope;
-    return scope.Close(v8::String::New((uint16_t*)mono_string_to_utf16(text)));  
+    return scope.Close(v8::String::New(
+        (uint16_t*)mono_string_chars(text),
+        mono_string_length(text)));  
 }
 
 MonoString* stringV82CLR(Handle<v8::String> text)
