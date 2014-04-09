@@ -49,13 +49,13 @@ public:
     static MonoClass* GetUriClass();
     static MonoObject* CreateExpandoObject();
     static MonoClass* GetFuncClass();
-    static MonoArray* IEnumerableToArray(MonoObject* ienumerable);
-    static MonoArray* IDictionaryToFlatArray(MonoObject* dictionary);
+    static MonoArray* IEnumerableToArray(MonoObject* ienumerable, MonoException** exc);
+    static MonoArray* IDictionaryToFlatArray(MonoObject* dictionary, MonoException** exc);
     static void ContinueTask(MonoObject* task, MonoObject* state);
-    static double GetDateValue(MonoObject* dt);
-    static MonoString* ToString(MonoObject* o);
-    static double Int64ToDouble(MonoObject* i64);
-    static MonoString* TryConvertPrimitiveOrDecimal(MonoObject* obj);
+    static double GetDateValue(MonoObject* dt, MonoException** exc);
+    static MonoString* ToString(MonoObject* o, MonoException** exc);
+    static double Int64ToDouble(MonoObject* i64, MonoException** exc);
+    static MonoString* TryConvertPrimitiveOrDecimal(MonoObject* obj, MonoException** exc);
 };
 
 typedef void (*uv_async_edge_cb)(void* data);
