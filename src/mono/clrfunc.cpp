@@ -79,7 +79,7 @@ Handle<v8::Value> ClrFunc::Initialize(const v8::Arguments& args)
         mono_runtime_invoke(ctor, compilerInstance, NULL, (MonoObject**)&exc);
         if(exc)
             return scope.Close(throwV8Exception(exc));
-        
+
         MonoMethod* compileFunc = mono_class_get_method_from_name(compilerClass, "CompileFunc", -1);
         MonoReflectionMethod* methodInfo = mono_method_get_object(mono_domain_get(),compileFunc, compilerClass);
         MonoClass* methodBase = mono_class_from_name(mono_get_corlib(), "System.Reflection", "MethodBase");
@@ -477,7 +477,9 @@ Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> cal
     }
     else
     {
-        MonoEmbedding::ContinueTask(task, c->GetMonoObject());
+        MonoEmbedding::ContinueTask(task, c->GetMonoObject(), &exc);
+        if (exc)
+            return scope.Close(throwV8Exception(exc));
     }
 
     return scope.Close(Undefined());    

@@ -175,10 +175,10 @@ MonoArray* MonoEmbedding::IDictionaryToFlatArray(MonoObject* dictionary, MonoExc
     return values;
 }
 
-void MonoEmbedding::ContinueTask(MonoObject* task, MonoObject* state)
+void MonoEmbedding::ContinueTask(MonoObject* task, MonoObject* state, MonoException** exc)
 {
     static MonoMethod* method;
-    MonoException* exc = NULL;
+    *exc = NULL;
 
     if (!method)
         method = mono_class_get_method_from_name(MonoEmbedding::GetClass(), "ContinueTask", -1);
@@ -186,7 +186,7 @@ void MonoEmbedding::ContinueTask(MonoObject* task, MonoObject* state)
     void* args[2];
     args[0] = task;
     args[1] = state;
-    mono_runtime_invoke(method, NULL, args, (MonoObject**)&exc);
+    mono_runtime_invoke(method, NULL, args, (MonoObject**)exc);
 }
 
 double MonoEmbedding::GetDateValue(MonoObject* dt, MonoException** exc)
