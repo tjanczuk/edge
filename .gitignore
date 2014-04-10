@@ -26,4 +26,6 @@ Edge.Tests.*
 node.exe
 Sample105.*
 
-.DS_Store
+.DS_StoreSample105.*
+*.sublime-project
+*.sublime-workspace

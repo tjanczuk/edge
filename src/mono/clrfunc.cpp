@@ -56,7 +56,8 @@ Handle<v8::Value> ClrFunc::Initialize(const v8::Arguments& args)
     Handle<v8::Function> result;
 
     Handle<v8::Value> jsassemblyFile = options->Get(String::NewSymbol("assemblyFile"));
-    if (jsassemblyFile->IsString()) {
+    if (jsassemblyFile->IsString())
+    {
         // reference .NET code through pre-compiled CLR assembly 
         String::Utf8Value assemblyFile(jsassemblyFile);
         String::Utf8Value nativeTypeName(options->Get(String::NewSymbol("typeName")));
@@ -67,14 +68,20 @@ Handle<v8::Value> ClrFunc::Initialize(const v8::Arguments& args)
             return scope.Close(throwV8Exception(exc));
         result = ClrFunc::Initialize(func);
     }
-    else {
+    else
+    {
         //// reference .NET code throgh embedded source code that needs to be compiled
+        MonoException* exc = NULL;
+
         String::Utf8Value compilerFile(options->Get(String::NewSymbol("compiler")));
         MonoAssembly *assembly = mono_domain_assembly_open (mono_domain_get(), *compilerFile);
         MonoClass* compilerClass = mono_class_from_name(mono_assembly_get_image(assembly), "", "EdgeCompiler");
         MonoObject* compilerInstance = mono_object_new(mono_domain_get(), compilerClass);
         MonoMethod* ctor = mono_class_get_method_from_name(compilerClass, ".ctor", 0);
-        mono_runtime_invoke(ctor, compilerInstance, NULL, NULL);
+        mono_runtime_invoke(ctor, compilerInstance, NULL, (MonoObject**)&exc);
+        if(exc)
+            return scope.Close(throwV8Exception(exc));
+
         MonoMethod* compileFunc = mono_class_get_method_from_name(compilerClass, "CompileFunc", -1);
         MonoReflectionMethod* methodInfo = mono_method_get_object(mono_domain_get(),compileFunc, compilerClass);
         MonoClass* methodBase = mono_class_from_name(mono_get_corlib(), "System.Reflection", "MethodBase");
@@ -83,7 +90,6 @@ Handle<v8::Value> ClrFunc::Initialize(const v8::Arguments& args)
         {
             // exception
         }
-        MonoException* exc = NULL;
         MonoObject* parameters = ClrFunc::MarshalV8ToCLR(options);
         MonoArray* methodInfoParams = mono_array_new(mono_domain_get(), mono_get_object_class(), 1);
         mono_array_setref(methodInfoParams, 0, parameters);
@@ -117,23 +123,31 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata)
     static MonoClass* uri_class;
     static MonoClass* datetimeoffset_class;
 
+    MonoException* exc = NULL;
+
     if (!guid_class)
         guid_class = mono_class_from_name (mono_get_corlib(), "System", "Guid");
     if (!idictionary_class)
         idictionary_class = mono_class_from_name (mono_get_corlib(), "System.Collections", "IDictionary");
-    if (!idictionary_string_object_class) 
-        idictionary_string_object_class = MonoEmbedding::GetIDictionaryStringObjectClass();
+    if (!idictionary_string_object_class)
+    {
+        idictionary_string_object_class = MonoEmbedding::GetIDictionaryStringObjectClass(&exc);
+        if(exc)
+            ABORT_TODO();
+    }
     if (!ienumerable_class)
         ienumerable_class = mono_class_from_name (mono_get_corlib(), "System.Collections", "IEnumerable");
     if (!datetime_class)
         datetime_class = mono_class_from_name (mono_get_corlib(), "System", "DateTime");
-    if (!uri_class) 
-        uri_class = MonoEmbedding::GetUriClass();
+    if (!uri_class)
+    {
+        uri_class = MonoEmbedding::GetUriClass(&exc);
+        if(exc)
+            ABORT_TODO();
+    }
     if (!datetimeoffset_class)
         datetimeoffset_class = mono_class_from_name (mono_get_corlib(), "System", "DateTimeOffset");
 
-    //try 
-    //{
     MonoClass* klass = mono_object_get_class(netdata);
     MonoString* primitive = NULL;
 
@@ -145,7 +159,10 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata)
     }
     else if (klass == mono_get_char_class())
     {
-        jsdata = stringCLR2V8(MonoEmbedding::ToString(netdata));
+        MonoString* str = MonoEmbedding::ToString(netdata, &exc);
+        if(exc)
+            return scope.Close(throwV8Exception(exc));
+        jsdata = stringCLR2V8(str);
     }
     else if (klass == mono_get_boolean_class())
     {
@@ -153,20 +170,31 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata)
     }
     else if (klass == guid_class)
     {
-        jsdata = stringCLR2V8(MonoEmbedding::ToString(netdata));
+        MonoString* str = MonoEmbedding::ToString(netdata, &exc);
+        if(exc)
+            return scope.Close(throwV8Exception(exc));
+        jsdata = stringCLR2V8(str);
     }
     else if (klass == datetime_class)
     {
-        double value = MonoEmbedding::GetDateValue(netdata);
+        double value = MonoEmbedding::GetDateValue(netdata, &exc);
+        if(exc)
+            return scope.Close(throwV8Exception(exc));
         jsdata = v8::Date::New(value);
     }
     else if (klass == datetimeoffset_class)
     {
-        jsdata = stringCLR2V8(MonoEmbedding::ToString(netdata));
+        MonoString* str = MonoEmbedding::ToString(netdata, &exc);
+        if(exc)
+            return scope.Close(throwV8Exception(exc));
+        jsdata = stringCLR2V8(str);
     }
     else if (mono_class_is_assignable_from(uri_class, klass))
     {
-        jsdata = stringCLR2V8(MonoEmbedding::ToString(netdata));
+        MonoString* str = MonoEmbedding::ToString(netdata, &exc);
+        if(exc)
+            return scope.Close(throwV8Exception(exc));
+        jsdata = stringCLR2V8(str);
     }
     else if (klass == mono_get_int32_class())
     {
@@ -174,7 +202,10 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata)
     }
     else if (klass == mono_get_int64_class())
     {
-        jsdata = v8::Number::New(MonoEmbedding::Int64ToDouble(netdata));
+        double val = MonoEmbedding::Int64ToDouble(netdata, &exc);
+        if(exc)
+            return scope.Close(throwV8Exception(exc));
+        jsdata = v8::Number::New(val);
     }
     else if (klass == mono_get_double_class())
     {
@@ -184,13 +215,18 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata)
     {
         jsdata = v8::Number::New(*(float*)mono_object_unbox(netdata));
     }
-    else if (NULL != (primitive = MonoEmbedding::TryConvertPrimitiveOrDecimal(netdata)))
+    else if (NULL != (primitive = MonoEmbedding::TryConvertPrimitiveOrDecimal(netdata, &exc)) || exc)
     {
+        if(exc)
+            return scope.Close(throwV8Exception(exc));
         jsdata = stringCLR2V8(primitive);
     }
     else if (mono_class_is_enum(klass))
     {
-        jsdata = stringCLR2V8(MonoEmbedding::ToString(netdata));
+        MonoString* str = MonoEmbedding::ToString(netdata, &exc);
+        if(exc)
+            return scope.Close(throwV8Exception(exc));
+        jsdata = stringCLR2V8(str);
     }
     else if (mono_class_get_rank(klass) > 0 && mono_class_get_element_class(klass) == mono_get_byte_class())
     {
@@ -211,32 +247,38 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata)
     {
         Handle<v8::Object> result = v8::Object::New();
 
-        MonoArray* kvs = MonoEmbedding::IDictionaryToFlatArray(netdata);
-        size_t length = mono_array_length(kvs);
-        for (unsigned int i = 0; i < length; i += 2)
+        MonoArray* kvs = MonoEmbedding::IDictionaryToFlatArray(netdata, &exc);
+        if(!exc)
         {
-            MonoString* k = (MonoString*)mono_array_get(kvs, MonoObject*, i);
-            MonoObject* v = mono_array_get(kvs, MonoObject*, i + 1);
-            result->Set(
-                stringCLR2V8(k),
-                ClrFunc::MarshalCLRToV8(v));
-        }
+            size_t length = mono_array_length(kvs);
+            for (unsigned int i = 0; i < length; i += 2)
+            {
+                MonoString* k = (MonoString*)mono_array_get(kvs, MonoObject*, i);
+                MonoObject* v = mono_array_get(kvs, MonoObject*, i + 1);
+                result->Set(
+                    stringCLR2V8(k),
+                    ClrFunc::MarshalCLRToV8(v));
+            }
 
-        jsdata = result;
+            jsdata = result;
+        }
     }
     else if (mono_class_is_assignable_from (ienumerable_class, klass))
     {
         Handle<v8::Array> result = v8::Array::New();
-        MonoArray* values = MonoEmbedding::IEnumerableToArray(netdata);
-        size_t length = mono_array_length(values);
-        unsigned int i = 0;
-        for (i = 0; i < length; i++)
+        MonoArray* values = MonoEmbedding::IEnumerableToArray(netdata, &exc);
+        if(!exc)
         {
-            MonoObject* value = mono_array_get(values, MonoObject*, i);
-            result->Set(i, ClrFunc::MarshalCLRToV8(value));
-        }
+            size_t length = mono_array_length(values);
+            unsigned int i = 0;
+            for (i = 0; i < length; i++)
+            {
+                MonoObject* value = mono_array_get(values, MonoObject*, i);
+                result->Set(i, ClrFunc::MarshalCLRToV8(value));
+            }
 
-        jsdata = result;
+            jsdata = result;
+        }
     }
     else if (MonoEmbedding::GetFuncClass() == klass)
     {
@@ -246,15 +288,9 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata)
     {
         jsdata = ClrFunc::MarshalCLRObjectToV8(netdata);
     }
-    //}
-    //catch (System::Exception^ e)
-    //{
-    //    return scope.Close(throwV8Exception(e));
-    //}
-    //else
-    //{
-    //    ABORT_TODO();
-    //}
+
+    if(exc)
+        return scope.Close(throwV8Exception(exc));
 
     return scope.Close(jsdata);
 }
@@ -465,7 +501,13 @@ Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> cal
     {
         c->InitializeAsyncOperation();
 
-        MonoEmbedding::ContinueTask(task, c->GetMonoObject());
+        MonoEmbedding::ContinueTask(task, c->GetMonoObject(), &exc);
+        if (exc)
+        {
+            delete c;
+            c = NULL;
+            return scope.Close(throwV8Exception(exc));
+        }
     }
 
     return scope.Close(Undefined());    

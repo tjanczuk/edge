@@ -73,14 +73,18 @@ MonoObject* MonoEmbedding::GetClrFuncReflectionWrapFunc(const char* assemblyFile
     return action;
 }
 
-MonoClass* MonoEmbedding::GetIDictionaryStringObjectClass() 
+MonoClass* MonoEmbedding::GetIDictionaryStringObjectClass(MonoException** exc) 
 {
     static MonoClass* klass;
-    MonoException* exc = NULL;
+    *exc = NULL;
 
-    if (!klass) {
+    if (!klass)
+    {
         MonoMethod* method = mono_class_get_method_from_name(MonoEmbedding::GetClass(), "GetIDictionaryStringObjectType", -1);
-        MonoReflectionType* typeObject = (MonoReflectionType*)mono_runtime_invoke(method, NULL, NULL, (MonoObject**)&exc);
+        MonoReflectionType* typeObject = (MonoReflectionType*)mono_runtime_invoke(method, NULL, NULL, (MonoObject**)exc);
+        if(*exc)
+            return NULL;
+        
         MonoType* type = mono_reflection_type_get_type(typeObject);
         klass = mono_class_from_mono_type(type);
     }
@@ -88,14 +92,18 @@ MonoClass* MonoEmbedding::GetIDictionaryStringObjectClass()
     return klass;    
 }
 
-MonoClass* MonoEmbedding::GetUriClass() 
+MonoClass* MonoEmbedding::GetUriClass(MonoException** exc) 
 {
     static MonoClass* klass;
-    MonoException* exc = NULL;
+    *exc = NULL;
 
-    if (!klass) {
+    if (!klass)
+    {
         MonoMethod* method = mono_class_get_method_from_name(MonoEmbedding::GetClass(), "GetUriType", -1);
-        MonoReflectionType* typeObject = (MonoReflectionType*)mono_runtime_invoke(method, NULL, NULL, (MonoObject**)&exc);
+        MonoReflectionType* typeObject = (MonoReflectionType*)mono_runtime_invoke(method, NULL, NULL, (MonoObject**)exc);
+        if(*exc)
+            return NULL;
+
         MonoType* type = mono_reflection_type_get_type(typeObject);
         klass = mono_class_from_mono_type(type);
     }
@@ -147,38 +155,42 @@ MonoClass* MonoEmbedding::GetFuncClass()
     return klass;
 }
 
-MonoArray* MonoEmbedding::IEnumerableToArray(MonoObject* ienumerable)
+MonoArray* MonoEmbedding::IEnumerableToArray(MonoObject* ienumerable, MonoException** exc)
 {
     static MonoMethod* method;
-    MonoException* exc = NULL;
+    *exc = NULL;
 
     if (!method)
         method = mono_class_get_method_from_name(MonoEmbedding::GetClass(), "IEnumerableToArray", -1);
 
     void* args[1];
     args[0] = ienumerable;
-    MonoArray* values = (MonoArray*)mono_runtime_invoke(method, NULL, args, (MonoObject**)&exc);
+    MonoArray* values = (MonoArray*)mono_runtime_invoke(method, NULL, args, (MonoObject**)exc);
+    if(*exc)
+        return NULL;
     return values;
 }
 
-MonoArray* MonoEmbedding::IDictionaryToFlatArray(MonoObject* dictionary)
+MonoArray* MonoEmbedding::IDictionaryToFlatArray(MonoObject* dictionary, MonoException** exc)
 {
     static MonoMethod* method;
-    MonoException* exc = NULL;
+    *exc = NULL;
 
     if (!method)
         method = mono_class_get_method_from_name(MonoEmbedding::GetClass(), "IDictionaryToFlatArray", -1);
 
     void* args[1];
     args[0] = dictionary;
-    MonoArray* values = (MonoArray*)mono_runtime_invoke(method, NULL, args, (MonoObject**)&exc);
+    MonoArray* values = (MonoArray*)mono_runtime_invoke(method, NULL, args, (MonoObject**)exc);
+    if(*exc)
+        return NULL;
     return values;
 }
 
-void MonoEmbedding::ContinueTask(MonoObject* task, MonoObject* state)
+void MonoEmbedding::ContinueTask(MonoObject* task, MonoObject* state, MonoException** exc)
 {
     static MonoMethod* method;
-    MonoException* exc = NULL;
+    *exc = NULL;
 
     if (!method)
         method = mono_class_get_method_from_name(MonoEmbedding::GetClass(), "ContinueTask", -1);
@@ -186,60 +198,65 @@ void MonoEmbedding::ContinueTask(MonoObject* task, MonoObject* state)
     void* args[2];
     args[0] = task;
     args[1] = state;
-    mono_runtime_invoke(method, NULL, args, (MonoObject**)&exc);
+    mono_runtime_invoke(method, NULL, args, (MonoObject**)exc);
 }
 
-double MonoEmbedding::GetDateValue(MonoObject* dt)
+double MonoEmbedding::GetDateValue(MonoObject* dt, MonoException** exc)
 {
     static MonoMethod* method;
-    MonoException* exc = NULL;
+    *exc = NULL;
 
     if (!method)
         method = mono_class_get_method_from_name(MonoEmbedding::GetClass(), "GetDateValue", -1);
 
     void* args[] = { mono_object_unbox(dt) };
 
-    return *(double*)mono_object_unbox(mono_runtime_invoke(method, NULL, args, (MonoObject**)&exc));
+    MonoObject* obj = mono_runtime_invoke(method, NULL, args, (MonoObject**)exc);
+    if (*exc)
+        return 0.0;
+    return *(double*)mono_object_unbox(obj);
 }
 
-double MonoEmbedding::Int64ToDouble(MonoObject* i64)
+double MonoEmbedding::Int64ToDouble(MonoObject* i64, MonoException** exc)
 {
     static MonoMethod* method;
-    MonoException* exc = NULL;
+    *exc = NULL;
 
     if (!method)
         method = mono_class_get_method_from_name(MonoEmbedding::GetClass(), "Int64ToDouble", -1);
 
     void* args[] = { mono_object_unbox(i64) };
 
-    return *(double*)mono_object_unbox(mono_runtime_invoke(method, NULL, args, (MonoObject**)&exc));
+    MonoObject* obj = mono_runtime_invoke(method, NULL, args, (MonoObject**)exc);
+    if (*exc)
+        return 0.0;
+    return *(double*)mono_object_unbox(obj);
 }
 
-MonoString* MonoEmbedding::ToString(MonoObject* o)
+MonoString* MonoEmbedding::ToString(MonoObject* o, MonoException** exc)
 {
     static MonoMethod* method;
-    MonoException* exc = NULL;
+    *exc = NULL;
 
     if (!method)
         method = mono_class_get_method_from_name(MonoEmbedding::GetClass(), "ObjectToString", -1);
 
     void* args[] = { o };
 
-    return (MonoString*)mono_runtime_invoke(method, NULL, args, (MonoObject**)&exc);
+    return (MonoString*)mono_runtime_invoke(method, NULL, args, (MonoObject**)exc);
 }
 
-MonoString* MonoEmbedding::TryConvertPrimitiveOrDecimal(MonoObject* obj)
+MonoString* MonoEmbedding::TryConvertPrimitiveOrDecimal(MonoObject* obj, MonoException** exc)
 {
     static MonoMethod* method;
-    MonoException* exc = NULL;
+    *exc = NULL;
 
     if (!method)
         method = mono_class_get_method_from_name(MonoEmbedding::GetClass(), "TryConvertPrimitiveOrDecimal", -1);
 
     void* args[] = { obj };
 
-    return (MonoString*)mono_runtime_invoke(method, NULL, args, (MonoObject**)&exc);
-
+    return (MonoString*)mono_runtime_invoke(method, NULL, args, (MonoObject**)exc);
 }
 
 // vim: ts=4 sw=4 et: 

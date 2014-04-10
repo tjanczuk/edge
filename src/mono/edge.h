@@ -45,17 +45,17 @@ public:
     static MonoClass* GetClass();
     static MonoObject* GetClrFuncReflectionWrapFunc(const char* assembly, const char* typeName, const char* methodName, MonoException ** exc);
     static MonoObject* CreateDateTime(double ticks);
-    static MonoClass* GetIDictionaryStringObjectClass();
-    static MonoClass* GetUriClass();
+    static MonoClass* GetIDictionaryStringObjectClass(MonoException** exc);
+    static MonoClass* GetUriClass(MonoException** exc);
     static MonoObject* CreateExpandoObject();
     static MonoClass* GetFuncClass();
-    static MonoArray* IEnumerableToArray(MonoObject* ienumerable);
-    static MonoArray* IDictionaryToFlatArray(MonoObject* dictionary);
-    static void ContinueTask(MonoObject* task, MonoObject* state);
-    static double GetDateValue(MonoObject* dt);
-    static MonoString* ToString(MonoObject* o);
-    static double Int64ToDouble(MonoObject* i64);
-    static MonoString* TryConvertPrimitiveOrDecimal(MonoObject* obj);
+    static MonoArray* IEnumerableToArray(MonoObject* ienumerable, MonoException** exc);
+    static MonoArray* IDictionaryToFlatArray(MonoObject* dictionary, MonoException** exc);
+    static void ContinueTask(MonoObject* task, MonoObject* state, MonoException** exc);
+    static double GetDateValue(MonoObject* dt, MonoException** exc);
+    static MonoString* ToString(MonoObject* o, MonoException** exc);
+    static double Int64ToDouble(MonoObject* i64, MonoException** exc);
+    static MonoString* TryConvertPrimitiveOrDecimal(MonoObject* obj, MonoException** exc);
 };
 
 typedef void (*uv_async_edge_cb)(void* data);
