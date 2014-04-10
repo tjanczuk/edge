@@ -158,6 +158,8 @@ MonoArray* MonoEmbedding::IEnumerableToArray(MonoObject* ienumerable, MonoExcept
     void* args[1];
     args[0] = ienumerable;
     MonoArray* values = (MonoArray*)mono_runtime_invoke(method, NULL, args, (MonoObject**)exc);
+    if(*exc)
+        return NULL;
     return values;
 }
 
@@ -172,6 +174,8 @@ MonoArray* MonoEmbedding::IDictionaryToFlatArray(MonoObject* dictionary, MonoExc
     void* args[1];
     args[0] = dictionary;
     MonoArray* values = (MonoArray*)mono_runtime_invoke(method, NULL, args, (MonoObject**)exc);
+    if(*exc)
+        return NULL;
     return values;
 }
 
