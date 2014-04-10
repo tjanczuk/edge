@@ -69,12 +69,17 @@ Handle<v8::Value> ClrFunc::Initialize(const v8::Arguments& args)
     }
     else {
         //// reference .NET code throgh embedded source code that needs to be compiled
+        MonoException* exc = NULL;
+
         String::Utf8Value compilerFile(options->Get(String::NewSymbol("compiler")));
         MonoAssembly *assembly = mono_domain_assembly_open (mono_domain_get(), *compilerFile);
         MonoClass* compilerClass = mono_class_from_name(mono_assembly_get_image(assembly), "", "EdgeCompiler");
         MonoObject* compilerInstance = mono_object_new(mono_domain_get(), compilerClass);
         MonoMethod* ctor = mono_class_get_method_from_name(compilerClass, ".ctor", 0);
-        mono_runtime_invoke(ctor, compilerInstance, NULL, NULL);
+        mono_runtime_invoke(ctor, compilerInstance, NULL, (MonoObject**)&exc);
+        if(exc)
+            return scope.Close(throwV8Exception(exc));
+        
         MonoMethod* compileFunc = mono_class_get_method_from_name(compilerClass, "CompileFunc", -1);
         MonoReflectionMethod* methodInfo = mono_method_get_object(mono_domain_get(),compileFunc, compilerClass);
         MonoClass* methodBase = mono_class_from_name(mono_get_corlib(), "System.Reflection", "MethodBase");
@@ -83,7 +88,6 @@ Handle<v8::Value> ClrFunc::Initialize(const v8::Arguments& args)
         {
             // exception
         }
-        MonoException* exc = NULL;
         MonoObject* parameters = ClrFunc::MarshalV8ToCLR(options);
         MonoArray* methodInfoParams = mono_array_new(mono_domain_get(), mono_get_object_class(), 1);
         mono_array_setref(methodInfoParams, 0, parameters);
