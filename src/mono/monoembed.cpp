@@ -78,7 +78,8 @@ MonoClass* MonoEmbedding::GetIDictionaryStringObjectClass(MonoException** exc)
     static MonoClass* klass;
     *exc = NULL;
 
-    if (!klass) {
+    if (!klass)
+    {
         MonoMethod* method = mono_class_get_method_from_name(MonoEmbedding::GetClass(), "GetIDictionaryStringObjectType", -1);
         MonoReflectionType* typeObject = (MonoReflectionType*)mono_runtime_invoke(method, NULL, NULL, (MonoObject**)exc);
         if(*exc)
@@ -96,7 +97,8 @@ MonoClass* MonoEmbedding::GetUriClass(MonoException** exc)
     static MonoClass* klass;
     *exc = NULL;
 
-    if (!klass) {
+    if (!klass)
+    {
         MonoMethod* method = mono_class_get_method_from_name(MonoEmbedding::GetClass(), "GetUriType", -1);
         MonoReflectionType* typeObject = (MonoReflectionType*)mono_runtime_invoke(method, NULL, NULL, (MonoObject**)exc);
         if(*exc)

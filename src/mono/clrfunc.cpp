@@ -56,7 +56,8 @@ Handle<v8::Value> ClrFunc::Initialize(const v8::Arguments& args)
     Handle<v8::Function> result;
 
     Handle<v8::Value> jsassemblyFile = options->Get(String::NewSymbol("assemblyFile"));
-    if (jsassemblyFile->IsString()) {
+    if (jsassemblyFile->IsString())
+    {
         // reference .NET code through pre-compiled CLR assembly 
         String::Utf8Value assemblyFile(jsassemblyFile);
         String::Utf8Value nativeTypeName(options->Get(String::NewSymbol("typeName")));
@@ -67,7 +68,8 @@ Handle<v8::Value> ClrFunc::Initialize(const v8::Arguments& args)
             return scope.Close(throwV8Exception(exc));
         result = ClrFunc::Initialize(func);
     }
-    else {
+    else
+    {
         //// reference .NET code throgh embedded source code that needs to be compiled
         MonoException* exc = NULL;
 
@@ -127,7 +129,8 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata)
         guid_class = mono_class_from_name (mono_get_corlib(), "System", "Guid");
     if (!idictionary_class)
         idictionary_class = mono_class_from_name (mono_get_corlib(), "System.Collections", "IDictionary");
-    if (!idictionary_string_object_class) {
+    if (!idictionary_string_object_class)
+    {
         idictionary_string_object_class = MonoEmbedding::GetIDictionaryStringObjectClass(&exc);
         if(exc)
             ABORT_TODO();
@@ -136,7 +139,8 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata)
         ienumerable_class = mono_class_from_name (mono_get_corlib(), "System.Collections", "IEnumerable");
     if (!datetime_class)
         datetime_class = mono_class_from_name (mono_get_corlib(), "System", "DateTime");
-    if (!uri_class) {
+    if (!uri_class)
+    {
         uri_class = MonoEmbedding::GetUriClass(&exc);
         if(exc)
             ABORT_TODO();
@@ -244,7 +248,8 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata)
         Handle<v8::Object> result = v8::Object::New();
 
         MonoArray* kvs = MonoEmbedding::IDictionaryToFlatArray(netdata, &exc);
-        if(!exc) {
+        if(!exc)
+        {
             size_t length = mono_array_length(kvs);
             for (unsigned int i = 0; i < length; i += 2)
             {
@@ -262,7 +267,8 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata)
     {
         Handle<v8::Array> result = v8::Array::New();
         MonoArray* values = MonoEmbedding::IEnumerableToArray(netdata, &exc);
-        if(!exc) {
+        if(!exc)
+        {
             size_t length = mono_array_length(values);
             unsigned int i = 0;
             for (i = 0; i < length; i++)
@@ -496,8 +502,10 @@ Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> cal
         c->InitializeAsyncOperation();
 
         MonoEmbedding::ContinueTask(task, c->GetMonoObject(), &exc);
-        if (exc) {
+        if (exc)
+        {
             delete c;
+            c = NULL;
             return scope.Close(throwV8Exception(exc));
         }
     }
