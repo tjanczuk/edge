@@ -144,8 +144,6 @@ private:
     Persistent<Function>* callback;
     uv_edge_async_t* uv_edge_async;
 
-    void DisposeCallback();
-
 public:
     MonoObject* Payload();
     void Payload(MonoObject* value);
@@ -157,6 +155,9 @@ public:
     MonoObject* GetMonoObject();
 
     ClrFuncInvokeContext(Handle<v8::Value> callbackOrSync);
+    ~ClrFuncInvokeContext();
+
+    void InitializeAsyncOperation();
 
     static void __cdecl CompleteOnCLRThread(ClrFuncInvokeContext *_this, MonoObject* task);
     static void __cdecl CompleteOnV8ThreadAsynchronous(ClrFuncInvokeContext *_this);

@@ -25,3 +25,7 @@ _ReSharper*
 Edge.Tests.*
 node.exe
 Sample105.*
+
+.DS_StoreSample105.*
+*.sublime-project
+*.sublime-workspace

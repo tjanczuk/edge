@@ -63,6 +63,7 @@ describe('async call from node.js to .net', function () {
 			assert.ok(result.h.b === 12);
 			assert.equal(typeof result.i, 'function');
 			assert.equal(typeof result.j, 'object');
+			console.log(result.j)
 			assert.ok(result.j.valueOf() === Date.UTC(2013, 07, 30));
 			done();
 		});

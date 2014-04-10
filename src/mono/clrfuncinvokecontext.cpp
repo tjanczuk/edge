@@ -24,12 +24,12 @@ ClrFuncInvokeContext::ClrFuncInvokeContext(Handle<v8::Value> callbackOrSync) : _
 
     ClrFuncInvokeContext* thisPointer = this;
     mono_field_set_value(obj, field, &thisPointer);
-    this->_this = mono_gchandle_new(obj, FALSE);
+    this->_this = mono_gchandle_new(obj, FALSE); // released in destructor
 
     DBG("ClrFuncInvokeContext::ClrFuncInvokeContext");
     if (callbackOrSync->IsFunction())
     {
-        this->callback = new Persistent<Function>();
+        this->callback = new Persistent<Function>(); // released in destructor
         *(this->callback) = Persistent<Function>::New(Handle<Function>::Cast(callbackOrSync));
         this->Sync(FALSE);
     }
@@ -37,24 +37,36 @@ ClrFuncInvokeContext::ClrFuncInvokeContext(Handle<v8::Value> callbackOrSync) : _
     {
         this->Sync(callbackOrSync->BooleanValue());
     }
+}
 
-    MonoMethod* getAction = mono_class_get_method_from_name(GetClrFuncInvokeContextClass(), "GetCompleteOnV8ThreadAsynchronousAction", -1);
+void ClrFuncInvokeContext::InitializeAsyncOperation()
+{
+    // Create a uv_edge_async instance representing V8 async operation that will complete 
+    // when the CLR function completes. The ClrActionContext is used to ensure the ClrFuncInvokeContext
+    // remains GC-rooted while the CLR function executes.
+
+    static MonoMethod* getAction = NULL;
+    if (!getAction)
+        getAction = mono_class_get_method_from_name(
+            GetClrFuncInvokeContextClass(), "GetCompleteOnV8ThreadAsynchronousAction", -1);
     
     ClrActionContext* data = new ClrActionContext;
-    data->action = mono_gchandle_new(mono_runtime_invoke(getAction, obj, NULL, NULL), FALSE);
+    data->action = mono_gchandle_new( // released in ClrActionContext::ActionCallback
+        mono_runtime_invoke(getAction, mono_gchandle_get_target(this->_this), NULL, NULL), FALSE);
     this->uv_edge_async = V8SynchronizationContext::RegisterAction(ClrActionContext::ActionCallback, data);
 }
 
-void ClrFuncInvokeContext::DisposeCallback()
+ClrFuncInvokeContext::~ClrFuncInvokeContext()
 {
     if (this->callback)
     {
         DBG("ClrFuncInvokeContext::DisposeCallback");
         (*(this->callback)).Dispose();
         (*(this->callback)).Clear();
-        //delete this->callback;
+        delete this->callback;
         this->callback = NULL;        
     }
+    mono_gchandle_free(this->_this);
 }
 
 void ClrFuncInvokeContext::CompleteOnCLRThread(ClrFuncInvokeContext *_this, MonoObject* task)
@@ -75,15 +87,14 @@ Handle<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread(bool completedSynchro
     DBG("ClrFuncInvokeContext::CompleteOnV8Thread");
 
     HandleScope handleScope;
-    if (completedSynchronously)
-    {
-        V8SynchronizationContext::CancelAction(this->uv_edge_async);
-        this->uv_edge_async = NULL;
-    }
+
+    // The uv_edge_async was already cleaned up in V8SynchronizationContext::ExecuteAction
+    this->uv_edge_async = NULL;
 
     if (!this->Sync() && !this->callback)
     {
         // this was an async call without callback specified
+        delete this;
         return handleScope.Close(Undefined());
     }
 
@@ -122,7 +133,7 @@ Handle<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread(bool completedSynchro
         // complete the asynchronous call to C# by invoking a callback in JavaScript
         TryCatch try_catch;
         (*(this->callback))->Call(v8::Context::GetCurrent()->Global(), argc, argv);
-        this->DisposeCallback();
+        delete this;
         if (try_catch.HasCaught()) 
         {
             node::FatalException(try_catch);
@@ -130,15 +141,18 @@ Handle<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread(bool completedSynchro
 
         return handleScope.Close(Undefined());
     }
-    else if (1 == argc) 
-    {
-        // complete the synchronous call to C# by re-throwing the resulting exception
-        return handleScope.Close(ThrowException(argv[0]));
-    }
-    else
-    {
-        // complete the synchronous call to C# by returning the result
-        return handleScope.Close(argv[1]);
+    else {
+        delete this;
+        if (1 == argc) 
+        {
+            // complete the synchronous call to C# by re-throwing the resulting exception
+            return handleScope.Close(ThrowException(argv[0]));
+        }
+        else
+        {
+            // complete the synchronous call to C# by returning the result
+            return handleScope.Close(argv[1]);
+        }
     }
 }
 

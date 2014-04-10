@@ -11,9 +11,10 @@ void ClrActionContext::ActionCallback(void* data)
 
     ClrActionContext* context = (ClrActionContext*)data;
     MonoObject* action = mono_gchandle_get_target(context->action);
-    delete context;
     MonoException* exc = NULL;
     mono_runtime_invoke(actionInvoke, action, NULL, (MonoObject**)&exc);
+    mono_gchandle_free(context->action);
+    delete context;
     if (exc)
         ABORT_TODO();
 }
