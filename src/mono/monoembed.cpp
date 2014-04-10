@@ -212,7 +212,10 @@ double MonoEmbedding::Int64ToDouble(MonoObject* i64, MonoException** exc)
 
     void* args[] = { mono_object_unbox(i64) };
 
-    return *(double*)mono_object_unbox(mono_runtime_invoke(method, NULL, args, (MonoObject**)exc));
+    MonoObject* obj = mono_runtime_invoke(method, NULL, args, (MonoObject**)exc);
+    if (exc)
+        return 0.0;
+    return *(double*)mono_object_unbox(obj);
 }
 
 MonoString* MonoEmbedding::ToString(MonoObject* o, MonoException** exc)
