@@ -73,14 +73,17 @@ MonoObject* MonoEmbedding::GetClrFuncReflectionWrapFunc(const char* assemblyFile
     return action;
 }
 
-MonoClass* MonoEmbedding::GetIDictionaryStringObjectClass() 
+MonoClass* MonoEmbedding::GetIDictionaryStringObjectClass(MonoException** exc) 
 {
     static MonoClass* klass;
-    MonoException* exc = NULL;
+    *exc = NULL;
 
     if (!klass) {
         MonoMethod* method = mono_class_get_method_from_name(MonoEmbedding::GetClass(), "GetIDictionaryStringObjectType", -1);
-        MonoReflectionType* typeObject = (MonoReflectionType*)mono_runtime_invoke(method, NULL, NULL, (MonoObject**)&exc);
+        MonoReflectionType* typeObject = (MonoReflectionType*)mono_runtime_invoke(method, NULL, NULL, (MonoObject**)exc);
+        if(*exc)
+            return NULL;
+        
         MonoType* type = mono_reflection_type_get_type(typeObject);
         klass = mono_class_from_mono_type(type);
     }
@@ -88,14 +91,17 @@ MonoClass* MonoEmbedding::GetIDictionaryStringObjectClass()
     return klass;    
 }
 
-MonoClass* MonoEmbedding::GetUriClass() 
+MonoClass* MonoEmbedding::GetUriClass(MonoException** exc) 
 {
     static MonoClass* klass;
-    MonoException* exc = NULL;
+    *exc = NULL;
 
     if (!klass) {
         MonoMethod* method = mono_class_get_method_from_name(MonoEmbedding::GetClass(), "GetUriType", -1);
-        MonoReflectionType* typeObject = (MonoReflectionType*)mono_runtime_invoke(method, NULL, NULL, (MonoObject**)&exc);
+        MonoReflectionType* typeObject = (MonoReflectionType*)mono_runtime_invoke(method, NULL, NULL, (MonoObject**)exc);
+        if(*exc)
+            return NULL;
+
         MonoType* type = mono_reflection_type_get_type(typeObject);
         klass = mono_class_from_mono_type(type);
     }

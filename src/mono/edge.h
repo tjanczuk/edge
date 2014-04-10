@@ -45,8 +45,8 @@ public:
     static MonoClass* GetClass();
     static MonoObject* GetClrFuncReflectionWrapFunc(const char* assembly, const char* typeName, const char* methodName, MonoException ** exc);
     static MonoObject* CreateDateTime(double ticks);
-    static MonoClass* GetIDictionaryStringObjectClass();
-    static MonoClass* GetUriClass();
+    static MonoClass* GetIDictionaryStringObjectClass(MonoException** exc);
+    static MonoClass* GetUriClass(MonoException** exc);
     static MonoObject* CreateExpandoObject();
     static MonoClass* GetFuncClass();
     static MonoArray* IEnumerableToArray(MonoObject* ienumerable, MonoException** exc);

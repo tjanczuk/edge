@@ -121,24 +121,31 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata)
     static MonoClass* uri_class;
     static MonoClass* datetimeoffset_class;
 
+    MonoException* exc = NULL;
+
     if (!guid_class)
         guid_class = mono_class_from_name (mono_get_corlib(), "System", "Guid");
     if (!idictionary_class)
         idictionary_class = mono_class_from_name (mono_get_corlib(), "System.Collections", "IDictionary");
-    if (!idictionary_string_object_class) 
-        idictionary_string_object_class = MonoEmbedding::GetIDictionaryStringObjectClass();
+    if (!idictionary_string_object_class) {
+        idictionary_string_object_class = MonoEmbedding::GetIDictionaryStringObjectClass(&exc);
+        if(exc)
+            ABORT_TODO();
+    }
     if (!ienumerable_class)
         ienumerable_class = mono_class_from_name (mono_get_corlib(), "System.Collections", "IEnumerable");
     if (!datetime_class)
         datetime_class = mono_class_from_name (mono_get_corlib(), "System", "DateTime");
-    if (!uri_class) 
-        uri_class = MonoEmbedding::GetUriClass();
+    if (!uri_class) {
+        uri_class = MonoEmbedding::GetUriClass(&exc);
+        if(exc)
+            ABORT_TODO();
+    }
     if (!datetimeoffset_class)
         datetimeoffset_class = mono_class_from_name (mono_get_corlib(), "System", "DateTimeOffset");
 
     MonoClass* klass = mono_object_get_class(netdata);
     MonoString* primitive = NULL;
-    MonoException* exc = NULL;
 
 // printf("CLR->V8 class: %s\n", mono_class_get_name(klass));
 
