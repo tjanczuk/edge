@@ -199,7 +199,10 @@ double MonoEmbedding::GetDateValue(MonoObject* dt, MonoException** exc)
 
     void* args[] = { mono_object_unbox(dt) };
 
-    return *(double*)mono_object_unbox(mono_runtime_invoke(method, NULL, args, (MonoObject**)exc));
+    MonoObject* obj = mono_runtime_invoke(method, NULL, args, (MonoObject**)exc);
+    if (*exc)
+        return 0.0;
+    return *(double*)mono_object_unbox(obj);
 }
 
 double MonoEmbedding::Int64ToDouble(MonoObject* i64, MonoException** exc)
@@ -213,7 +216,7 @@ double MonoEmbedding::Int64ToDouble(MonoObject* i64, MonoException** exc)
     void* args[] = { mono_object_unbox(i64) };
 
     MonoObject* obj = mono_runtime_invoke(method, NULL, args, (MonoObject**)exc);
-    if (exc)
+    if (*exc)
         return 0.0;
     return *(double*)mono_object_unbox(obj);
 }
