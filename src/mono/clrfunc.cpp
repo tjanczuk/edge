@@ -489,8 +489,10 @@ Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> cal
         c->InitializeAsyncOperation();
 
         MonoEmbedding::ContinueTask(task, c->GetMonoObject(), &exc);
-        if (exc)
+        if (exc) {
+            delete c;
             return scope.Close(throwV8Exception(exc));
+        }
     }
 
     return scope.Close(Undefined());    
