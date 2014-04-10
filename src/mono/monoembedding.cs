@@ -207,7 +207,6 @@ class NodejsFunc
 };
 
 class NodejsFuncInvokeContext {
-    public IntPtr NativeNodejsFuncInvokeContext { get; set; }
     NodejsFunc functionContext;
     object payload;
 
@@ -220,31 +219,36 @@ class NodejsFuncInvokeContext {
         this.TaskCompletionSource = new TaskCompletionSource<object>();
     }
 
-    [MethodImplAttribute(MethodImplOptions.InternalCall)]
-    static extern void ReleaseNodejsFuncInvokeContext(IntPtr NativeNodejsFuncInvokeContext);        
-
     public void CallFuncOnV8Thread()
     {
         // This function must run on V8 thread
-        string exc = null;
-        this.NativeNodejsFuncInvokeContext = CallFuncOnV8ThreadInternal(
-            this, this.functionContext.NativeNodejsFunc, this.payload, out exc);
-        if (!string.IsNullOrEmpty(exc))
-        {
-            throw new Exception(exc);
-        }
+        CallFuncOnV8ThreadInternal(
+            this, this.functionContext.NativeNodejsFunc, this.payload);
     }
 
     [MethodImplAttribute(MethodImplOptions.InternalCall)]
-    static extern IntPtr CallFuncOnV8ThreadInternal(NodejsFuncInvokeContext _this, IntPtr nativeNodejsFunc, object payload, out string exc);        
+    static extern void CallFuncOnV8ThreadInternal(NodejsFuncInvokeContext _this, IntPtr nativeNodejsFunc, object payload);        
 
-    public void Complete(string exception, object result)
+    public void Complete(object exception, object result)
     {
-        this.NativeNodejsFuncInvokeContext = IntPtr.Zero;
         Task.Run(() => {
-            if (!string.IsNullOrEmpty(exception))
+            if (exception != null)
             {
-                this.TaskCompletionSource.SetException(new Exception(exception));
+                var e = exception as Exception;
+                var s = exception as string;
+                if (e != null)
+                {
+                    this.TaskCompletionSource.SetException(e);
+                }
+                else if (!string.IsNullOrEmpty(s))
+                {
+                    this.TaskCompletionSource.SetException(new Exception(s));
+                }
+                else
+                {
+                    this.TaskCompletionSource.SetException(
+                        new InvalidOperationException("Unrecognized exception received from JavaScript."));
+                }
             }
             else
             {

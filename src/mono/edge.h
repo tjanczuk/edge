@@ -184,8 +184,8 @@ public:
     NodejsFuncInvokeContext(MonoObject* _this);
     ~NodejsFuncInvokeContext();
 
-    static NodejsFuncInvokeContext* __cdecl CallFuncOnV8Thread(MonoObject* _this, NodejsFunc* nativeNodejsFunc, MonoObject* payload, MonoString** exc);
-    void Complete(MonoString* exception, MonoObject* result);
+    static void __cdecl CallFuncOnV8Thread(MonoObject* _this, NodejsFunc* nativeNodejsFunc, MonoObject* payload);
+    void Complete(MonoObject* exception, MonoObject* result);
 };
 
 class ClrFunc {
@@ -195,13 +195,13 @@ private:
 
     ClrFunc();
 
-    static Handle<v8::Value> MarshalCLRObjectToV8(MonoObject* netdata);
+    static Handle<v8::Value> MarshalCLRObjectToV8(MonoObject* netdata, MonoException** exc);
 
 public:
     static Handle<v8::Value> Initialize(const v8::Arguments& args);
     static Handle<v8::Function> Initialize(/*System::Func<System::Object^,Task<System::Object^>^>^*/ MonoObject* func);
     Handle<v8::Value> Call(Handle<v8::Value> payload, Handle<v8::Value> callback);
-    static Handle<v8::Value> MarshalCLRToV8(MonoObject* netdata);
+    static Handle<v8::Value> MarshalCLRToV8(MonoObject* netdata, MonoException** exc);
     static MonoObject* MarshalV8ToCLR(Handle<v8::Value> jsdata);    
 };
 

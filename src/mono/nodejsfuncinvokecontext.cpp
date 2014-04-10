@@ -8,7 +8,7 @@ Handle<Value> v8FuncCallback(const v8::Arguments& args)
     NodejsFuncInvokeContext* context = (NodejsFuncInvokeContext*)(correlator->Value());
     if (!args[0]->IsUndefined() && !args[0]->IsNull())
     {
-       context->Complete(exceptionV82stringCLR(args[0]), NULL);
+       context->Complete((MonoObject*)exceptionV82stringCLR(args[0]), NULL);
     }
     else 
     {
@@ -32,40 +32,39 @@ NodejsFuncInvokeContext::~NodejsFuncInvokeContext()
     mono_gchandle_free(this->_this);
 }
 
-NodejsFuncInvokeContext* NodejsFuncInvokeContext::CallFuncOnV8Thread(MonoObject* _this, NodejsFunc* nativeNodejsFunc, MonoObject* payload, MonoString** exc)
+void NodejsFuncInvokeContext::CallFuncOnV8Thread(MonoObject* _this, NodejsFunc* nativeNodejsFunc, MonoObject* payload)
 {
     DBG("NodejsFuncInvokeContext::CallFuncOnV8Thread");
 
-    NodejsFuncInvokeContext* result = NULL;
-    *exc = NULL; 
-
     HandleScope scope;
-    TryCatch try_catch;
-    Handle<v8::Value> jspayload = ClrFunc::MarshalCLRToV8(payload);
-    if (try_catch.HasCaught()) 
+    NodejsFuncInvokeContext* ctx = new NodejsFuncInvokeContext(_this);
+    
+    MonoException* exc = NULL;
+    Handle<v8::Value> jspayload = ClrFunc::MarshalCLRToV8(payload, &exc);
+    if (exc) 
     {
-        *exc = mono_string_new(mono_domain_get(), "Unable to convert CLR value to V8 value.");
-        return result;
+        ctx->Complete((MonoObject*)exc, NULL);
+        // ctx deleted in Complete
     }
-
-    result = new NodejsFuncInvokeContext(_this);
-
-    Handle<v8::FunctionTemplate> callbackTemplate = v8::FunctionTemplate::New(v8FuncCallback);
-    Handle<v8::Function> callback = callbackTemplate->GetFunction();
-    callback->Set(v8::String::NewSymbol("_edgeContext"), v8::External::New((void*)result));
-    Handle<v8::Value> argv[] = { jspayload, callback };
-    TryCatch tryCatch;
-    (*(nativeNodejsFunc->Func))->Call(v8::Context::GetCurrent()->Global(), 2, argv);
-    if (tryCatch.HasCaught()) 
+    else 
     {
-        result->Complete(exceptionV82stringCLR(tryCatch.Exception()), NULL);
-        result = NULL;
-    }    
+        Handle<v8::FunctionTemplate> callbackTemplate = v8::FunctionTemplate::New(v8FuncCallback);
+        Handle<v8::Function> callback = callbackTemplate->GetFunction();
+        callback->Set(v8::String::NewSymbol("_edgeContext"), v8::External::New((void*)ctx));
+        Handle<v8::Value> argv[] = { jspayload, callback };
+        TryCatch tryCatch;
+        (*(nativeNodejsFunc->Func))->Call(v8::Context::GetCurrent()->Global(), 2, argv);
+        if (tryCatch.HasCaught()) 
+        {
+            ctx->Complete((MonoObject*)exceptionV82stringCLR(tryCatch.Exception()), NULL);
+            // ctx deleted in Complete
+        }
 
-    return result;
+        // In the absence of exception, processing resumes in v8FuncCallback
+    }
 }
 
-void NodejsFuncInvokeContext::Complete(MonoString* exception, MonoObject* result)
+void NodejsFuncInvokeContext::Complete(MonoObject* exception, MonoObject* result)
 {
     DBG("NodejsFuncInvokeContext::Complete");
 

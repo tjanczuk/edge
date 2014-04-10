@@ -118,12 +118,12 @@ Handle<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread(bool completedSynchro
         break;
     case Task::RanToCompletion:
         argc = 2;
-        TryCatch try_catch;
-        argv[1] = ClrFunc::MarshalCLRToV8(Task::Result(this->Task()));
-        if (try_catch.HasCaught()) 
+        MonoException* exc = NULL;
+        argv[1] = ClrFunc::MarshalCLRToV8(Task::Result(this->Task()), &exc);
+        if (exc) 
         {
             argc = 1;
-            argv[0] = try_catch.Exception();
+            argv[0] = exceptionCLR2stringV8(exc);
         }
         break;
     };
