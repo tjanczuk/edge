@@ -1029,9 +1029,9 @@ These instructions were tested on Ubuntu 12.04 x64. They assume you already have
 Install prerequisities:
 
 ```bash
-sudo apt-get install g++ pkg-config
-npm install node-gyp -g
-npm install mocha -g
+sudo apt-get install curl g++ pkg-config
+sudo npm install node-gyp -g
+sudo npm install mocha -g
 ```
 
 You need Mono 3.4.0 x64 on the box. Start by downloading Mono 3.4.0 sources, then build and install:
