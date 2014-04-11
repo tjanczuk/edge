@@ -29,6 +29,7 @@ Listen to the [Edge.js podcast on Herdingcode](http://herdingcode.com/herding-co
 [Performance](#performance)  
 [Building on Windows](#building-on-windows)  
 [Building on OSX](#building-on-osx)  
+[Building on Ubuntu](#building-on-ubuntu)  
 [Running tests](#running-tests)  
 [Contribution and derived work](#contribution-and-derived-work)  
 
@@ -980,7 +981,7 @@ npm run jshint
 
 ## Building on OSX
 
-**NOTE** This is pre-alpha functionality. 
+**NOTE** This is beta functionality. 
 
 First, uninstall previous installs of Mono using instructions from [here](
 http://mono-project.com/Mono:OSX#Uninstalling_Mono_on_Mac_OS_X). 
@@ -1017,6 +1018,78 @@ To build a debug build instead of release, you need to:
 ```bash
 node-gyp configure build -debug
 export EDGE_NATIVE=/Users/tomek/edge/build/Debug/edge.node
+```
+
+## Building on Ubuntu
+
+**NOTE** This is beta functionality. 
+
+These instructions were tested on Ubuntu 12.04 x64. They assume you already have Node.js x64 installed on the box (tested with Node.js v0.10.26).
+
+Install prerequisities:
+
+```bash
+sudo apt-get install g++ pkg-config
+npm install node-gyp -g
+npm install mocha -g
+```
+
+You need Mono 3.4.0 x64 on the box. Start by downloading Mono 3.4.0 sources, then build and install:
+
+```bash
+curl http://download.mono-project.com/sources/mono/mono-3.4.0.tar.bz2 > mono-3.4.0.tar.bz2
+tar -xvf mono-3.4.0.tar.bz2
+
+# now slipsteam a file that the Mono distribution is missing:
+
+curl https://raw.githubusercontent.com/tjanczuk/edge/mono/tools/Microsoft.Portable.Common.targets > ./mono-3.4.0/mcs/tools/xbuild/targets/Microsoft.Portable.Common.targets
+
+# configure, build, and install Mono
+
+cd mono-3.4.0
+./configure --prefix=/usr/local --with-glib=embedded --enable-nls=no
+make
+sudo make install
+```
+
+(For background on the missing file see [here](http://stackoverflow.com/questions/22844569/build-error-mono-3-4-0-centos)).
+
+Check the build was successful. Run `mono -V`, you should see something similar to this:
+
+```bash
+Mono JIT compiler version 3.4.0 (tarball Thu Apr 10 10:27:23 PDT 2014)
+Copyright (C) 2002-2014 Novell, Inc, Xamarin Inc and Contributors. www.mono-project.com
+    TLS:           __thread
+    SIGSEGV:       altstack
+    Notifications: epoll
+    Architecture:  amd64
+    Disabled:      none
+    Misc:          softdebug 
+    LLVM:          supported, not enabled.
+    GC:            sgen
+```
+
+Next, ensure Mono will be able to load the `libc` library:
+
+```bash
+cd /lib/x86_64-linux-gnu
+sudo ln -s libc.so.6 libc.so
+```
+
+(For background on the last step, see how [Mono loads native libraries](http://www.mono-project.com/Interop_with_Native_Libraries) or just [cut to the chase](http://stackoverflow.com/questions/14359981/mono-and-unmanaged-code-in-ubuntu)).
+
+Finally, you are able to build Edge.js. Assuming you have cloned the repo and checked out the `mono` branch:
+
+```bash
+npm install
+npm test
+```
+
+To build a debug build instead of release, you need to:
+
+```bash
+node-gyp configure build -debug
+export EDGE_NATIVE=/home/tomek/edge/build/Debug/edge.node
 ```
 
 ## Contribution and derived work
