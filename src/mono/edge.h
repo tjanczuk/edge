@@ -1,14 +1,46 @@
 #ifndef __EDGE_H
 #define __EDGE_H
 
+// From http://stackoverflow.com/questions/5919996/how-to-detect-reliably-mac-os-x-ios-linux-windows-in-c-preprocessor
+#ifdef _WIN64
+   // Windows 64
+#define EDGE_PLATFORM_WINDOWS 1
+#elif _WIN32
+   // Windows 32
+#define EDGE_PLATFORM_WINDOWS 1
+#elif __APPLE__
+   // OSX
+#define EDGE_PLATFORM_APPLE 1
+#elif __linux
+    // linux
+#define EDGE_PLATFORM_NIX 1
+#elif __unix // all unices not caught above
+    // Unix
+#define EDGE_PLATFORM_NIX 1
+#elif __posix
+    // POSIX
+#define EDGE_PLATFORM_NIX 1
+#endif
+
+#ifdef EDGE_PLATFORM_NIX
+#include <stdlib.h>
+#include <string.h>
+#define __cdecl
+#ifdef FALSE
+#undef FALSE
+#endif
+#define FALSE 0
+#ifdef TRUE
+#undef TRUE
+#endif
+#define TRUE  1
+typedef int BOOL;
+#endif
+
 #include <v8.h>
 #include <node.h>
 #include <node_buffer.h>
 #include <uv.h>
-
-#ifdef _MSC_VER
-#define EDGE_PLATFORM_WINDOWS 1
-#endif
 
 #include "mono/metadata/object.h"
 #include "mono/metadata/appdomain.h"
@@ -19,8 +51,10 @@ using namespace v8;
 #define DBG(msg) if (debugMode) printf(msg "\n");
 #ifdef EDGE_PLATFORM_WINDOWS
 #define ABORT_TODO() do { printf("%s (%d): %s\n", __FILE__, __LINE__, __FUNCTION__); abort(); } while (0)
-#else
+#elif EDGE_PLATFORM_APPLE
 #define ABORT_TODO() do { printf("%s (%d): %s\n", __FILE__, __LINE__, __func__); abort(); } while (0)
+#else
+#define ABORT_TODO() do { printf("%s (%d): %s\n", __FILE__, __LINE__, __func__); exit(1); } while (0)
 #endif
 
 // Good explanation of native Buffers at 

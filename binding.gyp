@@ -112,7 +112,7 @@
             ['OS=="win"', {
               'action': ['csc', '-target:exe', '-out:build/$(BUILDTYPE)/MonoEmbedding.exe', 'src/mono/MonoEmbedding.cs']
               }, {
-              'action': ['dmcs', '-sdk:4.5', '-target:exe', '-out:build/$(BUILDTYPE)/MonoEmbedding.exe', 'src/mono/MonoEmbedding.cs']
+              'action': ['dmcs', '-sdk:4.5', '-target:exe', '-out:build/$(BUILDTYPE)/MonoEmbedding.exe', 'src/mono/monoembedding.cs']
               }
             ]
           ]
