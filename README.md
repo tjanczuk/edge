@@ -37,7 +37,7 @@ Edge.js allows you to run .NET and Node.js code in one process. You can call .NE
 
 ![F# Python C# Node.js](https://f.cloud.github.com/assets/822369/468830/a293c728-b6a3-11e2-9fb3-99c7bf2bf6ed.png)
 
-Edge.js provides a basic, prescriptive model and implementation for interoperability between .NET and Node.js in-process. You can built upon and extended this basic mechanism to support more specific scenarios, for example:
+Edge.js provides a basic, prescriptive model and implementation for interoperability between .NET and Node.js in-process. You can build upon and extended this basic mechanism to support more specific scenarios, for example:
 * implementing express.js handlers and connect middleware for Node.js application using .NET 4.5 ([read more](http://tomasz.janczuk.org/2013/02/hosting-net-code-in-nodejs-applications.html)),  
 * implementing CPU-bound computations in .NET and running them in-process with Node.js application without blocking the event loop ([read more](http://tomasz.janczuk.org/2013/02/cpu-bound-workers-for-nodejs.html)),  
 * using C# and IronPython and .NET instead of writing native Node.js extensions in C/C++ and Win32 to access Windows specific functionality from a Node.js application ([read more](http://tomasz.janczuk.org/2013/02/access-ms-sql-from-nodejs-application.html)). 
