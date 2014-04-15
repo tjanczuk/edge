@@ -883,7 +883,7 @@ You can also debug C# code embeeded directly into a *.js file using the function
 
 ```javscript
 var hello = edge.func(function () {/*
-    async (input)
+    async (input) =>
     {
         System.Diagnostics.Debugger.Break();
         var result = ".NET welcomes " + input.ToString();
