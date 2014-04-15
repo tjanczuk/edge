@@ -5,7 +5,7 @@ sudo -u ${USERNAME} mkdir ~/tmp
 
 # install prerequisities
 
-apt-get install curl g++ pkg-config gettext
+apt-get install curl g++ pkg-config
 
 # download and build Node.js
 
@@ -28,7 +28,7 @@ sudo -u ${USERNAME} curl http://download.mono-project.com/sources/mono/mono-3.4.
 sudo -u ${USERNAME} tar -xvf mono-3.4.0.tar.bz2
 sudo -u ${USERNAME} curl https://raw.githubusercontent.com/tjanczuk/edge/mono/tools/Microsoft.Portable.Common.targets > ./mono-3.4.0/mcs/tools/xbuild/targets/Microsoft.Portable.Common.targets
 sudo -u ${USERNAME} cd mono-3.4.0
-sudo -u ${USERNAME} ./configure --prefix=/usr/local --with-glib=embedded
+sudo -u ${USERNAME} ./configure --prefix=/usr/local --with-glib=embedded --enable-nls=no
 sudo -u ${USERNAME} make
 make install
 ln -s /lib/x86_64-linux-gnu/libc.so.6 /lib/x86_64-linux-gnu/libc.so
