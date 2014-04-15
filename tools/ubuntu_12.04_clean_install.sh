@@ -33,7 +33,7 @@ cd mono-3.4.0
 sudo -u ${THE_USER} bash -c './configure --prefix=/usr/local --with-glib=embedded --enable-nls=no'
 sudo -u ${THE_USER} make
 make install
-ln -s /lib/x86_64-linux-gnu/libc.so.6 /lib/x86_64-linux-gnu/libc.so
+ln -s -f /lib/x86_64-linux-gnu/libc.so.6 /lib/x86_64-linux-gnu/libc.so
 ldconfig
 cd ..
 
