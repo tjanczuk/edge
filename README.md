@@ -688,7 +688,7 @@ var getTop10Products = edge.func('sql', function () {/*
 getTop10Products(null, function (error, result) {
     if (error) throw error;
     console.log(result);
-    console.log(result[0].Name);
+    console.log(result[0].ProductName);
     console.log(result[1].ReorderLevel);
 });
 ```
