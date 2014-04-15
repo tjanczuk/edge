@@ -1024,66 +1024,37 @@ export EDGE_NATIVE=/Users/tomek/edge/build/Debug/edge.node
 
 **NOTE** This is beta functionality. 
 
-These instructions were tested on Ubuntu 12.04 x64. They assume you already have Node.js x64 installed on the box (tested with Node.js v0.10.26).
+These instructions were tested on Ubuntu 12.04 x64. High level, you must have Node.js x64 and Mono x64 installed on the machine before you can install Edge.js. There are two ways of getting there.
 
-Install prerequisities:
+### Ubuntu, starting from a clean VM (i.e. taking the high road)
 
-```bash
-sudo apt-get install curl g++ pkg-config
-sudo npm install node-gyp -g
-sudo npm install mocha -g
-```
-
-You need Mono 3.4.0 x64 on the box. Start by downloading Mono 3.4.0 sources, then build and install:
+If you have a fresh Ubuntu 12.04 x64 installation, the most convenient way of installing Edge.js with all prerequisities is by running:
 
 ```bash
-curl http://download.mono-project.com/sources/mono/mono-3.4.0.tar.bz2 > mono-3.4.0.tar.bz2
-tar -xvf mono-3.4.0.tar.bz2
-
-# now slipsteam a file that the Mono distribution is missing:
-
-curl https://raw.githubusercontent.com/tjanczuk/edge/mono/tools/Microsoft.Portable.Common.targets > ./mono-3.4.0/mcs/tools/xbuild/targets/Microsoft.Portable.Common.targets
-
-# configure, build, and install Mono
-
-cd mono-3.4.0
-./configure --prefix=/usr/local --with-glib=embedded --enable-nls=no
-make
-sudo make install
+sudo bash -c 'bash <(wget -qO- https://raw.githubusercontent.com/tjanczuk/edge/mono/tools/ubuntu_12.04_clean_install.sh)'
 ```
 
-(For background on the missing file see [here](http://stackoverflow.com/questions/22844569/build-error-mono-3-4-0-centos)).
+This will do the following:
 
-Check the build was successful. Run `mono -V`, you should see something similar to this:
+* Download Node.js v0.10.26 sources, build, and install Node.js x64  
+* Download Mono 3.4.0 sources, build, and install Mono x64  
+* Download and install node-gyp and mocha  
+* Download Edge.js sources and build x64 release  
+* Run Edge.js tests  
 
-```bash
-Mono JIT compiler version 3.4.0 (tarball Thu Apr 10 10:27:23 PDT 2014)
-Copyright (C) 2002-2014 Novell, Inc, Xamarin Inc and Contributors. www.mono-project.com
-    TLS:           __thread
-    SIGSEGV:       altstack
-    Notifications: epoll
-    Architecture:  amd64
-    Disabled:      none
-    Misc:          softdebug 
-    LLVM:          supported, not enabled.
-    GC:            sgen
-```
+This process takes about 25 minutes on a Ubuntu 12.04 x64 VM running on a 2 core VM with 4GB RAM within Fusion on a MacBook Pro. If successful, your machine will have all the prerequisities to `npm install edge`. 
 
-Next, ensure Mono will be able to load the `libc` library:
+### Ubuntu, manual install 
 
-```bash
-cd /lib/x86_64-linux-gnu
-sudo ln -s libc.so.6 libc.so
-```
+This method is adequate if you already have a Mono x64 or Node.js x64 install on the machine and need to incrementally add Edge to it. 
 
-(For background on the last step, see how [Mono loads native libraries](http://www.mono-project.com/Interop_with_Native_Libraries) or just [cut to the chase](http://stackoverflow.com/questions/14359981/mono-and-unmanaged-code-in-ubuntu)).
+Read through the [install script](https://raw.githubusercontent.com/tjanczuk/edge/mono/tools/ubuntu_12.04_clean_install.sh) and cherry pick the steps you need. Here are some gotchas:
 
-Finally, you are able to build Edge.js. Assuming you have cloned the repo and checked out the `mono` branch:
+* The Mono 3.4.0 source code tarball misses one file which the install script manually adds. For background on the missing file see [here](http://stackoverflow.com/questions/22844569/build-error-mono-3-4-0-centos).  
+* If you need to build Mono, make sure to run `ldconfig` afterwards, otherwise the garbage collection libraries may not load.  
+* To make sure Mono can load the standard C library, run `sudo ln -s -f /lib/x86_64-linux-gnu/libc.so.6 /lib/x86_64-linux-gnu/libc.so`. For background on that step, see how [Mono loads native libraries](http://www.mono-project.com/Interop_with_Native_Libraries) or just [cut to the chase](http://stackoverflow.com/questions/14359981/mono-and-unmanaged-code-in-ubuntu).  
 
-```bash
-npm install
-npm test
-```
+### Debug build of Edge.js
 
 To build a debug build instead of release, you need to:
 
