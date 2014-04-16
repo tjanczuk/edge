@@ -912,7 +912,7 @@ Read more about [performance of edge.js on the wiki](https://github.com/tjanczuk
 
 ## Building on Windows
 
-You must have Visual Studio 2012 toolset, Python 2.7.x, and node-gyp installed for building.
+You must have Visual Studio 2013 toolset, Python 2.7.x, and node-gyp installed for building.
 
 To build and test the project against all supported versions of node.js in x86 and x64 flavors, run the following:
 
@@ -935,7 +935,7 @@ To build the C++\CLI native extension using the version of node.js installed on 
 
 ```
 npm install -g node-gyp
-node-gyp configure --msvs_version=2012
+node-gyp configure --msvs_version=2013
 node-gyp build -debug
 ```
 
@@ -949,7 +949,7 @@ You can also set the `EDGE_DEBUG` environment variable to 1 to have the edge mod
 
 ## Running tests
 
-You must run tests from a place that has `csc.exe` to VS 2012 tooset on the PATH, for example the VS 2012 developer command prompt. To run the tests using the version node.js installed you your system:
+You must run tests from a place that has `csc.exe` to VS 2013 tooset on the PATH, for example the VS 2013 developer command prompt. To run the tests using the version node.js installed you your system:
 
 ```
 npm test
