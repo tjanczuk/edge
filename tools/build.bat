@@ -54,7 +54,7 @@ if not exist "%GYP%" (
     exit /b -1
 )
 
-"%NODEEXE%" "%GYP%" configure build --msvs_version=2012 -%FLAVOR%
+"%NODEEXE%" "%GYP%" configure build --msvs_version=2013 -%FLAVOR%
 if %ERRORLEVEL% neq 0 (
     echo Error building edge.node %FLAVOR% for node.js %2 v%3
     exit /b -1
@@ -67,9 +67,9 @@ if %ERRORLEVEL% neq 0 (
     exit /b -1
 )
 
-copy /y "%DESTDIR%\..\msvcr110.dll" "%DESTDIR%"
+copy /y "%DESTDIR%\..\msvcr120.dll" "%DESTDIR%"
 if %ERRORLEVEL% neq 0 (
-    echo Error copying msvcr110.dll %FLAVOR% to %DESTDIR%
+    echo Error copying msvcr120.dll %FLAVOR% to %DESTDIR%
     exit /b -1
 )
 
