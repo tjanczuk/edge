@@ -20,45 +20,45 @@
       'target_name': 'edge',
       'sources': [ ],
       'conditions': [
-      	['OS=="win"'
-      	, {
-	      	  'sources+': [ 
-	            'src/edge.cpp', 
-	            'src/utils.cpp', 
-	            'src/clrfunc.cpp',
-	            'src/clrfuncinvokecontext.cpp',
-	            'src/nodejsfunc.cpp',
-	            'src/nodejsfuncinvokecontext.cpp',
-	            'src/persistentdisposecontext.cpp',
-	            'src/v8synchronizationcontext.cpp',
-	            'src/clrfuncreflectionwrap.cpp',
-	            'src/clractioncontext.cpp'
-	          ]
-	      	}
-      	, {
-		        'sources+': [
-		          'src/mono/clractioncontext.cpp',
-		          'src/mono/clrfunc.cpp',
-		          'src/mono/clrfuncinvokecontext.cpp',
-		          'src/mono/edge.cpp',
-		          'src/mono/edge.h',
-		          'src/mono/monoembed.cpp',
-		          'src/mono/monotask.cpp',
-		          'src/mono/nodejsfunc.cpp',
-		          'src/mono/nodejsfuncinvokecontext.cpp',
-		          'src/mono/utils.cpp',
-		          'src/mono/v8synchronizationcontext.cpp',
-		        ]
-		      , 'include_dirs': [
-		          '<!@(pkg-config mono-2 --cflags-only-I | sed s/-I//g)'
-		        ]
-		      , 'link_settings': {
-		          'libraries': [
-		            '<!@(pkg-config mono-2 --libs)'
-		          ],
-		        }
-		      }
-  			]
+        ['OS=="win"'
+        , {
+            'sources+': [ 
+              'src/edge.cpp', 
+              'src/utils.cpp', 
+              'src/clrfunc.cpp',
+              'src/clrfuncinvokecontext.cpp',
+              'src/nodejsfunc.cpp',
+              'src/nodejsfuncinvokecontext.cpp',
+              'src/persistentdisposecontext.cpp',
+              'src/v8synchronizationcontext.cpp',
+              'src/clrfuncreflectionwrap.cpp',
+              'src/clractioncontext.cpp'
+            ]
+          }
+        , {
+            'sources+': [
+              'src/mono/clractioncontext.cpp',
+              'src/mono/clrfunc.cpp',
+              'src/mono/clrfuncinvokecontext.cpp',
+              'src/mono/edge.cpp',
+              'src/mono/edge.h',
+              'src/mono/monoembed.cpp',
+              'src/mono/monotask.cpp',
+              'src/mono/nodejsfunc.cpp',
+              'src/mono/nodejsfuncinvokecontext.cpp',
+              'src/mono/utils.cpp',
+              'src/mono/v8synchronizationcontext.cpp',
+            ]
+          , 'include_dirs': [
+              '<!@(pkg-config mono-2 --cflags-only-I | sed s/-I//g)'
+            ]
+          , 'link_settings': {
+              'libraries': [
+                '<!@(pkg-config mono-2 --libs)'
+              ],
+            }
+          }
+        ]
       ],
       'configurations': {
         'Release': {
@@ -97,27 +97,29 @@
     }
   , {
       'target_name': 'build_managed',
-      'type': 'none',
-      'dependencies': [ 'edge' ],
-      'actions': [
-        {
-          'action_name': 'compile_mono_embed',
-          'inputs': [
-            'src/mono/monoembedding.cs'
-          ],
-          'outputs': [
-            'src/mono/monoembedding.exe'
-          ],
-          'conditions': [
-            ['OS=="win"', {
-              'action': ['csc', '-target:exe', '-out:build/$(BUILDTYPE)/MonoEmbedding.exe', 'src/mono/MonoEmbedding.cs']
-              }, {
-              'action': ['dmcs', '-sdk:4.5', '-target:exe', '-out:build/$(BUILDTYPE)/MonoEmbedding.exe', 'src/mono/monoembedding.cs']
-              }
+      'conditions': [[ 'OS!="win"', {
+        'type': 'none',
+        'dependencies': [ 'edge' ],
+        'actions': [
+          {
+            'action_name': 'compile_mono_embed',
+            'inputs': [
+              'src/mono/monoembedding.cs'
+            ],
+            'outputs': [
+              'src/mono/monoembedding.exe'
+            ],
+            'conditions': [
+              ['OS=="win"', {
+                'action': ['csc', '-target:exe', '-out:build/$(BUILDTYPE)/MonoEmbedding.exe', 'src/mono/MonoEmbedding.cs']
+                }, {
+                'action': ['dmcs', '-sdk:4.5', '-target:exe', '-out:build/$(BUILDTYPE)/MonoEmbedding.exe', 'src/mono/monoembedding.cs']
+                }
+              ]
             ]
-          ]
-        }
-      ]
+          }
+        ]
+      }]]
     }    
   ]
 }
