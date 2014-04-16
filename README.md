@@ -39,10 +39,10 @@ Edge.js allows you to run .NET and Node.js code in one process. You can call .NE
 
 ![F# Python C# Node.js](https://f.cloud.github.com/assets/822369/468830/a293c728-b6a3-11e2-9fb3-99c7bf2bf6ed.png)
 
-Edge.js provides a basic, prescriptive model and implementation for interoperability between .NET and Node.js in-process. You can built upon and extended this basic mechanism to support more specific scenarios, for example:
+Edge.js provides a basic, prescriptive model and implementation for interoperability between .NET and Node.js in-process. You can build upon and extended this basic mechanism to support more specific scenarios, for example:
 * implementing express.js handlers and connect middleware for Node.js application using .NET 4.5 ([read more](http://tomasz.janczuk.org/2013/02/hosting-net-code-in-nodejs-applications.html)),  
 * implementing CPU-bound computations in .NET and running them in-process with Node.js application without blocking the event loop ([read more](http://tomasz.janczuk.org/2013/02/cpu-bound-workers-for-nodejs.html)),  
-* using C# and IronPython and .NET instead of writing native Node.js extensions in C/C++ and Win32 to access Windows specific functionality from a Node.js application ([read more](http://tomasz.janczuk.org/2013/02/access-ms-sql-from-nodejs-application.html)). 
+* using C# or IronPython with .NET instead of writing native Node.js extensions in C/C++ and Win32 to access Windows specific functionality from a Node.js application ([read more](http://tomasz.janczuk.org/2013/02/access-ms-sql-from-nodejs-application.html)). 
 
 Read more about the background and motivations of the project [here](http://tomasz.janczuk.org/2013/02/hosting-net-code-in-nodejs-applications.html). 
 
@@ -86,7 +86,7 @@ C:\projects\barebones>node server.js
 
 ## How to: integrate C# code into node.js code
 
-Edge provies several ways to integrate C# code into a node.js application. Regardless of the way you choose, the entry point into the .NET code is normalized to a `Func<object,Task<object>>` delegate. This allows node.js code to call .NET asynchronoulsy and avoid blocking the node.js event loop. 
+Edge provides several ways to integrate C# code into a node.js application. Regardless of the way you choose, the entry point into the .NET code is normalized to a `Func<object,Task<object>>` delegate. This allows node.js code to call .NET asynchronoulsy and avoid blocking the node.js event loop. 
 
 Edge provides a function that accepts a reference to C# code in one of the supported representations, and returns a node.js function which acts as a JavaScript proxy to the `Func<object,Task<object>>` .NET delegate:
 
@@ -690,7 +690,7 @@ var getTop10Products = edge.func('sql', function () {/*
 getTop10Products(null, function (error, result) {
     if (error) throw error;
     console.log(result);
-    console.log(result[0].Name);
+    console.log(result[0].ProductName);
     console.log(result[1].ReorderLevel);
 });
 ```
@@ -885,7 +885,7 @@ You can also debug C# code embeeded directly into a *.js file using the function
 
 ```javscript
 var hello = edge.func(function () {/*
-    async (input)
+    async (input) =>
     {
         System.Diagnostics.Debugger.Break();
         var result = ".NET welcomes " + input.ToString();
