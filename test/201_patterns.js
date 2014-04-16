@@ -161,14 +161,14 @@ describe('call patterns', function () {
 
         var tryFinish = function() {
             if (log.length === 4) {
-                assert.deepEqual(log, [ 'callin1', 'callin2', 'return', 'return' ]);
+                assert.deepEqual(log.sort(), [ 'callin1', 'callin1-return', 'callin2', 'callin2-return' ]);
                 done();
             }
         };
 
         var callback = function (error, result) {
             assert.ifError(error);
-            log.push('return');
+            log.push(result + '-return');
             tryFinish();
         };
 
