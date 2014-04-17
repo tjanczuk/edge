@@ -25,15 +25,15 @@
         ['OS=="win"'
         , {
             'sources+': [ 
-              'src/edge.cpp', 
-              'src/utils.cpp', 
-              'src/clrfunc.cpp',
-              'src/clrfuncinvokecontext.cpp',
-              'src/nodejsfunc.cpp',
-              'src/nodejsfuncinvokecontext.cpp',
-              'src/persistentdisposecontext.cpp',
-              'src/clrfuncreflectionwrap.cpp',
-              'src/clractioncontext.cpp'
+              'src/dotnet/edge.cpp', 
+              'src/dotnet/utils.cpp', 
+              'src/dotnet/clrfunc.cpp',
+              'src/dotnet/clrfuncinvokecontext.cpp',
+              'src/dotnet/nodejsfunc.cpp',
+              'src/dotnet/nodejsfuncinvokecontext.cpp',
+              'src/dotnet/persistentdisposecontext.cpp',
+              'src/dotnet/clrfuncreflectionwrap.cpp',
+              'src/dotnet/clractioncontext.cpp'
             ]
           }
         , {

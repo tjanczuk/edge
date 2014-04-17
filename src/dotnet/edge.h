@@ -17,7 +17,7 @@
 #ifndef __EDGE_H
 #define __EDGE_H
 
-#include "./common/edge_common.h"
+#include "../common/edge_common.h"
 
 #include <vcclr.h>
 
