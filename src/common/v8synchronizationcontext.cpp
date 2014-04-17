@@ -14,7 +14,7 @@
  * See the Apache Version 2.0 License for specific language governing 
  * permissions and limitations under the License.
  */
-#include "edge.h"
+#include "edge_common.h"
 
 void continueOnV8Thread(uv_async_t* handle, int status)
 {
@@ -30,13 +30,8 @@ void continueOnV8Thread(uv_async_t* handle, int status)
 }
 
 unsigned long V8SynchronizationContext::v8ThreadId;
-#ifdef USE_WIN32_SYNCHRONIZATION
-    HANDLE V8SynchronizationContext::funcWaitHandle;
-#else
-    uv_sem_t* V8SynchronizationContext::funcWaitHandle;
-#endif
+uv_sem_t* V8SynchronizationContext::funcWaitHandle;
 uv_edge_async_t* V8SynchronizationContext::uv_edge_async;
-
 
 void V8SynchronizationContext::Initialize() 
 {
@@ -47,23 +42,15 @@ void V8SynchronizationContext::Initialize()
     uv_edge_async->singleton = TRUE;
     uv_async_init(uv_default_loop(), &V8SynchronizationContext::uv_edge_async->uv_async, continueOnV8Thread);
     V8SynchronizationContext::Unref(V8SynchronizationContext::uv_edge_async);
-#ifdef USE_WIN32_SYNCHRONIZATION
-    V8SynchronizationContext::funcWaitHandle = CreateSemaphore(NULL, 1, INT_MAX, NULL);
-#else    
     V8SynchronizationContext::funcWaitHandle = new uv_sem_t;
     uv_sem_init(V8SynchronizationContext::funcWaitHandle, 1);
-#endif
     V8SynchronizationContext::v8ThreadId = V8SynchronizationContext::GetCurrentThreadId();
 }
 
 void V8SynchronizationContext::Unref(uv_edge_async_t* uv_edge_async)
 {
     DBG("V8SynchronizationContext::Unref");
-#if UV_VERSION_MAJOR==0 && UV_VERSION_MINOR<8
-    uv_unref(uv_default_loop());
-#else
     uv_unref((uv_handle_t*)&uv_edge_async->uv_async);
-#endif  
 }
 
 uv_edge_async_t* V8SynchronizationContext::RegisterAction(uv_async_edge_cb action, void* data)
@@ -87,11 +74,7 @@ uv_edge_async_t* V8SynchronizationContext::RegisterAction(uv_async_edge_cb actio
         // This executes on CLR thread. 
         // Acquire exlusive access to uv_edge_async previously initialized on V8 thread.
 
-#ifdef USE_WIN32_SYNCHRONIZATION
-        WaitForSingleObject(V8SynchronizationContext::funcWaitHandle, INFINITE);
-#else
         uv_sem_wait(V8SynchronizationContext::funcWaitHandle);
-#endif
         V8SynchronizationContext::uv_edge_async->action = action;
         V8SynchronizationContext::uv_edge_async->data = data;
         return V8SynchronizationContext::uv_edge_async;
@@ -119,11 +102,7 @@ void V8SynchronizationContext::CancelAction(uv_edge_async_t* uv_edge_async)
         // Release the wait handle to allow the uv_edge_async reuse by another CLR thread.
         uv_edge_async->action = NULL;
         uv_edge_async->data = NULL;
-#ifdef USE_WIN32_SYNCHRONIZATION
-        ReleaseSemaphore(V8SynchronizationContext::funcWaitHandle, 1, NULL);
-#else        
         uv_sem_post(V8SynchronizationContext::funcWaitHandle);
-#endif
     }
     else
     {

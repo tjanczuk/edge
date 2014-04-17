@@ -18,7 +18,9 @@
   'targets': [
     {
       'target_name': 'edge',
-      'sources': [ ],
+      'sources': [ 
+        'src/common/v8synchronizationcontext.cpp'
+      ],
       'conditions': [
         ['OS=="win"'
         , {
@@ -30,7 +32,6 @@
               'src/nodejsfunc.cpp',
               'src/nodejsfuncinvokecontext.cpp',
               'src/persistentdisposecontext.cpp',
-              'src/v8synchronizationcontext.cpp',
               'src/clrfuncreflectionwrap.cpp',
               'src/clractioncontext.cpp'
             ]
@@ -47,7 +48,6 @@
               'src/mono/nodejsfunc.cpp',
               'src/mono/nodejsfuncinvokecontext.cpp',
               'src/mono/utils.cpp',
-              'src/mono/v8synchronizationcontext.cpp',
             ]
           , 'include_dirs': [
               '<!@(pkg-config mono-2 --cflags-only-I | sed s/-I//g)'
