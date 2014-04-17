@@ -33,6 +33,9 @@ using namespace v8;
 #include <stdlib.h>
 #include <string.h>
 #define __cdecl
+#endif
+
+#ifndef EDGE_PLATFORM_WINDOWS
 #ifdef FALSE
 #undef FALSE
 #endif
