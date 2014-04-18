@@ -997,7 +997,7 @@ brew install pkg-config
 
 # build and install Mono 64 bit
 
-brew install https://raw.githubusercontent.com/tjanczuk/edge/mono/tools/mono.rb
+brew install https://raw.githubusercontent.com/tjanczuk/edge/master/tools/mono64.rb
 
 # at this point I fried an omelette on the lid of my Mac Book Air which was running hot 
 # for about 15 minutes, compiling and installing Mono 64bit; 
@@ -1031,7 +1031,7 @@ These instructions were tested on Ubuntu 12.04 x64. High level, you must have No
 If you have a fresh Ubuntu 12.04 x64 installation, the most convenient way of installing Edge.js with all prerequisities is by running:
 
 ```bash
-sudo bash -c 'bash <(wget -qO- https://raw.githubusercontent.com/tjanczuk/edge/mono/tools/ubuntu_12.04_clean_install.sh)'
+sudo bash -c 'bash <(wget -qO- https://raw.githubusercontent.com/tjanczuk/edge/master/tools/ubuntu_12.04_clean_install.sh)'
 ```
 
 This will do the following:

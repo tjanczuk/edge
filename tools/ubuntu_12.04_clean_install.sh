@@ -28,7 +28,7 @@ npm install mocha -g
 
 sudo -u ${THE_USER} curl http://download.mono-project.com/sources/mono/mono-3.4.0.tar.bz2 > mono-3.4.0.tar.bz2
 sudo -u ${THE_USER} tar -xvf mono-3.4.0.tar.bz2
-sudo -u ${THE_USER} curl https://raw.githubusercontent.com/tjanczuk/edge/mono/tools/Microsoft.Portable.Common.targets > ./mono-3.4.0/mcs/tools/xbuild/targets/Microsoft.Portable.Common.targets
+sudo -u ${THE_USER} curl https://raw.githubusercontent.com/tjanczuk/edge/master/tools/Microsoft.Portable.Common.targets > ./mono-3.4.0/mcs/tools/xbuild/targets/Microsoft.Portable.Common.targets
 cd mono-3.4.0
 sudo -u ${THE_USER} bash -c './configure --prefix=/usr/local --with-glib=embedded --enable-nls=no'
 sudo -u ${THE_USER} make
@@ -39,8 +39,8 @@ cd ..
 
 # download and build Edge.js
 
-sudo -u ${THE_USER} curl https://codeload.github.com/tjanczuk/edge/zip/mono > edge.js.zip
+sudo -u ${THE_USER} curl https://codeload.github.com/tjanczuk/edge/zip/master > edge.js.zip
 sudo -u ${THE_USER} unzip edge.js.zip 
-cd edge-mono/
+cd edge-master/
 sudo -u ${THE_USER} npm install
 sudo -u ${THE_USER} npm test
