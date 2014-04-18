@@ -1,6 +1,7 @@
 function help() {
     console.log('Usage: node latency.js i|x <N>');
-    console.log('   i - in-process loop of N iterations');
+    console.log('   i - 1 compilation, in-process loop of N calls');
+    console.log('   c - in-process loop of N compilations and calls');
     console.log('   x - child process loop of N iterations');
     console.log('e.g. node latency.js i 1000');
     process.exit(1);    
@@ -27,6 +28,27 @@ if (process.argv[2] === 'i') {
     var start = Date.now();
     one_i();
     function one_i() {
+        func('Node.js', function (error, result) {
+            if (error) throw error;
+            if (--M <= 0) {
+                var delta = Date.now() - start;
+                console.log(delta, delta / N);
+            }
+            else 
+                setImmediate(one_i);
+        });
+    }
+}
+if (process.argv[2] === 'c') {
+    var csharp = 'async (input) => { return ".NET welcomes " + input.ToString(); } /*';
+
+    var edge = require('../lib/edge');
+    var M = N;
+    var start = Date.now();
+    one_i();
+    function one_i() {
+        var code = csharp + M +  '*/'; // force cache miss and recompile
+        var func = edge.func(code);
         func('Node.js', function (error, result) {
             if (error) throw error;
             if (--M <= 0) {
