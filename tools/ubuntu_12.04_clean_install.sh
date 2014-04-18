@@ -7,7 +7,7 @@ sudo -u ${THE_USER} mkdir ~/tmp
 
 # install prerequisities
 
-apt-get install curl g++ pkg-config
+apt-get -y install curl g++ pkg-config
 
 # download and build Node.js
 
