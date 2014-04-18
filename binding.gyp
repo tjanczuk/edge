@@ -43,8 +43,9 @@
               'src/mono/clrfuncinvokecontext.cpp',
               'src/mono/edge.cpp',
               'src/mono/edge.h',
-              'src/mono/monoembed.cpp',
-              'src/mono/monotask.cpp',
+              'src/mono/monoembedding.cpp',
+              'src/mono/task.cpp',
+              'src/mono/dictionary.cpp',
               'src/mono/nodejsfunc.cpp',
               'src/mono/nodejsfuncinvokecontext.cpp',
               'src/mono/utils.cpp',
@@ -104,16 +105,16 @@
           {
             'action_name': 'compile_mono_embed',
             'inputs': [
-              'src/mono/monoembedding.cs'
+              'src/mono/*.cs'
             ],
             'outputs': [
               'src/mono/monoembedding.exe'
             ],
             'conditions': [
               ['OS=="win"', {
-                'action': ['csc', '-target:exe', '-out:build/$(BUILDTYPE)/MonoEmbedding.exe', 'src/mono/MonoEmbedding.cs']
+                'action': ['csc', '-target:exe', '-out:build/$(BUILDTYPE)/MonoEmbedding.exe', 'src/mono/*cs']
                 }, {
-                'action': ['dmcs', '-sdk:4.5', '-target:exe', '-out:build/$(BUILDTYPE)/MonoEmbedding.exe', 'src/mono/monoembedding.cs']
+                'action': ['dmcs', '-sdk:4.5', '-target:exe', '-out:build/$(BUILDTYPE)/MonoEmbedding.exe', 'src/mono/*.cs']
                 }
               ]
             ]

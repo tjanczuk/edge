@@ -4,8 +4,10 @@
 #include "../common/edge_common.h"
 
 #include <pthread.h>
+#include "mono/metadata/class.h"
 #include "mono/metadata/object.h"
 #include "mono/metadata/appdomain.h"
+
 typedef int GCHandle;
 
 using namespace v8;
@@ -145,5 +147,3 @@ typedef struct clrFuncWrap {
 } ClrFuncWrap;
 
 #endif
-
-// vim: ts=4 sw=4 et: 
