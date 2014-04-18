@@ -3,7 +3,7 @@ var fs = require('fs')
 
 if(process.platform === 'win32') {
 	var libroot = path.resolve(__dirname, '../lib/native/win32')
-		, dllname = 'msvcr110.dll'
+		, dllname = 'msvcr120.dll'
 		, lib32bit = path.resolve(libroot, 'ia32')
 		, dll32bit = path.resolve(lib32bit, dllname)
 		, lib64bit = path.resolve(libroot, 'x64')
