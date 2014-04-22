@@ -20,7 +20,7 @@ Handle<Value> v8FuncCallback(const v8::Arguments& args)
 {
     DBG("v8FuncCallback");
     HandleScope scope;
-    Handle<v8::External> correlator = Handle<v8::External>::Cast(args.Callee()->Get(v8::String::NewSymbol("_edgeContext")));
+    Handle<v8::External> correlator = Handle<v8::External>::Cast(args[2]);
     NodejsFuncInvokeContextWrap* wrap = (NodejsFuncInvokeContextWrap*)(correlator->Value());
     NodejsFuncInvokeContext^ context = wrap->context;    
     wrap->context = nullptr;
@@ -63,16 +63,33 @@ NodejsFuncInvokeContext::!NodejsFuncInvokeContext()
 void NodejsFuncInvokeContext::CallFuncOnV8Thread()
 {
     DBG("NodejsFuncInvokeContext::CallFuncOnV8Thread");
+
+    static Persistent<v8::Function> callbackFactory;
+    static Persistent<v8::Function> callbackFunction;
+
     HandleScope scope;
     try 
     {
         Handle<v8::Value> jspayload = ClrFunc::MarshalCLRToV8(this->payload);
 
-        Handle<v8::FunctionTemplate> callbackTemplate = v8::FunctionTemplate::New(v8FuncCallback);
-        Handle<v8::Function> callback = callbackTemplate->GetFunction();
+        // See https://github.com/tjanczuk/edge/issues/125 for context
+        
+        if (callbackFactory.IsEmpty())
+        {
+            callbackFunction = Persistent<v8::Function>::New(
+                FunctionTemplate::New(v8FuncCallback)->GetFunction());
+            Handle<v8::String> code = v8::String::New(
+                "(function (cb, ctx) { return function (e, d) { return cb(e, d, ctx); }; })");
+            callbackFactory = Persistent<v8::Function>::New(
+                Handle<v8::Function>::Cast(v8::Script::Compile(code)->Run()));
+        }
+
         this->wrap = new NodejsFuncInvokeContextWrap;
         this->wrap->context = this;
-        callback->Set(v8::String::NewSymbol("_edgeContext"), v8::External::New((void*)this->wrap));
+        Handle<v8::Value> factoryArgv[] = { callbackFunction, v8::External::New((void*)this->wrap) };
+        Handle<v8::Function> callback = Handle<v8::Function>::Cast(
+            callbackFactory->Call(v8::Context::GetCurrent()->Global(), 2, factoryArgv));        
+
         Handle<v8::Value> argv[] = { jspayload, callback };
         TryCatch tryCatch;
         (*(this->functionContext->Func))->Call(v8::Context::GetCurrent()->Global(), 2, argv);
