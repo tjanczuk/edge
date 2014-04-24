@@ -20,7 +20,6 @@
   "engines": {
     "node": ">= 0.8"
   },
-  "os": [ "win32" ],
   "licenses": [
     {
       "type": "Apache",
