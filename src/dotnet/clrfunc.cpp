@@ -11,7 +11,7 @@ Handle<v8::Value> clrFuncProxy(const v8::Arguments& args)
 {
     DBG("clrFuncProxy");
     HandleScope scope;
-    Handle<v8::External> correlator = Handle<v8::External>::Cast(args.Callee()->Get(v8::String::NewSymbol("_edgeContext")));
+    Handle<v8::External> correlator = Handle<v8::External>::Cast(args[2]);
     ClrFuncWrap* wrap = (ClrFuncWrap*)(correlator->Value());
     ClrFunc^ clrFunc = wrap->clrFunc;
     return scope.Close(clrFunc->Call(args[0], args[1]));
@@ -31,16 +31,34 @@ Handle<v8::Function> ClrFunc::Initialize(System::Func<System::Object^,Task<Syste
 {
     DBG("ClrFunc::Initialize Func<object,Task<object>> wrapper");
 
+    static Persistent<v8::Function> proxyFactory;
+    static Persistent<v8::Function> proxyFunction;        
+
     HandleScope scope;
 
     ClrFunc^ app = gcnew ClrFunc();
     app->func = func;
     ClrFuncWrap* wrap = new ClrFuncWrap;
     wrap->clrFunc = app;    
+
+    // See https://github.com/tjanczuk/edge/issues/128 for context
+    
+    if (proxyFactory.IsEmpty())
+    {
+        proxyFunction = Persistent<v8::Function>::New(
+            FunctionTemplate::New(clrFuncProxy)->GetFunction());
+        Handle<v8::String> code = v8::String::New(
+            "(function (f, ctx) { return function (d, cb) { return f(d, cb, ctx); }; })");
+        proxyFactory = Persistent<v8::Function>::New(
+            Handle<v8::Function>::Cast(v8::Script::Compile(code)->Run()));
+    }
+
+    Handle<v8::Value> factoryArgv[] = { proxyFunction, v8::External::New((void*)wrap) };
     v8::Persistent<v8::Function> funcProxy = v8::Persistent<v8::Function>::New(
-        FunctionTemplate::New(clrFuncProxy)->GetFunction());
-    funcProxy->Set(v8::String::NewSymbol("_edgeContext"), v8::External::New((void*)wrap));
+        Handle<v8::Function>::Cast(
+            proxyFactory->Call(v8::Context::GetCurrent()->Global(), 2, factoryArgv)));
     funcProxy.MakeWeak((void*)wrap, clrFuncProxyNearDeath);
+
     return scope.Close(funcProxy);
 }
 
