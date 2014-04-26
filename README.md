@@ -1,13 +1,19 @@
-Edge.js: run .NET and Node.js code in-process
+Edge.js: .NET and Node.js in-process
 ====
 
-An edge connects two nodes. This edge connects Node.js and .NET. V8 and CLR. Node.js, Python, and C# - in process.
+An edge connects two nodes. 
+
+This edge connects Node.js and .NET. V8 and CLR/Mono - in process. On Windows, MacOS, and Linux. 
+
+![image](https://cloud.githubusercontent.com/assets/822369/2807996/94b3ff4e-cd07-11e3-833c-b0474d25119a.png)
 
 ## Before you dive in
 
 See the [Edge.js overview](http://tjanczuk.github.com/edge).  
 Read the [Edge.js introduction on InfoQ](http://www.infoq.com/articles/the_edge_of_net_and_node).  
 Listen to the [Edge.js podcast on Herdingcode](http://herdingcode.com/herding-code-166-tomasz-janczuk-on-edge-js/). 
+
+![image](https://cloud.githubusercontent.com/assets/822369/2808101/87f73a5c-cd0f-11e3-9f7a-f53be86641be.png)
 
 ## Contents
 
@@ -35,14 +41,18 @@ Listen to the [Edge.js podcast on Herdingcode](http://herdingcode.com/herding-co
 
 ## Introduction 
 
-Edge.js allows you to run .NET and Node.js code in one process. You can call .NET functions from Node.js and Node.js functions from .NET. Edge.js takes care of marshaling data between CLR and V8. Edge.js also reconciles threading models of single threaded V8 and multi-threaded CLR. Edge.js ensures correct lifetime of objects on V8 and CLR heaps. The CLR code can be pre-compiled or specified as C#, F#, Python, or PowerShell source: edge.js can run CLR scripts at runtime. Edge can be extended to support other CLR languages.
+Edge.js allows you to run Node.js and .NET/Mono code in one process on Windows, MacOS, and Linux. 
+
+You can call .NET/Mono functions from Node.js and Node.js functions from .NET/Mono. Edge.js takes care of marshaling data between CLR and V8. Edge.js also reconciles threading models of single threaded V8 and multi-threaded CLR. Edge.js ensures correct lifetime of objects on V8 and CLR heaps. The CLR code can be pre-compiled or specified as C#, F#, Python, or PowerShell source: edge.js can run CLR scripts at runtime. Edge can be extended to support other CLR languages or DSLs.
 
 ![F# Python C# Node.js](https://f.cloud.github.com/assets/822369/468830/a293c728-b6a3-11e2-9fb3-99c7bf2bf6ed.png)
 
-Edge.js provides a basic, prescriptive model and implementation for interoperability between .NET and Node.js in-process. You can build upon and extended this basic mechanism to support more specific scenarios, for example:
-* implementing express.js handlers and connect middleware for Node.js application using .NET 4.5 ([read more](http://tomasz.janczuk.org/2013/02/hosting-net-code-in-nodejs-applications.html)),  
-* implementing CPU-bound computations in .NET and running them in-process with Node.js application without blocking the event loop ([read more](http://tomasz.janczuk.org/2013/02/cpu-bound-workers-for-nodejs.html)),  
-* using C# or IronPython with .NET instead of writing native Node.js extensions in C/C++ and Win32 to access Windows specific functionality from a Node.js application ([read more](http://tomasz.janczuk.org/2013/02/access-ms-sql-from-nodejs-application.html)). 
+Edge.js provides an asynchronous, in-process mechanism for interoperability between Node.js and .NET/Mono. You can use this mechanism to:
+
+* access MS SQL from Node.js using ADO.NET [more...](http://blog.codeship.io/2014/04/22/leverage-sql-server-with-node-js-using-edge-js.html)  
+* use CLR multi-threading from Node.js for CPU intensive work [more...](http://tomasz.janczuk.org/2013/02/cpu-bound-workers-for-nodejs.html)  
+* write native extensions to Node.js in C# instead of C/C++  
+* intergate existing .NET/Mono components into Node.js applications
 
 Read more about the background and motivations of the project [here](http://tomasz.janczuk.org/2013/02/hosting-net-code-in-nodejs-applications.html). 
 
@@ -50,13 +60,36 @@ Read more about the background and motivations of the project [here](http://toma
 
 ## What you need
 
-* Windows
-* node.js 0.6.x or later (developed and tested with v0.6.20, v0.8.22, and v0.10.0, both x32 and x64 architectures)  
+Edge.js runs on Windows, Linux, and MacOS and requires Node.js 0.8 or later, as well as .NET Framework 4.5. or Mono 3.4.0. 
+
+### Windows
+
+* Node.js 0.8.x or later (developed and tested with v0.8.22, and v0.10.0, both x32 and x64 architectures)  
 * [.NET 4.5](http://www.microsoft.com/en-us/download/details.aspx?id=30653)  
 * to use Python, you also need [IronPython 2.7.3 or later](http://ironpython.codeplex.com/releases/view/81726)  
 * to use F#, read [Dave Thomas blog post](http://7sharpnine.com/posts/i-node-something/)
 
+![image](https://cloud.githubusercontent.com/assets/822369/2808066/3707f37c-cd0d-11e3-9b4e-7257ffc27c9c.png)
+
+### Linux
+
+* Node.js 0.8.x or later (developed and tested with v0.10.26 x64)  
+* Mono 3.4.0 x64  
+* Check out [Ubuntu 12.04 setup instructions](#building-on-ubuntu)
+
+![image](https://cloud.githubusercontent.com/assets/822369/2808077/03f92874-cd0e-11e3-88ea-79f67b8b1d49.png)
+
+### MacOS  
+
+* Node.js 0.8.x or later (developed and tested with v0.10.26 x64)  
+* Mono 3.4.0 x64
+* Check out [Mac OS setup instructions](#building-on-osx)  
+
+![image](https://cloud.githubusercontent.com/assets/822369/2808046/8f4ce378-cd0b-11e3-95dc-ef0842c28821.png)
+
 ## How to: C# hello, world
+
+Follow setup instructions [for your platform](#what-you-need). 
 
 Install edge:
 
@@ -80,7 +113,7 @@ helloWorld('JavaScript', function (error, result) {
 Run and enjoy:
 
 ```
-C:\projects\barebones>node server.js
+$>node server.js
 .NET welcomes JavaScript
 ```
 
@@ -156,7 +189,7 @@ var add7 = edge.func(function() {/*
 If your C# code grows substantially, it is useful to keep it in a separate file. You can save it to a file with `*.csx` or `*.cs` extension, and then reference from your node.js application:
 
 ```javascript
-var add7 = edge.func(__dirname + '/add7.csx');
+var add7 = edge.func(require('path').join(__dirname, 'add7.csx'));
 ```
 
 If you integrate C# code into your node.js application by specifying C# source using one of he methods above, edge will compile the code on the fly. If you prefer to pre-compile your C# sources to a CLR assembly, or if your C# component is already pre-compiled, you can reference a CLR assembly from your node.js code. In the most generic form, you can specify the assembly file name, the type name, and the method name when creating a node.js proxy to a .NET method:
@@ -330,7 +363,7 @@ C:\projects\barebones>node sample.js
 
 When data is marshaled from .NET to node.js, no checks for circular references are made. They will typically result in stack overflows. Make sure the object graph you are passing from .NET to node.js is a tree and does not contain any cycles. 
 
-When marshaling strongly typed objects (e.g. Person) form .NET to node.js, you can optionaly tell edge.js to observe the [System.Web.Script.Serialization.ScriptIgnoreAttribute](http://msdn.microsoft.com/en-us/library/system.web.script.serialization.scriptignoreattribute.aspx). You opt in to this behavior by setting the `EDGE_ENABLE_SCRIPTIGNOREATTRIBUTE` environment variable:
+**WINDOWS ONLY** When marshaling strongly typed objects (e.g. Person) form .NET to node.js, you can optionaly tell edge.js to observe the [System.Web.Script.Serialization.ScriptIgnoreAttribute](http://msdn.microsoft.com/en-us/library/system.web.script.serialization.scriptignoreattribute.aspx). You opt in to this behavior by setting the `EDGE_ENABLE_SCRIPTIGNOREATTRIBUTE` environment variable:
 
 ```
 set EDGE_ENABLE_SCRIPTIGNOREATTRIBUTE=1
@@ -444,7 +477,7 @@ console.log(counter(null, true)); // prints 14
 
 Edge.js enables you to run Python and node.js in-process.
 
-You need Windows, [node.js](http://nodejs.org) (any stable version 0.6.x or later), [.NET 4.5](http://www.microsoft.com/en-us/download/details.aspx?id=30653), and [IronPython 2.7.3](http://ironpython.codeplex.com/releases/view/81726) to proceed.
+You need Windows, [node.js](http://nodejs.org) (any stable version 0.8.x or later), [.NET 4.5](http://www.microsoft.com/en-us/download/details.aspx?id=30653), and [IronPython 2.7.3](http://ironpython.codeplex.com/releases/view/81726) to proceed.
 
 ### Hello, world
 
@@ -568,9 +601,9 @@ The `sync: true` property in the call to `edge.func` tells edge.js to execute Py
 
 ## How to: script PowerShell in a node.js application
 
-Edge.js enables you to run PowerShell and node.js in-process. [Edge-PS](https://github.com/dfinke/edge-ps) connects the PowerShell ecosystem with 24k+ npm modules and more.
+Edge.js enables you to run PowerShell and node.js in-process on Windows. [Edge-PS](https://github.com/dfinke/edge-ps) connects the PowerShell ecosystem with Node.js.
 
-You need Windows, [node.js](http://nodejs.org) (any stable version 0.6.x or later), [.NET 4.5](http://www.microsoft.com/en-us/download/details.aspx?id=30653), and [PowerShell 3.0](http://www.microsoft.com/en-us/download/details.aspx?id=34595) to proceed.
+You need Windows, [node.js](http://nodejs.org), [.NET 4.5](http://www.microsoft.com/en-us/download/details.aspx?id=30653), and [PowerShell 3.0](http://www.microsoft.com/en-us/download/details.aspx?id=34595) to proceed.
 
 ### Hello, world
 
@@ -611,7 +644,7 @@ What you can do in native PowerShell works in node.js.
 
 ### Interop PowerShell and Python
 
-Here you can reach out to IronPython from PowerShell from within node.js. This holds true for working with JavaScript frameworks and C#.
+Here you can reach out to IronPython from PowerShell from within node.js on Windows. This holds true for working with JavaScript frameworks and C#.
 
 ```javascript
 var edge = require('edge');
@@ -640,7 +673,7 @@ helloPython('Node.js', function(error, result){
 
 ## How to: script F# in a node.js application
 
-This section is coming up. In the meantime please refer to [Dave Thomas blog post](http://7sharpnine.com/posts/i-node-something/).
+This section is coming up. In the meantime please refer to [Dave Thomas blog post](http://7sharpnine.com/posts/i-node-something/). This has been validated on Windows only. 
 
 ```javascript
 var edge = require('edge');
@@ -659,9 +692,9 @@ helloFs('Node.js', function (error, result) {
 
 ## How to: script T-SQL in a node.js application
 
-The edge-sql extension of edge.js allows for accessing MS SQL databases by scripting T-SQL inside the Node.js application. The edge-sql extension uses async ADO.NET SQL client to access MS SQL. 
+The edge-sql extension of edge.js allows for accessing MS SQL databases by scripting T-SQL inside the Node.js application. The edge-sql extension uses async ADO.NET SQL client to access MS SQL. This has been validated on Windows only. 
 
-You need Windows, [node.js](http://nodejs.org) (any stable version 0.6.x or later), and [.NET 4.5](http://www.microsoft.com/en-us/download/details.aspx?id=30653). To run the sample code below you also need a connection string to the sample Northwind database that ships with MS SQL. 
+You need Windows, [node.js](http://nodejs.org), and [.NET 4.5](http://www.microsoft.com/en-us/download/details.aspx?id=30653). To run the sample code below you also need a connection string to the sample Northwind database that ships with MS SQL. 
 
 ### Hello, world
 
@@ -849,7 +882,7 @@ System.Exception: Error: Sample JavaScript error
 
 ## How to: debugging
 
-You can debug the .NET code running as part of your node.js application by attaching a managed code debugger (e.g. Visual Studio) to node.exe. You can debug .NET code in a pre-compiled CLR assembly as well C# literals embedded in the application and compiled by edge.js at runtime. 
+On Windows, you can debug the .NET code running as part of your node.js application by attaching a managed code debugger (e.g. Visual Studio) to node.exe. You can debug .NET code in a pre-compiled CLR assembly as well C# literals embedded in the application and compiled by edge.js at runtime. 
 
 ### Debugging pre-compiled .NET code
 
@@ -867,7 +900,7 @@ From there, you can set breakpoints in your .NET code and the debugger will stop
 
 ### Debugging embedded C# code
 
-Debugging embedded C# code requires that `EDGE_CS_DEBUG` environment variable is set in the environment of the node.exe process:
+Debugging embedded C# code (on Windows) requires that `EDGE_CS_DEBUG` environment variable is set in the environment of the node.exe process:
 
 ```
 set EDGE_CS_DEBUG=1
