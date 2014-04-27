@@ -45,7 +45,7 @@ Edge.js allows you to run Node.js and .NET code in one process on Windows, MacOS
 
 You can call .NET functions from Node.js and Node.js functions from .NET. Edge.js takes care of marshaling data between CLR and V8. Edge.js also reconciles threading models of single threaded V8 and multi-threaded CLR. Edge.js ensures correct lifetime of objects on V8 and CLR heaps. The CLR code can be pre-compiled or specified as C#, F#, Python, or PowerShell source: Edge.js can run CLR scripts at runtime. Edge can be extended to support other CLR languages or DSLs.
 
-![F# Python C# Node.js](https://f.cloud.github.com/assets/822369/468830/a293c728-b6a3-11e2-9fb3-99c7bf2bf6ed.png)
+![Edge.js interop model](https://f.cloud.github.com/assets/822369/234085/b305625c-8768-11e2-8de0-e03ae98e7249.PNG)
 
 Edge.js provides an asynchronous, in-process mechanism for interoperability between Node.js and .NET. You can use this mechanism to:
 
