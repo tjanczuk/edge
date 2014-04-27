@@ -992,13 +992,21 @@ You can also set the `EDGE_DEBUG` environment variable to 1 to have the edge mod
 
 ## Running tests
 
-You must run tests from a place that has `csc.exe` to VS 2013 tooset on the PATH, for example the VS 2013 developer command prompt. To run the tests using the version Node.js installed you your system:
+You must have mocha installed on the system. Then:
 
 ```
 npm test
 ```
 
-This first builds a CLR assembly in C# that contains the .NET code of the tests, and then runs the tests with mocha.
+or, from the root of the enlistment:
+
+```
+mocha -R spec
+```
+
+### Node.js version targeting on Windows
+
+**NOTE** this is Windows only functionality.
 
 If you want to run tests after building against a specific version of Node.js that one of the previous builds used, issue the following command:
 
@@ -1007,7 +1015,7 @@ cd test
 test.bat ia32 0.10.0
 ```
 
-Which will run the tests using Node.js x86 v0.1.0. Similarly:
+Which will run the tests using Node.js x86 v0.10.0. Similarly:
 
 ```
 cd test
