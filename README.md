@@ -861,7 +861,6 @@ var multiplyBy2 = edge.func(function () {/*
         }
 
         return null;
-
     }
 */});
 
