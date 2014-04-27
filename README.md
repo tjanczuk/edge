@@ -235,12 +235,12 @@ In that case the default typeName of `My.Edge.Samples.Startup` and methodName of
 
 ## How to: specify additional CLR assembly references in C# code
 
-When you provide C# source code and let edge compile it for you at runtime, edge will by default reference only mscorlib.dll and System.dll assemblies. In applications that require additional assemblies you can specify them in C# code using a special comment pattern. For example, to use ADO.NET you must reference System.Data.dll:
+When you provide C# source code and let edge compile it for you at runtime, edge will by default reference only mscorlib.dll and System.dll assemblies. In applications that require additional assemblies you can specify them in C# code using a special hash pattern, similar to Roslyn. For example, to use ADO.NET you must reference System.Data.dll:
 
 ```javascript
 var add7 = edge.func(function() {/*
 
-    //#r "System.Data.dll"
+    #r "System.Data.dll"
 
     using System.Data;
     using System.Threading.Tasks;
