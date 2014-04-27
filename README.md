@@ -487,7 +487,7 @@ console.log(counter(null, true)); // prints 14
 
 ## How to: script Python in a Node.js application
 
-**NOTE** This functionality requires IronPython. 
+**NOTE** This functionality requires IronPython and has been tested on Windows only. 
 
 Edge.js enables you to run Python and Node.js in-process.
 
