@@ -5,8 +5,11 @@ Foundations:
 103_hello_file.js - separate file
 104_add7_class.js - entire class instead of lambda
 105_add7_dll.js - pre-compiled DLL
-	csc.exe /target:library /debug Sample105.cs
-	start repl, load owin, attach VS, call func, show debugging
+    On Windows: 
+    	csc.exe /target:library /debug Sample105.cs
+    On Mono (MacOS, Linux):
+        mcs -sdk:4.5 Sample105.cs -target:library
+	start repl, attach VS, call func, show debugging
 106_marshal_v82cls.js - data from V8 to CLR
 107_marshal_clr2v8.js - data from CLR to V8
 108_func.js - marshal func from v8 to CLR and call node from .NET

@@ -1,6 +1,7 @@
 // Overview of edge.js: http://tjanczuk.github.com/edge
 
-var edge = require('../lib/edge');
+var edge = require('../lib/edge')
+    , path = require('path');
 
 var unzipDirectory = edge.func(function() {/*
     #r "System.IO.Compression.FileSystem.dll"
@@ -18,8 +19,8 @@ var unzipDirectory = edge.func(function() {/*
 */});
 
 var params = { 
-    source: '..\\samples.zip', 
-    destination: '..\\samples_tmp' 
+    source: path.join(__dirname, '..', 'samples.zip'), 
+    destination: path.join(__dirname, '..', 'samples_tmp')
 };
 
 unzipDirectory(params, function (error) {

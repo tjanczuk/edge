@@ -1,6 +1,7 @@
 // Overview of edge.js: http://tjanczuk.github.com/edge
 
-var edge = require('../lib/edge');
+var edge = require('../lib/edge')
+    , path = require('path');
 
 var zipDirectory = edge.func(function() {/*
     #r "System.IO.Compression.FileSystem.dll"
@@ -18,8 +19,8 @@ var zipDirectory = edge.func(function() {/*
 */});
 
 var params = { 
-    source: '..\\samples', 
-    destination: '..\\samples.zip' 
+    source: path.join(__dirname, '..', 'samples'), 
+    destination: path.join(__dirname, '..', 'samples.zip') 
 };
 
 zipDirectory(params, function (error) {

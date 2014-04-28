@@ -1,6 +1,7 @@
 // Overview of edge.js: http://tjanczuk.github.com/edge
 
-var edge = require('../lib/edge');
+var edge = require('../lib/edge')
+    , path = require('path');
 
 var convertImage = edge.func(function() {/*
     #r "System.Drawing.dll"
@@ -37,8 +38,8 @@ var convertImage = edge.func(function() {/*
 */});
 
 var params = { 
-    source: '.\\edge.png', 
-    destination: '.\\edge.jpg',
+    source: path.join(__dirname, 'edge.png'), 
+    destination: path.join(__dirname, 'edge.jpg'),
     toType: 'jpg'
 };
 

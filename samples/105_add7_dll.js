@@ -1,7 +1,10 @@
 // Overview of edge.js: http://tjanczuk.github.com/edge
 
 // Compile Sample105.dll with
-// csc.exe /target:library /debug Sample105.cs
+// - on Windows (.NET Framework):
+//      csc.exe /target:library /debug Sample105.cs
+// - on MacOS/Linux (Mono):
+//      mcs -sdk:4.5 Sample105.cs -target:library
 
 var edge = require('../lib/edge');
 
