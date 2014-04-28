@@ -6,7 +6,7 @@
 
     <title>Edge.js</title>
 
-    <meta name="description" content="Run .NET and node.js in process">
+    <meta name="description" content="Run .NET and Node.js in process">
     <meta name="author" content="Tomasz Janczuk">
 
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -39,10 +39,11 @@
 
         <section>
           <h1>Edge.js</h1>
-          <h3>Run node.js and .NET code in-process</h3>
+          <h3>Run Node.js and .NET code in-process</h3>
           <p>&nbsp;</p>
           <p>An edge connects two nodes</p>
-          <p>This edge connects node.js with .NET</p>
+          <p>This edge connects Node.js with .NET</p>
+          <p>On Windows, MacOS, and Linux</p>
           <p>&nbsp;</p>
           <p>
             <small>Created by <a href="http://tomasz.janczuk.org">Tomasz Janczuk</a> / <a href="http://twitter.com/tjanczuk">@tjanczuk</a></small>
@@ -54,24 +55,14 @@
         </section>
 
         <section>
-            <h2>Edge.js connects</h2>
-            <p><small>30k+ npm modules with 11k+ nuget packages</small></p>
-            <p><small>JavaScript with C#, F#, Python, and PowerShell</small></p>
-            <p><small>loose typing with strong typing</small></p>
-            <p><small>IO-bound single threaded with CPU-bound multi-threaded</small></p>
-            <p><small>cool with awesome</small></p>
-            <h3>in one process</h3>
-        </section>
-
-        <section>
-          <h2>C# welcomes Node.js</h2>
-          <p><small>Call C# async lambda from node.js</small></p>
+          <h2>.NET welcomes Node.js</h2>
+          <p><small>Call C# async lambda from Node.js</small></p>
           <pre><code>
 var edge = require('edge');
 
 var hello = edge.func(function () {/*
     async (input) => { 
-        return "CSharp welcomes " + input.ToString(); 
+        return ".NET welcomes " + input.ToString(); 
     }
 */});
 
@@ -82,14 +73,43 @@ hello('Node.js', function (error, result) {
           </code></pre>     
           <a href="https://github.com/tjanczuk/edge/blob/master/samples/101_hello_lambda.js"><small>see full code</small></a>
           <pre><code>
-c:\projects\edgedemo> node sample.js
-CSharp welcomes Node.js
+> node sample.js
+.NET welcomes Node.js
           </code></pre>                  
         </section>
 
         <section>
+          <h2>On Windows...</h2>
+          <img src="https://cloud.githubusercontent.com/assets/822369/2808066/3707f37c-cd0d-11e3-9b4e-7257ffc27c9c.png" alt="Edge.js on Windows">               
+        </section>            
+
+        <section>
+          <h2>...On Mac...</h2>
+          <img src="https://cloud.githubusercontent.com/assets/822369/2808046/8f4ce378-cd0b-11e3-95dc-ef0842c28821.png" alt="Edge.js on MacOS">               
+        </section>     
+
+        <section>
+          <h2>...and on Linux</h2>
+          <img src="https://cloud.githubusercontent.com/assets/822369/2808077/03f92874-cd0e-11e3-88ea-79f67b8b1d49.png" alt="Edge.js on Linux">               
+        </section>  
+
+        <section>
+            <h2>Edge.js connects</h2>
+            <p><small>Node.js and .NET ecosystems</small></p>
+            <p><small>JavaScript with C#, F#, Python, and PowerShell</small></p>
+            <p><small>loose typing with strong typing</small></p>
+            <p><small>IO-bound single threaded with CPU-bound multi-threaded</small></p>
+            <p><small>cool with awesome</small></p>
+            <h3>in one process</h3>
+        </section>
+
+        <section>
+          <h2>Not only C#</h2>                  
+        </section>            
+
+        <section>
           <h2>F# welcomes Node.js</h2>
-          <p><small>Call F# async workflows from node.js</small></p>
+          <p><small>Call F# async workflows from Node.js</small></p>
           <pre><code>
 var edge = require('edge');
 
@@ -104,16 +124,16 @@ hello('Node.js', function (error, result) {
     console.log(result);
 });
           </code></pre>     
-          <a href="https://github.com/tjanczuk/edge#how-to-script-f-in-a-nodejs-application"><small>how to F# in node.js</small></a>
+          <a href="https://github.com/tjanczuk/edge#how-to-script-f-in-a-nodejs-application"><small>how to F# in Node.js</small></a>
           <pre><code>
-c:\projects\edgedemo> node sample.js
+$> node sample.js
 FSharp welcomes Node.js
           </code></pre>                  
         </section>        
 
         <section>
           <h2>Python welcomes Node.js</h2>
-          <p><small>Script IronPython from node.js</small></p>
+          <p><small>Script IronPython from Node.js</small></p>
           <pre><code>
 var edge = require('edge');
 
@@ -129,16 +149,16 @@ hello('Node.js', function (error, result) {
     console.log(result);
 });
           </code></pre>     
-          <a href="https://github.com/tjanczuk/edge#how-to-script-python-in-a-nodejs-application"><small>how to python in node.js</small></a>
+          <a href="https://github.com/tjanczuk/edge#how-to-script-python-in-a-nodejs-application"><small>how to python in Node.js</small></a>
           <pre><code>
-c:\projects\edgedemo> node sample.js
+$> node sample.js
 Python welcomes Node.js
           </code></pre>                  
         </section>        
 
         <section>
           <h2>T-SQL welcomes Node.js</h2>
-          <p><small>Access MS SQL from node.js using in-process ADO.NET</small></p>
+          <p><small>Access MS SQL from Node.js using in-process ADO.NET</small></p>
           <pre><code>
 var update = require('edge').func('sql', function () {/*
     update Products
@@ -151,12 +171,12 @@ update({ id: 10, newName: 'New Ikura' }, function (error, result) {
     console.log(result);
 });
           </code></pre>     
-          <a href="https://github.com/tjanczuk/edge#how-to-script-t-sql-in-a-nodejs-application"><small>how to T-SQL in node.js</small></a>                 
+          <a href="https://github.com/tjanczuk/edge#how-to-script-t-sql-in-a-nodejs-application"><small>how to T-SQL in Node.js</small></a>                 
         </section>                
 
         <section>
           <h2>PowerShell welcomes Node.js</h2>
-          <p><small>Call PowerShell scripts asynchronously from node.js</small></p>
+          <p><small>Call PowerShell scripts asynchronously from Node.js (Windows only)</small></p>
           <pre><code>
 var edge = require('edge');
 
@@ -169,7 +189,7 @@ hello('Node.js', function (error, result) {
     console.log(result);
 });
           </code></pre>     
-          <a href="https://github.com/tjanczuk/edge#how-to-script-powershell-in-a-nodejs-application"><small>how to PowerShell in node.js</small></a>
+          <a href="https://github.com/tjanczuk/edge#how-to-script-powershell-in-a-nodejs-application"><small>how to PowerShell in Node.js</small></a>
           <pre><code>
 c:\projects\edgedemo> node sample.js
 PowerShell welcomes Node.js
@@ -178,8 +198,8 @@ PowerShell welcomes Node.js
 
         <section>
           <h2>Interop model</h2>
-          <p><small>Async, in-process calling convention between CLR and node.js</small></p>
-           <img src="https://f.cloud.github.com/assets/822369/234085/b305625c-8768-11e2-8de0-e03ae98e7249.PNG" alt="edge.js interop model" /> 
+          <p><small>Async, in-process calling convention between CLR and Node.js</small></p>
+           <img src="https://f.cloud.github.com/assets/822369/234085/b305625c-8768-11e2-8de0-e03ae98e7249.PNG" alt="Edge.js interop model" /> 
         </section>          
 
         <section>
@@ -233,7 +253,7 @@ var hello = edge.func('mysample.cs');
 
         <section>
           <h2>Multiple languages</h2>
-          <p><small>Compile code for many CLR languages through extensibility</small></p>
+          <p><small>Compile code for many CLR languages or DSLs through extensibility</small></p>
             <pre><code>
 var helloCs = edge.func(...); // C# is the default
 var helloFs = edge.func('fs', ...); // F#
@@ -241,7 +261,7 @@ var helloPy = edge.func('py', ...); // Python
 var helloPs = edge.func('ps', ...); // PowerShell
 ...
             </code></pre>      
-            <a href="https://github.com/tjanczuk/edge#how-to-support-for-other-clr-languages"><small>how to support other CLR languages</small></a>
+            <a href="https://github.com/tjanczuk/edge#how-to-support-for-other-clr-languages"><small>how to support other CLR languages or DSLs</small></a>
         </section>        
 
         <section>
@@ -322,12 +342,12 @@ var result = hello('Node.js', true);
         <section>
           <h2>Debugging</h2>
           <p><small>Use Visual Studio to debug C# code running in node.exe</small></p>
-           <img src="https://f.cloud.github.com/assets/822369/326781/923d870c-9b4a-11e2-8f45-201a6431afbf.PNG" alt="edge.js debugging" /> 
+           <img src="https://f.cloud.github.com/assets/822369/326781/923d870c-9b4a-11e2-8f45-201a6431afbf.PNG" alt="Edge.js debugging" /> 
         </section>
 
         <section>
-          <h2>Data from node.js to C#</h2>
-          <p><small>Pass data from node.js to C#</small></p>
+          <h2>Data from Node.js to C#</h2>
+          <p><small>Pass data from Node.js to C#</small></p>
           <pre><code>
 var hello = require('edge').func('My.Sample.dll');
 
@@ -347,8 +367,8 @@ hello(payload, function (error, result) { ... });
         </section>        
 
         <section>
-          <h2>Data from C# to node.js</h2>
-          <p><small>Pass data from C# to node.js</small></p>
+          <h2>Data from C# to Node.js</h2>
+          <p><small>Pass data from C# to Node.js</small></p>
           <pre><code>
 var getData = require('edge').func(function () {/*
   async (input) => {
@@ -370,7 +390,7 @@ getData(null, function (error, result) { ... });
         </section>    
 
         <section>
-          <h2>Export node.js function to C#</h2>
+          <h2>Export Node.js function to C#</h2>
           <p><small>Node.js function is also data</small></p>
           <pre><code>
 var addAndMultiplyBy2 = require('edge').func( ... );
@@ -389,7 +409,7 @@ addAndMultiplyBy2(payload, function (error, result) { ... });
         </section>              
 
         <section>
-          <h2>Call node.js function from C#</h2>
+          <h2>Call Node.js function from C#</h2>
           <p><small>Node.js function is also data, continued</small></p>
           <pre><code class="javascript">
 var addAndMultiplyBy2 = require('edge').func(function () {/*
@@ -406,7 +426,7 @@ var addAndMultiplyBy2 = require('edge').func(function () {/*
         </section>              
 
         <section>
-          <h2>Return C# function to node.js</h2>
+          <h2>Return C# function to Node.js</h2>
           <p><small>C# function is also data</small></p>
           <pre><code class="javascript">
 var createHello = require('edge').func(function () {/*
@@ -425,8 +445,8 @@ hello(null, true); // prints out "Hello from .NET"
         </section>              
 
         <section>
-          <h2>Manage C# state from node.js</h2>
-          <p><small>Call node.js proxy to C# closure over CLR data</small></p>
+          <h2>Manage C# state from Node.js</h2>
+          <p><small>Call Node.js proxy to C# closure over CLR data</small></p>
           <pre><code class="javascript">
 var createCounter = require('edge').func(function () {/*
     async (input) => {
@@ -446,8 +466,8 @@ console.log(counter(null, true)); // prints 14
 
         <section>
           <h2>Performance</h2>
-          <p><small>Latency of edge.js call is 32x smaller than localhost, cross-process call over HTTP</small></p>
-          <img src="https://f.cloud.github.com/assets/822369/486393/645f696a-b920-11e2-8a20-9fa6932bb092.png" alt="performance of edge.js" /> 
+          <p><small>Latency of Edge.js call is 32x smaller than localhost, cross-process call over HTTP</small></p>
+          <img src="https://f.cloud.github.com/assets/822369/486393/645f696a-b920-11e2-8a20-9fa6932bb092.png" alt="performance of Edge.js" /> 
           <p><a href="https://github.com/tjanczuk/edge/wiki/Performance"><small>details</small></a></p>
         </section>
 
@@ -455,23 +475,25 @@ console.log(counter(null, true)); // prints 14
           <h2>Let's build something...</h2>
         </section>         
 
+        <section>
+          <h2>Script T-SQL in Node.js via ADO.NET</h2>
+          <pre><code>
+var update = require('edge').func('sql', function () {/*
+    update Products
+    set ProductName = @newName 
+    where ProductId = @id
+*/});
+
+update({ id: 10, newName: 'New Ikura' }, function (error, result) {
+    if (error) throw error;
+    console.log(result);
+});
+          </code></pre>     
+          <a href="https://github.com/tjanczuk/edge#how-to-script-t-sql-in-a-nodejs-application"><small>how to T-SQL in Node.js</small></a>                 
+        </section>                  
 
         <section>
-          <h2>Access SQL from node.js with ADO.NET</h2>
-          <pre><code class="javascript">
-var sql = require('edge').func('sql.csx');
-
-sql('select top 2 * from Products', function (error, result) {
-  if (error) throw error;
-  console.log(result);
-});            
-         </code></pre>
-         <a href="https://github.com/tjanczuk/edge/blob/master/samples/202_sql.js"><small>see full code</small></a>
-        </section>     
-
-        <section>
-          <h2>Access SQL from node.js, continued</h2>
-          <p><small>sql.csx:</small></p>
+          <h2>Full ADO.NET in Node.js</h2>
           <pre><code class="C#">
 #r "System.Data.dll"
 #r ...
@@ -489,11 +511,15 @@ public class Startup {
         using (var reader = await command.ExecuteReaderAsync() {
     ...
          </code></pre>
-         <a href="https://github.com/tjanczuk/edge/blob/master/samples/202_sql.csx"><small>see full code</small></a>
+         <small>
+            <a href="http://blog.codeship.io/2014/04/22/leverage-sql-server-with-node-js-using-edge-js.html">full article</a>
+            by
+            <a href="http://twitter.com/reverentgeek">David Neal (@reverentgeek)</a>
+          </small>
         </section>             
 
         <section>
-          <h2>Multi-threading in node.js process</h2>
+          <h2>Multi-threading in Node.js process</h2>
           <p><small>Run CPU-bound background work on CLR thread pool</small></p>
           <pre><code class="javascript">
 var heavyLifting = require('edge').func(function () {/*
@@ -603,22 +629,22 @@ wss.listen(8080);
           <h2>Express.js handler in C#</h2>
           <p><small>Plug in .NET OWIN apps as connect middleware or express handlers</small></p>
           <pre><code class="javscript">
-var edge = require('edge-express')
+var owin = require('connect-owin')
     , express = require('express');
 
 var app = express();
-app.use(express.bodyParser());
-app.get('/net', edge('Edge.Samples.dll'))
+app.get('/net', owin('Edge.Samples.dll'));
 app.get('/node', function (req, res) {
     res.send(200, 'Hello from JavaScript!');
 });
 
 app.listen(3000);
          </code></pre>
+         <a href="https://github.com/bbaia/connect-owin"><small>see bbaia/connect-owin</small></a>
         </section>          
 
         <section>
-          <h2>Call legacy SOAP services from node.js</h2>
+          <h2>Call legacy SOAP services from Node.js</h2>
           <p><small>Use WCF to call SOAP services</small></p>
           <pre><code class="javscript">
 var edge = require('edge');
@@ -631,7 +657,7 @@ kg2pound(123, function (error, result) { ... });
         </section>
 
         <section>
-          <h2>Call legacy SOAP services from node.js, continued</h2>
+          <h2>Call legacy SOAP services from Node.js, continued</h2>
           <p><small>Use WCF proxy to call a SOAP service; soap.csx:</small></p>
           <pre><code class="c#">
 // ...
@@ -717,7 +743,7 @@ public class Startup {
 <a href="https://github.com/tjanczuk/edge"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_red_aa0000.png" alt="Fork me on GitHub"></a>    
 
 <iframe allowtransparency="true" frameborder="0" scrolling="no"
-        src="https://platform.twitter.com/widgets/tweet_button.html?url=http://tjanczuk.github.io/edge/&via=tjanczuk&text=Run node.js and .NET code in-process with edge.js&count=horizontal&hashtags=edgejs"
+        src="https://platform.twitter.com/widgets/tweet_button.html?url=http://tjanczuk.github.io/edge/&via=tjanczuk&text=Run Node.js and .NET code in-process with Edge.js&count=horizontal&hashtags=edgejs"
         style="width:130px; height:20px; position: absolute; top: 20px; left: 20px; border: 0;"></iframe>
 
 <script type="text/javascript">
