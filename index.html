@@ -32,6 +32,15 @@
 
   <body>
 
+    <div id="fb-root"></div>
+    <script>(function(d, s, id) {
+      var js, fjs = d.getElementsByTagName(s)[0];
+      if (d.getElementById(id)) return;
+      js = d.createElement(s); js.id = id;
+      js.src = "//connect.facebook.net/en_US/all.js#xfbml=1&appId=479349292107454";
+      fjs.parentNode.insertBefore(js, fjs);
+    }(document, 'script', 'facebook-jssdk'));</script>    
+
     <div class="reveal">
 
       <!-- Any section element inside of this container is displayed as a slide -->
@@ -763,6 +772,10 @@ public class Startup {
 <!-- Place this tag where you want the +1 button to render. -->
 <div style="width:130px; height:20px; position: absolute; top: 50px; left: 20px; border: 0;">
   <div class="g-plusone" data-size="medium" data-annotation="inline" data-width="130" data-href="http://tjanczuk.github.io/edge"></div>
+</div>
+
+<div style="width:130px; height:20px; position: absolute; top: 80px; left: 20px; border: 0;">
+  <div class="fb-share-button" data-href="http://tjanczuk.github.io/edge" data-width="130" data-type="button_count"></div>
 </div>
 
 <script type="text/javascript">
