@@ -40,13 +40,13 @@
         <section>
           <h1>Edge.js</h1>
           <h3>Run Node.js and .NET code in-process</h3>
+          <h3>On Windows, <span style="color: red">Mac OS, and Linux (NEW!)</span></h3>
           <p>&nbsp;</p>
           <p>An edge connects two nodes</p>
           <p>This edge connects Node.js with .NET</p>
-          <p>On Windows, MacOS, and Linux</p>
           <p>&nbsp;</p>
           <p>
-            <small>Created by <a href="http://tomasz.janczuk.org">Tomasz Janczuk</a> / <a href="http://twitter.com/tjanczuk">@tjanczuk</a></small>
+            <small>Brought to you by <a href="http://tomasz.janczuk.org">Tomasz Janczuk</a> / <a href="http://twitter.com/tjanczuk">@tjanczuk</a></small>
           </p>  
           <p>&nbsp;</p>
           <p>
@@ -194,7 +194,20 @@ hello('Node.js', function (error, result) {
 c:\projects\edgedemo> node sample.js
 PowerShell welcomes Node.js
           </code></pre>                  
-        </section>                
+        </section>          
+
+                      <section>
+          <h2>FOO welcomes Node.js</h2>
+          <p><small>Extend Edge.js with other CLR/Mono languages or DSLs</small></p>
+            <pre><code>
+var helloCs = edge.func(...); // C# is the default
+var helloFs = edge.func('fs', ...); // F#
+var helloPy = edge.func('py', ...); // Python
+
+var helloFo = edge.func('foo', ...); // Your CLR/Mono language or DSL here
+            </code></pre>            
+          <a href="https://github.com/tjanczuk/edge/wiki/Add-support-for-a-CLR-language"><small>learn more</small></a>
+        </section>      
 
         <section>
           <h2>Interop model</h2>
@@ -259,6 +272,7 @@ var helloCs = edge.func(...); // C# is the default
 var helloFs = edge.func('fs', ...); // F#
 var helloPy = edge.func('py', ...); // Python
 var helloPs = edge.func('ps', ...); // PowerShell
+var helloPs = edge.func('sql', ...); // T-SQL via ADO.NET
 ...
             </code></pre>      
             <a href="https://github.com/tjanczuk/edge#how-to-support-for-other-clr-languages"><small>how to support other CLR languages or DSLs</small></a>
@@ -689,7 +703,7 @@ public class Startup {
         <section>
           <h1>Edge.js</h1>
           <p>
-            <small>Created by <a href="http://tomasz.janczuk.org">Tomasz Janczuk</a> / <a href="http://twitter.com/tjanczuk">@tjanczuk</a></small>
+            <small>Brought to you by <a href="http://tomasz.janczuk.org">Tomasz Janczuk</a> / <a href="http://twitter.com/tjanczuk">@tjanczuk</a></small>
           </p>          
           <p>
             <small><a href="https://github.com/tjanczuk/edge">github.com/tjanczuk/edge</a></small>
