@@ -5,14 +5,15 @@
     "url": "http://tomasz.janczuk.org",
     "twitter": "tjanczuk"
   },
-  "version": "0.7.15-pre",
-  "description": "Edge.js: run .NET and node.js code in-process",
+  "version": "0.8.0",
+  "description": "Edge.js: run .NET and node.js code in-process on Windows, Mac OS, and Linux",
   "tags": [
     "owin",
     "edge",
     "net",
     "clr",
     "c#",
+    "mono",
     "managed",
     ".net"
   ],
