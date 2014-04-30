@@ -22,6 +22,12 @@ helloWorld('JavaScript', function (error, result) {
 });
 ```
 
+## What problems does Edge.js solve?
+
+> Ah, whatever problem you have. If you have this problem, this solves it.
+
+*[--Scott Hanselman (@shanselman)](https://twitter.com/shanselman/status/461532471037677568)*
+
 ## Before you dive in
 
 See the [Edge.js overview](http://tjanczuk.github.com/edge).  
