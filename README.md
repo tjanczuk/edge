@@ -64,7 +64,7 @@ Listen to the [Edge.js podcast on Herdingcode](http://herdingcode.com/herding-co
 
 Edge.js allows you to run Node.js and .NET code in one process on Windows, MacOS, and Linux. 
 
-You can call .NET functions from Node.js and Node.js functions from .NET. Edge.js takes care of marshaling data between CLR and V8. Edge.js also reconciles threading models of single threaded V8 and multi-threaded CLR. Edge.js ensures correct lifetime of objects on V8 and CLR heaps. The CLR code can be pre-compiled or specified as C#, F#, Python, or PowerShell source: Edge.js can compile CLR scripts at runtime. Edge can be extended to support other CLR languages or DSLs.
+You can call .NET functions from Node.js and Node.js functions from .NET. Edge.js takes care of marshalling data between CLR and V8. Edge.js also reconciles threading models of single threaded V8 and multi-threaded CLR. Edge.js ensures correct lifetime of objects on V8 and CLR heaps. The CLR code can be pre-compiled or specified as C#, F#, Python, or PowerShell source: Edge.js can compile CLR scripts at runtime. Edge can be extended to support other CLR languages or DSLs.
 
 ![Edge.js interop model](https://f.cloud.github.com/assets/822369/234085/b305625c-8768-11e2-8de0-e03ae98e7249.PNG)
 
@@ -73,7 +73,7 @@ Edge.js provides an asynchronous, in-process mechanism for interoperability betw
 * access MS SQL from Node.js using ADO.NET [more...](http://blog.codeship.io/2014/04/22/leverage-sql-server-with-node-js-using-edge-js.html)  
 * use CLR multi-threading from Node.js for CPU intensive work [more...](http://tomasz.janczuk.org/2013/02/cpu-bound-workers-for-nodejs.html)  
 * write native extensions to Node.js in C# instead of C/C++  
-* intergate existing .NET components into Node.js applications
+* integrate existing .NET components into Node.js applications
 
 Read more about the background and motivations of the project [here](http://tomasz.janczuk.org/2013/02/hosting-net-code-in-nodejs-applications.html). 
 
@@ -144,7 +144,7 @@ $>node server.js
 
 ## How to: integrate C# code into Node.js code
 
-Edge provides several ways to integrate C# code into a Node.js application. Regardless of the way you choose, the entry point into the .NET code is normalized to a `Func<object,Task<object>>` delegate. This allows Node.js code to call .NET asynchronoulsy and avoid blocking the Node.js event loop. 
+Edge provides several ways to integrate C# code into a Node.js application. Regardless of the way you choose, the entry point into the .NET code is normalized to a `Func<object,Task<object>>` delegate. This allows Node.js code to call .NET asynchronously and avoid blocking the Node.js event loop. 
 
 Edge provides a function that accepts a reference to C# code in one of the supported representations, and returns a Node.js function which acts as a JavaScript proxy to the `Func<object,Task<object>>` .NET delegate:
 
@@ -168,7 +168,7 @@ Alternatively, if you know the C# implementation will complete synchronously giv
 var result = myFunction('Some input', true);
 ```
 
-The `true` parameter instead of a callback indicates that Node.js expects the C# implementation to complete synchronsouly. If the CLR function implementation does not complete synchronously, the call above will result in an exception. 
+The `true` parameter instead of a callback indicates that Node.js expects the C# implementation to complete synchronously. If the CLR function implementation does not complete synchronously, the call above will result in an exception. 
 
 One representation of CLR code that Edge.js accepts is C# source code. You can embed C# literal representing a .NET async lambda expression implementing the `Func<object,Task<object>>` delegate directly inside Node.js code:
 
@@ -176,7 +176,7 @@ One representation of CLR code that Edge.js accepts is C# source code. You can e
 var add7 = edge.func('async (input) => { return (int)input + 7; }');
 ``` 
 
-In antoher representation, you can embed multi-line C# source code by providing a function with a body containing a multi-line comment. Edge extracts the C# code from the function body using regular expressions:
+In another representation, you can embed multi-line C# source code by providing a function with a body containing a multi-line comment. Edge extracts the C# code from the function body using regular expressions:
 
 ```javascript
 var add7 = edge.func(function() {/*
@@ -227,9 +227,9 @@ var clrMethod = edge.func({
 });
 ```
 
-If you don't specify methodName, `Invoke` is assumed. If you don't specify typeName, a type name is constucted by assuming the class called `Startup` in the namespace equal to the assembly file name (without the `.dll`). In the example above, if typeName was not specified, it would default to `My.Edge.Samples.Startup`.
+If you don't specify methodName, `Invoke` is assumed. If you don't specify typeName, a type name is constructed by assuming the class called `Startup` in the namespace equal to the assembly file name (without the `.dll`). In the example above, if typeName was not specified, it would default to `My.Edge.Samples.Startup`.
 
-The assemblyFile is relative to the working directory. If you want to locate your assembly in a fixed location relative to your Node.js application, it is useful to constuct the assemblyFile using `__dirname`. 
+The assemblyFile is relative to the working directory. If you want to locate your assembly in a fixed location relative to your Node.js application, it is useful to construct the assemblyFile using `__dirname`. 
 
 You can also create Node.js proxies to .NET functions specifying just the assembly name as a parameter:
 
@@ -284,7 +284,7 @@ var add7 = edge.func({
 
 ## How to: marshal data between C# and Node.js
 
-Edge.js can marshal any JSON-serializable value between .NET and Node.js (although JSON serializaton is not used in the process). Edge also supports marshaling between Node.js `Buffer` instance and a CLR `byte[]` array to help you efficiently pass binary data.
+Edge.js can marshal any JSON-serializable value between .NET and Node.js (although JSON serialization is not used in the process). Edge also supports marshalling between Node.js `Buffer` instance and a CLR `byte[]` array to help you efficiently pass binary data.
 
 You can call .NET from Node.js and pass in a complex JavaScript object as follows:
 
@@ -327,7 +327,7 @@ public class Startup
 
 ```
 
-Similar type marshaling is applied when .NET code passes data back to Node.js code. In .NET code you can provide an instance of any CLR type that would normally be JSON serializable, including domain specific types like `Person` or anonymous objects. For example:
+Similar type marshalling is applied when .NET code passes data back to Node.js code. In .NET code you can provide an instance of any CLR type that would normally be JSON serializable, including domain specific types like `Person` or anonymous objects. For example:
 
 ```c#
 using System.Threading.Tasks;
@@ -401,9 +401,9 @@ $>node sample.js
   anObject: { a: 'foo', b: 12 } }
 ```
 
-When data is marshaled from .NET to Node.js, no checks for circular references are made. They will typically result in stack overflows. Make sure the object graph you are passing from .NET to Node.js is a tree and does not contain any cycles. 
+When data is marshalled from .NET to Node.js, no checks for circular references are made. They will typically result in stack overflows. Make sure the object graph you are passing from .NET to Node.js is a tree and does not contain any cycles. 
 
-**WINDOWS ONLY** When marshaling strongly typed objects (e.g. Person) form .NET to Node.js, you can optionaly tell Edge.js to observe the [System.Web.Script.Serialization.ScriptIgnoreAttribute](http://msdn.microsoft.com/en-us/library/system.web.script.serialization.scriptignoreattribute.aspx). You opt in to this behavior by setting the `EDGE_ENABLE_SCRIPTIGNOREATTRIBUTE` environment variable:
+**WINDOWS ONLY** When marshalling strongly typed objects (e.g. Person) form .NET to Node.js, you can optionally tell Edge.js to observe the [System.Web.Script.Serialization.ScriptIgnoreAttribute](http://msdn.microsoft.com/en-us/library/system.web.script.serialization.scriptignoreattribute.aspx). You opt in to this behavior by setting the `EDGE_ENABLE_SCRIPTIGNOREATTRIBUTE` environment variable:
 
 ```
 set EDGE_ENABLE_SCRIPTIGNOREATTRIBUTE=1
@@ -413,7 +413,7 @@ Edge.js by default does not observe the ScriptIgnoreAttribute to avoid the assoc
 
 ## How to: call Node.js from C#  
 
-In addition to marshaling data, edge can marshal proxies to JavaScript functions when invoking .NET code from Node.js. This allows .NET code to call back into Node.js. 
+In addition to marshalling data, edge can marshal proxies to JavaScript functions when invoking .NET code from Node.js. This allows .NET code to call back into Node.js. 
 
 Suppose the Node.js application passes an `add` function to the .NET code as a property of an object. The function receives two numbers and returns the sum of them via the provided callback:
 
@@ -450,9 +450,9 @@ $>node sample.js
 10
 ```
 
-The Node.js function exported from Node.js to .NET must follow the prescriptive async pattern of accepting two parameters: payload and a callback. The callback function accepts two parametrs. The first one is the error, if any, and the second the result of the operation:
+The Node.js function exported from Node.js to .NET must follow the prescriptive async pattern of accepting two parameters: payload and a callback. The callback function accepts two parameters. The first one is the error, if any, and the second the result of the operation:
 
-```javasctipt
+```javascript
 function (payload, callback) {
     var error;  // must be null or undefined in the absence of error
     var result; 
@@ -473,7 +473,7 @@ Using TPL in CLR to provide a proxy to an asynchronous Node.js function allows t
 
 ## How to: export C# function to Node.js
 
-Similarly to marshaling functions from Node.js to .NET, Edge.js can also marshal functions from .NET to Node.js. The .NET code can export a `Func<object,Task<object>>` delegate to Node.js as part of the return value of a .NET method invocation. For example:
+Similarly to marshalling functions from Node.js to .NET, Edge.js can also marshal functions from .NET to Node.js. The .NET code can export a `Func<object,Task<object>>` delegate to Node.js as part of the return value of a .NET method invocation. For example:
 
 ```javascript
 var createHello = edge.func(function () {/*
@@ -512,7 +512,7 @@ console.log(counter(null, true)); // prints 14
 
 Edge.js enables you to run Python and Node.js in-process.
 
-In addition to [platform specific prerequisities](#what-you-need) you need [IronPython 2.7.3](http://ironpython.codeplex.com/releases/view/81726) to proceed.
+In addition to [platform specific prerequisites](#what-you-need) you need [IronPython 2.7.3](http://ironpython.codeplex.com/releases/view/81726) to proceed.
 
 ### Hello, world
 
@@ -612,9 +612,9 @@ Python welcomes Node.js
 
 ### To sync or to async, that is the question
 
-In the examples above Pythion script was executing asynchronously on its own thread without blocking the singleton V8 thread on which the Node.js event loop runs. This means your Node.js application remains reponsive while the Python code executes in the background. 
+In the examples above Python script was executing asynchronously on its own thread without blocking the singleton V8 thread on which the Node.js event loop runs. This means your Node.js application remains responsive while the Python code executes in the background. 
 
-If know your Python code is non-blocking, or if your know what your are doing, you can tell Edge.js to execute Python code on the singleton V8 thread. This will improve performance for non-blocking Python scripts embedded in a Node.js application:
+If you know your Python code is non-blocking, or if you know what you are doing, you can tell Edge.js to execute Python code on the singleton V8 thread. This will improve performance for non-blocking Python scripts embedded in a Node.js application:
 
 ```javascript
 var edge = require('edge');
@@ -746,7 +746,7 @@ npm install edge
 npm install edge-sql
 ```
 
-Set the connection string as an enironment variable (your connection string may be different):
+Set the connection string as an environment variable (your connection string may be different):
 
 ```
 set EDGE_SQL_CONNECTION_STRING=Data Source=localhost;Initial Catalog=Northwind;Integrated Security=True
@@ -830,13 +830,13 @@ updateProductName({ myProductId: 10, newName: 'New Ikura' }, function (error, re
 
 Edge.js can work with any pre-compiled CLR assembly that contains the `Func<object,Task<object>>` delegate. Out of the box, Edge.js also allows you to embed C# source code in a Node.js application and compile it on the fly. 
 
-To enable compilation of other CLR languages (e.g. F#) at runtime, or to support domain specific languages (DSLs) like T-SQL, you can use the compiler composibility model provided by Edge.js. Please read the [add support for a CLR language](https://github.com/tjanczuk/edge/wiki/Add-support-for-a-CLR-language) guide to get started. 
+To enable compilation of other CLR languages (e.g. F#) at runtime, or to support domain specific languages (DSLs) like T-SQL, you can use the compiler composability model provided by Edge.js. Please read the [add support for a CLR language](https://github.com/tjanczuk/edge/wiki/Add-support-for-a-CLR-language) guide to get started. 
 
 ## How to: exceptions
 
 Edge.js marshals Node.js errors and exceptions to .NET as well as .NET exceptions to Node.js. 
 
-CLR exceptions thrown in .NET code invoked from Node.js are marshaled as the `error` parameter to the Node.js callback function. Consider this example:
+CLR exceptions thrown in .NET code invoked from Node.js are marshalled as the `error` parameter to the Node.js callback function. Consider this example:
 
 ```javascript
 var edge = require('edge');
@@ -941,11 +941,11 @@ Without this setting (the default), Edge.js will not generate debugging informat
 
 You can debug C# code embedded into a Node.js application using a reference to a *.cs or *.csx file:
 
-```javacript
+```javascript
 var hello = edge.func('MyClass.cs');
 ```
 
-You can also debug C# code embeeded directly into a *.js file using the function comment syntax:
+You can also debug C# code embedded directly into a *.js file using the function comment syntax:
 
 ```javscript
 var hello = edge.func(function () {/*
@@ -995,7 +995,7 @@ build.bat release 0.10.0
 
 Note: the Node.js version number you provide must be version number corresponding to one of the subdirectories of http://nodejs.org/dist. The command will build both x32 and x64 architectures (assuming you use x64 machine). The command will also copy the edge.node executables to appropriate locations under lib\native directory where they are looked up from at runtime. The `npm install` step copies the C standard library shared DLL to the location of the edge.node for the component to be ready to go.
 
-To build the C++\CLI native extension using the version of Node.js installed on your machine, issue the followig command:
+To build the C++\CLI native extension using the version of Node.js installed on your machine, issue the following command:
 
 ```
 npm install -g node-gyp
@@ -1095,7 +1095,7 @@ These instructions were tested on Ubuntu 12.04 x64. High level, you must have No
 
 ### Ubuntu, starting from a clean VM (i.e. taking the high road)
 
-If you have a fresh Ubuntu 12.04 x64 installation, the most convenient way of installing Edge.js with all prerequisities is by running:
+If you have a fresh Ubuntu 12.04 x64 installation, the most convenient way of installing Edge.js with all prerequisites is by running:
 
 ```bash
 sudo bash -c 'bash <(wget -qO- https://raw.githubusercontent.com/tjanczuk/edge/master/tools/ubuntu_12.04_clean_install.sh)'
@@ -1109,7 +1109,7 @@ This will do the following:
 * Download Edge.js sources and build x64 release  
 * Run Edge.js tests  
 
-This process takes about 25 minutes on a Ubuntu 12.04 x64 VM running on a 2 core VM with 4GB RAM within Fusion on a MacBook Pro. If successful, your machine will have all the prerequisities to `npm install edge`. 
+This process takes about 25 minutes on a Ubuntu 12.04 x64 VM running on a 2 core VM with 4GB RAM within Fusion on a MacBook Pro. If successful, your machine will have all the prerequisites to `npm install edge`. 
 
 ### Ubuntu, manual install 
 
