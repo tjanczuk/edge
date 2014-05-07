@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Edge.Js
+namespace EdgeJs
 {
     public class Edge
     {
@@ -14,6 +14,7 @@ namespace Edge.Js
         static bool initialized;
         static TaskCompletionSource<object> tcs;
         static Func<object, Task<object>> compileFunc;
+        static ManualResetEvent waitHandle = new ManualResetEvent(false);
 
         static string AssemblyDirectory
         {
@@ -32,20 +33,16 @@ namespace Edge.Js
             compileFunc = (Func<object, Task<object>>)input;
             tcs = new TaskCompletionSource<object>();
             initialized = true;
-
-            Task.Run(async () =>
-            {
-                await compileFunc("SOME JS CODE TO COMPILE");
-            });
+            waitHandle.Set();
 
             return tcs.Task;
         }
 
-        [DllImport(@"node86.dll, Edge.Js", EntryPoint = "#585", CallingConvention = CallingConvention.Cdecl)]
-        static extern int NodeStart86(int argc, string[] argv);
+        [DllImport("node.dll", EntryPoint = "#585", CallingConvention = CallingConvention.Cdecl)]
+        static extern int NodeStart(int argc, string[] argv);
 
-        [DllImport(@"node64.dll, Edge.Js", EntryPoint = "#585", CallingConvention = CallingConvention.Cdecl)]
-        static extern int NodeStart64(int argc, string[] argv);
+        [DllImport("kernel32.dll", EntryPoint = "LoadLibrary")]
+        static extern int LoadLibrary([MarshalAs(UnmanagedType.LPStr)] string lpLibFileName);
 
         public static Func<object,Task<object>> Func(string code)
         {
@@ -55,38 +52,32 @@ namespace Edge.Js
                 {
                     if (!initialized)
                     {
-                        var boostrap = @"
-                            __dirname = process.argv[1];
-                            process.env['EDGE_NATIVE'] = process.argv[1]
-                                + (process.arch === 'x64' ? '\\x64\\edge.node' : '\\x86\\edge.node');
-                            var edge = require(process.argv[1] + '\\edge.js');
-                            var initialize = edge.func({
-                                assemblyFile: 'Edge.Js.dll',
-                                typeName: 'Edge.Js.Edge',
-                                methodName: 'InitializeInternal'
-                            });
-                            var compileFunc = function (data, callback) {
-                                console.log(data);
-                                callback();
-                            }
-                            initialize(compileFunc, function (error, data) {
-                                if (error) throw error;
-                                // At this point V8 thread will terminate unless there 
-                                // are other pending events or active listeners. 
-                            });
-                        ";
-
                         if (IntPtr.Size == 4)
                         {
-                            NodeStart86(4, new string[] { "node", "-e", boostrap, AssemblyDirectory });
+                            LoadLibrary(AssemblyDirectory + @"\x86\node.dll");
                         }
                         else if (IntPtr.Size == 8)
                         {
-                            NodeStart64(4, new string[] { "node", "-e", boostrap, AssemblyDirectory });
+                            LoadLibrary(AssemblyDirectory + @"\x64\node.dll");
                         }
                         else
                         {
-                            throw new InvalidOperationException("Unsupported architecture. Only x86 and x64 are supported.");
+                            throw new InvalidOperationException(
+                                "Unsupported architecture. Only x86 and x64 are supported.");
+                        }
+
+                        Thread v8Thread = new Thread(() => 
+                        {
+                            NodeStart(2, new string[] { "node", AssemblyDirectory + "\\double_edge.js" });
+                            waitHandle.Set();
+                        });
+
+                        v8Thread.Start();
+                        waitHandle.WaitOne();
+
+                        if (!initialized)
+                        {
+                            throw new InvalidOperationException("Unable to initialize Node.js runtime.");
                         }
                     }
                 }
