@@ -6,7 +6,9 @@ if "%1" equ "" (
     exit /b -1
 )
 
-mkdir "%SELF%\build\nuget" > nul 2>&1
+mkdir "%SELF%\build\nuget\content\edge" > nul 2>&1
+mkdir "%SELF%\build\nuget\lib" > nul 2>&1
+mkdir "%SELF%\build\nuget\tools" > nul 2>&1
 
 if not exist "%SELF%\build\download.exe" (
 	csc /out:"%SELF%\build\download.exe" "%SELF%\download.cs"
@@ -18,6 +20,10 @@ if not exist "%SELF%\build\unzip.exe" (
 
 if not exist "%SELF%\build\repl.exe" (
 	csc /out:"%SELF%\build\repl.exe" "%SELF%\repl.cs"
+)
+
+if not exist "%SELF%\build\nuget.exe" (
+	"%SELF%\build\download.exe" http://nuget.org/nuget.exe "%SELF%\build\nuget.exe"
 )
 
 if not exist "%SELF%\build\%1.zip" (
@@ -46,11 +52,24 @@ if %ERRORLEVEL% neq 0 exit /b -1
 call :build_edge %1 x64
 if %ERRORLEVEL% neq 0 exit /b -1
 
-csc /out:"%SELF%\build\nuget\EdgeJs.dll" /target:library "%SELF%\..\src\double\dotnet\EdgeJs.cs"
+csc /out:"%SELF%\build\nuget\lib\EdgeJs.dll" /target:library "%SELF%\..\src\double\dotnet\EdgeJs.cs"
 if %ERRORLEVEL% neq 0 exit /b -1
 
-copy /y "%SELF%\..\lib\edge.js" "%SELF%\build\nuget"
-copy /y "%SELF%\..\lib\double_edge.js" "%SELF%\build\nuget"
+copy /y "%SELF%\..\lib\edge.js" "%SELF%\build\nuget\content\edge"
+copy /y "%SELF%\..\lib\double_edge.js" "%SELF%\build\nuget\content\edge"
+copy /y "%SELF%\nuget\install.ps1" "%SELF%\build\nuget\tools"
+copy /y "%SELF%\nuget\edge.nuspec" "%SELF%\build\nuget"
+
+pushd "%SELF%\build\nuget"
+"%SELF%\build\nuget.exe" pack edge.nuspec
+if %ERRORLEVEL% neq 0 (
+	echo Failure building Nuget package
+	popd
+	exit /b -1
+)
+popd
+
+echo SUCCESS. Nuget package at %SELF%\build\nuget
 
 exit /b 0
 
@@ -58,8 +77,7 @@ exit /b 0
 
 rem takes 2 parameters: 1 - node version, 2 - x86 or x64
 
-if exist "%SELF%\build\nuget\%2\edge.node" exit /b 0
-rem rmdir /s /q "%SELF%\build\nuget\%2" > nul 2>&1
+if exist "%SELF%\build\nuget\content\edge\%2\edge.node" exit /b 0
 
 set NODEEXE=%SELF%\build\node-%1-%2\node.exe
 set GYP=%APPDATA%\npm\node_modules\node-gyp\bin\node-gyp.js
@@ -69,9 +87,9 @@ pushd "%SELF%\.."
 "%NODEEXE%" "%GYP%" configure --msvs_version=2013
 "%SELF%\build\repl.exe" ./build/edge.vcxproj "%USERPROFILE%\.node-gyp\%1\$(Configuration)\node.lib" "%SELF%\build\node-%1-%2\node.lib"
 "%NODEEXE%" "%GYP%" build
-mkdir "%SELF%\build\nuget\%2" > nul 2>&1
-copy /y build\release\edge.node "%SELF%\build\nuget\%2"
-copy /y "%SELF%\build\node-%1-%2\node.dll" "%SELF%\build\nuget\%2"
+mkdir "%SELF%\build\nuget\content\edge\%2" > nul 2>&1
+copy /y build\release\edge.node "%SELF%\build\nuget\content\edge\%2"
+copy /y "%SELF%\build\node-%1-%2\node.dll" "%SELF%\build\nuget\content\edge\%2"
 
 popd
 

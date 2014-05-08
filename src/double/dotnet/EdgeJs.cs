@@ -54,11 +54,11 @@ namespace EdgeJs
                     {
                         if (IntPtr.Size == 4)
                         {
-                            LoadLibrary(AssemblyDirectory + @"\x86\node.dll");
+                            LoadLibrary(AssemblyDirectory + @"\edge\x86\node.dll");
                         }
                         else if (IntPtr.Size == 8)
                         {
-                            LoadLibrary(AssemblyDirectory + @"\x64\node.dll");
+                            LoadLibrary(AssemblyDirectory + @"\edge\x64\node.dll");
                         }
                         else
                         {
@@ -68,7 +68,7 @@ namespace EdgeJs
 
                         Thread v8Thread = new Thread(() => 
                         {
-                            NodeStart(2, new string[] { "node", AssemblyDirectory + "\\double_edge.js" });
+                            NodeStart(2, new string[] { "node", AssemblyDirectory + "\\edge\\double_edge.js" });
                             waitHandle.Set();
                         });
 
