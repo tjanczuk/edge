@@ -1,11 +1,11 @@
 Edge.js: .NET and Node.js in-process
 ====
 
-An edge connects two nodes:
+An edge connects two nodes. This edge connects Node.js and .NET. V8 and CLR/Mono - in process. On Windows, MacOS, and Linux. 
 
 ![image](https://cloud.githubusercontent.com/assets/822369/2807996/94b3ff4e-cd07-11e3-833c-b0474d25119a.png)
 
-This edge connects Node.js and .NET. V8 and CLR/Mono - in process. On Windows, MacOS, and Linux. 
+You can script C# from a Node.js process:
 
 ```javascript
 var edge = require('edge');
@@ -20,6 +20,33 @@ helloWorld('JavaScript', function (error, result) {
     if (error) throw error;
     console.log(result);
 });
+```
+
+You can also script Node.js from C#:
+
+```c#
+using System;
+using System.Threading.Tasks;
+using EdgeJs;
+
+class Program
+{
+    public static async void Start()
+    {
+        var func = Edge.Func(@"
+            return function (data, callback) {
+                callback(null, 'Node.js welcomes ' + data);
+            }
+        ");
+
+        Console.WriteLine(await func(".NET"));
+    }
+
+    static void Main(string[] args)
+    {
+        Task.Run((Action)Start).Wait();
+    }
+}
 ```
 
 ## What problems does Edge.js solve?
@@ -70,6 +97,8 @@ You can call .NET functions from Node.js and Node.js functions from .NET. Edge.j
 
 Edge.js provides an asynchronous, in-process mechanism for interoperability between Node.js and .NET. You can use this mechanism to:
 
+* script Node.js from a .NET application (console app, ASP.NET, etc.)
+* script C# from a Node.js application on Windows, MacOS, and Linux
 * access MS SQL from Node.js using ADO.NET [more...](http://blog.codeship.io/2014/04/22/leverage-sql-server-with-node-js-using-edge-js.html)  
 * use CLR multi-threading from Node.js for CPU intensive work [more...](http://tomasz.janczuk.org/2013/02/cpu-bound-workers-for-nodejs.html)  
 * write native extensions to Node.js in C# instead of C/C++  
