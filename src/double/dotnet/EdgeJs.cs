@@ -12,7 +12,6 @@ namespace EdgeJs
     {
         static object syncRoot = new object();
         static bool initialized;
-        static TaskCompletionSource<object> tcs;
         static Func<object, Task<object>> compileFunc;
         static ManualResetEvent waitHandle = new ManualResetEvent(false);
 
@@ -20,7 +19,7 @@ namespace EdgeJs
         {
             get
             {
-                string codeBase = Assembly.GetExecutingAssembly().CodeBase;
+                string codeBase = typeof(Edge).Assembly.CodeBase;
                 UriBuilder uri = new UriBuilder(codeBase);
                 string path = Uri.UnescapeDataString(uri.Path);
                 return Path.GetDirectoryName(path);
@@ -31,11 +30,10 @@ namespace EdgeJs
         public Task<object> InitializeInternal(object input)
         {
             compileFunc = (Func<object, Task<object>>)input;
-            tcs = new TaskCompletionSource<object>();
             initialized = true;
             waitHandle.Set();
 
-            return tcs.Task;
+            return Task<object>.FromResult((object)null);
         }
 
         [DllImport("node.dll", EntryPoint = "#585", CallingConvention = CallingConvention.Cdecl)]
@@ -72,6 +70,7 @@ namespace EdgeJs
                             waitHandle.Set();
                         });
 
+                        v8Thread.IsBackground = true;
                         v8Thread.Start();
                         waitHandle.WaitOne();
 
@@ -91,22 +90,6 @@ namespace EdgeJs
             var task = compileFunc(code);
             task.Wait();
             return (Func<object, Task<object>>)task.Result;
-        }
-
-        public static void Close()
-        {
-            if (initialized && compileFunc != null)
-            {
-                lock (syncRoot)
-                {
-                    if (compileFunc != null)
-                    {
-                        tcs.SetResult(null);
-                        compileFunc = null;
-                        tcs = null;
-                    }
-                }
-            }
         }
     }
 }
