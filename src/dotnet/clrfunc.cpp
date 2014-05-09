@@ -175,6 +175,10 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(System::Object^ netdata)
     {
         jsdata = v8::Integer::New((int)netdata);
     }
+    else if (type == Int16::typeid)
+    {
+        jsdata = v8::Integer::New((int)netdata);
+    }
     else if (type == System::Int64::typeid)
     {
         jsdata = v8::Number::New(((System::IConvertible^)netdata)->ToDouble(nullptr));
