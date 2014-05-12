@@ -1089,6 +1089,16 @@ node-gyp configure build -debug
 export EDGE_NATIVE=/Users/tomek/edge/build/Debug/edge.node
 ```
 
+### Troubleshooting
+
+You may receive the following error while trying to install edge on OSX:
+
+```bash
+Package mono-2 was not found in the pkg-config search path.
+```
+
+In all likeliness this is the result of having a version of `pkg-config` installed that is not searching for libs in the correct location. You might find a solution in [Issue #134](./issues/134).
+
 ## Building on Ubuntu
 
 These instructions were tested on Ubuntu 12.04 x64. High level, you must have Node.js x64 and Mono x64 installed on the machine before you can install Edge.js. There are two ways of getting there.
