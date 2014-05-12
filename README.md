@@ -1097,7 +1097,7 @@ You may receive the following error while trying to install edge on OSX:
 Package mono-2 was not found in the pkg-config search path.
 ```
 
-In all likeliness this is the result of having a version of `pkg-config` installed that is not searching for libs in the correct location. You might find a solution in [Issue #134](./issues/134).
+In all likeliness this is the result of having a version of `pkg-config` installed that is not searching for libs in the correct location. You might find a solution in Issue #134.
 
 ## Building on Ubuntu
 
