@@ -66,25 +66,27 @@ Listen to the [Edge.js podcast on Herdingcode](http://herdingcode.com/herding-co
 ## Contents
 
 [Introduction](#introduction)  
-[What you need](#what-you-need)  
-[How to: C# hello, world](#how-to-c-hello-world)  
-[How to: integrate C# code into Node.js code](#how-to-integrate-c-code-into-nodejs-code)  
-[How to: specify additional CLR assembly references in C# code](#how-to-specify-additional-clr-assembly-references-in-c-code)  
-[How to: marshal data between C# and Node.js](#how-to-marshal-data-between-c-and-nodejs)  
-[How to: call Node.js from C#](#how-to-call-nodejs-from-c)  
-[How to: export C# function to Node.js](#how-to-export-c-function-to-nodejs)  
-[How to: script Python in a Node.js application](#how-to-script-python-in-a-nodejs-application)  
-[How to: script PowerShell in a Node.js application](#how-to-script-powershell-in-a-nodejs-application)  
-[How to: script F# in a Node.js application](#how-to-script-f-in-a-nodejs-application)  
-[How to: script T-SQL in a Node.js application](#how-to-script-t-sql-in-a-nodejs-application)  
-[How to: support for other CLR languages](#how-to-support-for-other-clr-languages)  
-[How to: exceptions](#how-to-exceptions)  
-[How to: debugging](#how-to-debugging)  
-[Performance](#performance)  
-[Building on Windows](#building-on-windows)  
-[Building on OSX](#building-on-osx)  
-[Building on Ubuntu](#building-on-ubuntu)  
-[Running tests](#running-tests)  
+[Scripting CLR from Node.js](#scripting-clr-from-nodejs)  
+[  What you need](#what-you-need)  
+[  How to: C# hello, world](#how-to-c-hello-world)  
+[  How to: integrate C# code into Node.js code](#how-to-integrate-c-code-into-nodejs-code)  
+[  How to: specify additional CLR assembly references in C# code](#how-to-specify-additional-clr-assembly-references-in-c-code)  
+[  How to: marshal data between C# and Node.js](#how-to-marshal-data-between-c-and-nodejs)  
+[  How to: call Node.js from C#](#how-to-call-nodejs-from-c)  
+[  How to: export C# function to Node.js](#how-to-export-c-function-to-nodejs)  
+[  How to: script Python in a Node.js application](#how-to-script-python-in-a-nodejs-application)  
+[  How to: script PowerShell in a Node.js application](#how-to-script-powershell-in-a-nodejs-application)  
+[  How to: script F# in a Node.js application](#how-to-script-f-in-a-nodejs-application)  
+[  How to: script T-SQL in a Node.js application](#how-to-script-t-sql-in-a-nodejs-application)  
+[  How to: support for other CLR languages](#how-to-support-for-other-clr-languages)  
+[  How to: exceptions](#how-to-exceptions)  
+[  How to: debugging](#how-to-debugging)  
+[  Performance](#performance)  
+[  Building on Windows](#building-on-windows)  
+[  Building on OSX](#building-on-osx)  
+[  Building on Ubuntu](#building-on-ubuntu)  
+[  Running tests](#running-tests)  
+[Scripting Node.js from CLR](#scripting-nodejs-from-clr)  
 [Contribution and derived work](#contribution-and-derived-work)  
 
 ## Introduction 
@@ -108,11 +110,15 @@ Read more about the background and motivations of the project [here](http://toma
 
 [Follow @tjanczuk](https://twitter.com/tjanczuk) for updates related to the module. 
 
-## What you need
+## Scripting CLR from Node.js
+
+If you are writing a Node.js application, this section explains how you include and run CLR code in your app. It works on Windows, MacOS, and Linux.
+
+### What you need
 
 Edge.js runs on Windows, Linux, and MacOS and requires Node.js 0.8 or later, as well as .NET Framework 4.5. or Mono 3.4.0. 
 
-### Windows
+#### Windows
 
 * Node.js 0.8.x or later (developed and tested with v0.8.22, and v0.10.0, both x32 and x64 architectures)  
 * [.NET 4.5](http://www.microsoft.com/en-us/download/details.aspx?id=30653)  
@@ -121,7 +127,7 @@ Edge.js runs on Windows, Linux, and MacOS and requires Node.js 0.8 or later, as 
 
 ![image](https://cloud.githubusercontent.com/assets/822369/2808066/3707f37c-cd0d-11e3-9b4e-7257ffc27c9c.png)
 
-### Linux
+#### Linux
 
 * Node.js 0.8.x or later (developed and tested with v0.10.26 x64)  
 * Mono 3.4.0 x64  
@@ -129,7 +135,7 @@ Edge.js runs on Windows, Linux, and MacOS and requires Node.js 0.8 or later, as 
 
 ![image](https://cloud.githubusercontent.com/assets/822369/2808077/03f92874-cd0e-11e3-88ea-79f67b8b1d49.png)
 
-### MacOS  
+#### MacOS  
 
 * Node.js 0.8.x or later (developed and tested with v0.10.26 x64)  
 * Mono 3.4.0 x64
@@ -137,7 +143,7 @@ Edge.js runs on Windows, Linux, and MacOS and requires Node.js 0.8 or later, as 
 
 ![image](https://cloud.githubusercontent.com/assets/822369/2808046/8f4ce378-cd0b-11e3-95dc-ef0842c28821.png)
 
-## How to: C# hello, world
+### How to: C# hello, world
 
 Follow setup instructions [for your platform](#what-you-need). 
 
@@ -171,7 +177,7 @@ $>node server.js
 .NET welcomes JavaScript
 ```
 
-## How to: integrate C# code into Node.js code
+### How to: integrate C# code into Node.js code
 
 Edge provides several ways to integrate C# code into a Node.js application. Regardless of the way you choose, the entry point into the .NET code is normalized to a `Func<object,Task<object>>` delegate. This allows Node.js code to call .NET asynchronously and avoid blocking the Node.js event loop. 
 
@@ -268,7 +274,7 @@ var clrMethod = edge.func('My.Edge.Samples.dll');
 
 In that case the default typeName of `My.Edge.Samples.Startup` and methodName of `Invoke` is assumed as explained above. 
 
-## How to: specify additional CLR assembly references in C# code
+### How to: specify additional CLR assembly references in C# code
 
 When you provide C# source code and let edge compile it for you at runtime, edge will by default reference only mscorlib.dll and System.dll assemblies. In applications that require additional assemblies you can specify them in C# code using a special hash pattern, similar to Roslyn. For example, to use ADO.NET you must reference System.Data.dll:
 
@@ -311,7 +317,7 @@ var add7 = edge.func({
 );
 ```
 
-## How to: marshal data between C# and Node.js
+### How to: marshal data between C# and Node.js
 
 Edge.js can marshal any JSON-serializable value between .NET and Node.js (although JSON serialization is not used in the process). Edge also supports marshalling between Node.js `Buffer` instance and a CLR `byte[]` array to help you efficiently pass binary data.
 
@@ -440,7 +446,7 @@ set EDGE_ENABLE_SCRIPTIGNOREATTRIBUTE=1
 
 Edge.js by default does not observe the ScriptIgnoreAttribute to avoid the associated performance cost. 
 
-## How to: call Node.js from C#  
+### How to: call Node.js from C#  
 
 In addition to marshalling data, edge can marshal proxies to JavaScript functions when invoking .NET code from Node.js. This allows .NET code to call back into Node.js. 
 
@@ -500,7 +506,7 @@ Func<object,Task<object>>
 
 Using TPL in CLR to provide a proxy to an asynchronous Node.js function allows the .NET code to use the convenience of the `await` keyword when invoking the Node.js functionality. The example above shows the use of the `await` keyword when calling the proxy of the Node.js `add` method.  
 
-## How to: export C# function to Node.js
+### How to: export C# function to Node.js
 
 Similarly to marshalling functions from Node.js to .NET, Edge.js can also marshal functions from .NET to Node.js. The .NET code can export a `Func<object,Task<object>>` delegate to Node.js as part of the return value of a .NET method invocation. For example:
 
@@ -535,7 +541,7 @@ console.log(counter(null, true)); // prints 13
 console.log(counter(null, true)); // prints 14
 ```
 
-## How to: script Python in a Node.js application
+### How to: script Python in a Node.js application
 
 **NOTE** This functionality requires IronPython and has been tested on Windows only. 
 
@@ -543,7 +549,7 @@ Edge.js enables you to run Python and Node.js in-process.
 
 In addition to [platform specific prerequisites](#what-you-need) you need [IronPython 2.7.3](http://ironpython.codeplex.com/releases/view/81726) to proceed.
 
-### Hello, world
+#### Hello, world
 
 Install edge and edge-py modules:
 
@@ -577,7 +583,7 @@ $>node py.js
 Python welcomes Node.js
 ```
 
-### The interop model
+#### The interop model
 
 Your Python script must evaluate to a lambda expression that accepts a single parameter. The parameter represents marshalled input from the Node.js code. The return value of the lambda expression is passed back as the result to Node.js code. The Python script can contain constructs (e.g. Python functions) that are used in the closure of the lambda expression. The instance of the script with associated state is created when `edge.func` is called in Node.js. Each call to the function referes to that instance.
 
@@ -606,7 +612,7 @@ def add(x):
 lambda x: add(x)
 ```
 
-### Python in its own file
+#### Python in its own file
 
 You can reference Python script stored in a *.py file instead of embedding Python code in a Node.js script.
 
@@ -639,7 +645,7 @@ $>node hello.js
 Python welcomes Node.js
 ```
 
-### To sync or to async, that is the question
+#### To sync or to async, that is the question
 
 In the examples above Python script was executing asynchronously on its own thread without blocking the singleton V8 thread on which the Node.js event loop runs. This means your Node.js application remains responsive while the Python code executes in the background. 
 
@@ -663,7 +669,7 @@ console.log(hello('Node.js', true));
 
 The `sync: true` property in the call to `edge.func` tells Edge.js to execute Python code on the V8 thread as opposed to creating a new thread to run Python script on. The `true` parameter in the call to `hello` requests that Edge.js does in fact call the `hello` function synchronously, i.e. return the result as opposed to calling a callback function. 
 
-## How to: script PowerShell in a Node.js application
+### How to: script PowerShell in a Node.js application
 
 **NOTE** This functionality only works on Windows. 
 
@@ -702,13 +708,13 @@ C:\testEdgeps>node server
 PowerShell welcomes Node.js on 05/04/2013 09:38:40
 ```
 
-### Tapping into PowerShell's ecosystem
+#### Tapping into PowerShell's ecosystem
 
 Rather than embedding PowerShell directly, you can use PowerShell files, dot source them and even use *Import-Module*.
 
 What you can do in native PowerShell works in Node.js.
 
-### Interop PowerShell and Python
+#### Interop PowerShell and Python
 
 Here you can reach out to IronPython from PowerShell from within Node.js on Windows. This holds true for working with JavaScript frameworks and C#.
 
@@ -737,7 +743,7 @@ helloPython('Node.js', function(error, result){
 });
 ```
 
-## How to: script F# in a Node.js application
+### How to: script F# in a Node.js application
 
 **NOTE** This functionality has not been tested on non-Windows platforms. 
 
@@ -758,7 +764,7 @@ helloFs('Node.js', function (error, result) {
 });
 ```
 
-## How to: script T-SQL in a Node.js application
+### How to: script T-SQL in a Node.js application
 
 **NOTE** This functionality has only been tested on Windows. Although ADO.NET exist in Mono, your mileage can vary. 
 
@@ -766,7 +772,7 @@ The edge-sql extension of Edge.js allows for accessing MS SQL databases by scrip
 
 You need Windows, [Node.js](http://nodejs.org), and [.NET 4.5](http://www.microsoft.com/en-us/download/details.aspx?id=30653). To run the sample code below you also need a connection string to the sample Northwind database that ships with MS SQL. 
 
-### Hello, world
+#### Hello, world
 
 Install edge and edge-sql modules:
 
@@ -818,7 +824,7 @@ New Ikura
 12
 ```
 
-### Parameterized queries
+#### Parameterized queries
 
 You can construct a parameterized query once and provide parameter values on a per-call basis:
 
@@ -836,7 +842,7 @@ getProduct({ myProductId: 10 }, function (error, result) {
 });
 ```
 
-### Basic CRUD support: select, update, insert, delete
+#### Basic CRUD support: select, update, insert, delete
 
 The four basic CRUD operations are supported. For example, here is how an update can look like:
 
@@ -855,13 +861,13 @@ updateProductName({ myProductId: 10, newName: 'New Ikura' }, function (error, re
 });
 ```
 
-## How to: support for other CLR languages
+### How to: support for other CLR languages
 
 Edge.js can work with any pre-compiled CLR assembly that contains the `Func<object,Task<object>>` delegate. Out of the box, Edge.js also allows you to embed C# source code in a Node.js application and compile it on the fly. 
 
 To enable compilation of other CLR languages (e.g. F#) at runtime, or to support domain specific languages (DSLs) like T-SQL, you can use the compiler composability model provided by Edge.js. Please read the [add support for a CLR language](https://github.com/tjanczuk/edge/wiki/Add-support-for-a-CLR-language) guide to get started. 
 
-## How to: exceptions
+### How to: exceptions
 
 Edge.js marshals Node.js errors and exceptions to .NET as well as .NET exceptions to Node.js. 
 
@@ -938,13 +944,13 @@ System.Exception: Error: Sample JavaScript error
    at Edge.Sample.Startup.<Invoke>d__0.MoveNext()
 ```
 
-## How to: debugging
+### How to: debugging
 
 **NOTE** This is Windows-only functionality.
 
 On Windows, you can debug the .NET code running as part of your Node.js application by attaching a managed code debugger (e.g. Visual Studio) to node.exe. You can debug .NET code in a pre-compiled CLR assembly as well C# literals embedded in the application and compiled by Edge.js at runtime. 
 
-### Debugging pre-compiled .NET code
+#### Debugging pre-compiled .NET code
 
 If you have integrated .NET code into a Node.js application using a pre-compiled CLR assembly like this:
 
@@ -958,7 +964,7 @@ then the best way to debug your .NET code is to attach a managed code debugger (
 
 From there, you can set breakpoints in your .NET code and the debugger will stop when they are reached.
 
-### Debugging embedded C# code
+#### Debugging embedded C# code
 
 Debugging embedded C# code (on Windows) requires that `EDGE_CS_DEBUG` environment variable is set in the environment of the node.exe process:
 
@@ -997,13 +1003,13 @@ After setting `EDGE_CS_DEBUG=1` environment variable before starting node.exe an
 
 ![debug-inline](https://f.cloud.github.com/assets/822369/326781/923d870c-9b4a-11e2-8f45-201a6431afbf.PNG)
 
-## Performance
+### Performance
 
 Read more about [performance of Edge.js on the wiki](https://github.com/tjanczuk/edge/wiki/Performance). Here is the gist of the latency (smaller is better):
 
 ![edgejs-performance1](https://f.cloud.github.com/assets/822369/486393/645f696a-b920-11e2-8a20-9fa6932bb092.png)
 
-## Building on Windows
+### Building on Windows
 
 You must have Visual Studio 2013 toolset, Python 2.7.x, and node-gyp installed for building.
 
@@ -1040,7 +1046,7 @@ set EDGE_NATIVE=C:\projects\edge\build\Debug\edge.node
 
 You can also set the `EDGE_DEBUG` environment variable to 1 to have the edge module generate debug traces to the console when it runs.
 
-## Running tests
+### Running tests
 
 You must have mocha installed on the system. Then:
 
@@ -1054,7 +1060,7 @@ or, from the root of the enlistment:
 mocha -R spec
 ```
 
-### Node.js version targeting on Windows
+#### Node.js version targeting on Windows
 
 **NOTE** this is Windows only functionality.
 
@@ -1080,7 +1086,7 @@ Lastly, you can run jshint on the project with:
 npm run jshint
 ```
 
-## Building on OSX
+### Building on OSX
 
 Prerequisities:
 
@@ -1118,7 +1124,7 @@ node-gyp configure build -debug
 export EDGE_NATIVE=/Users/tomek/edge/build/Debug/edge.node
 ```
 
-## Building on Ubuntu
+### Building on Ubuntu
 
 These instructions were tested on Ubuntu 12.04 x64. High level, you must have Node.js x64 and Mono x64 installed on the machine before you can install Edge.js. There are two ways of getting there.
 
@@ -1140,7 +1146,7 @@ This will do the following:
 
 This process takes about 25 minutes on a Ubuntu 12.04 x64 VM running on a 2 core VM with 4GB RAM within Fusion on a MacBook Pro. If successful, your machine will have all the prerequisites to `npm install edge`. 
 
-### Ubuntu, manual install 
+#### Ubuntu, manual install 
 
 This method is adequate if you already have a Mono x64 or Node.js x64 install on the machine and need to incrementally add Edge to it. 
 
@@ -1150,13 +1156,371 @@ Read through the [install script](https://raw.githubusercontent.com/tjanczuk/edg
 * If you need to build Mono, make sure to run `ldconfig` afterwards, otherwise the garbage collection libraries may not load.  
 * To make sure Mono can load the standard C library, run `sudo ln -s -f /lib/x86_64-linux-gnu/libc.so.6 /lib/x86_64-linux-gnu/libc.so`. For background on that step, see how [Mono loads native libraries](http://www.mono-project.com/Interop_with_Native_Libraries) or just [cut to the chase](http://stackoverflow.com/questions/14359981/mono-and-unmanaged-code-in-ubuntu).  
 
-### Debug build of Edge.js
+#### Debug build of Edge.js
 
 To build a debug build instead of release, you need to:
 
 ```bash
 node-gyp configure build -debug
 export EDGE_NATIVE=/home/tomek/edge/build/Debug/edge.node
+```
+
+## Scripting Node.js from CLR
+
+If you are writing a CLR application (e.g. a C# console application or ASP.NET web app), this section explains how you include and run Node.js code in your app. Currently it works on Windows, but MacOS, and Linux support is coming soon.
+
+### What you need
+
+You need Windows with:
+
+* [.NET 4.5](http://www.microsoft.com/en-us/download/details.aspx?id=30653)  
+* [Edge.js NuGet package](http://nuget.org)  
+* [Node.js](http://nodejs.org) (optional, if you want to use additional NPM packages)
+
+Edge.js support for scripting Node.js ships as a NuGet Package called `Edge.js`. It comes with everything you need to get started writing applications for x86 and x64 architectures. However, if you want to use additional Node.js packages from NPM, you must separately install Node.js runtime to access the NPM package manager. Edge.js has been developed and tested with Node.js v0.10.28. If you choose a different version of Node.js to install NPM packages, your mileage can vary. 
+
+You can install the [Edge.js NuGet package](http://nuget.org) using the Visual Studio built-in NuGet package management functionality or using the stand-alone [NuGet client](http://nuget.org/download). 
+
+### How to: Node.js hello, world
+
+Create a .NET 4.5 Console Application in Visual Studio. Add the Edge.js NuGet package to the project. Then in your code:
+
+```c#
+using System;
+using System.Threading.Tasks;
+using EdgeJs;
+
+class Program
+{
+    public static async void Start()
+    {
+        var func = Edge.Func(@"
+            return function (data, callback) {
+                callback(null, 'Node.js welcomes ' + data);
+            }
+        ");
+
+        Console.WriteLine(await func(".NET"));
+    }
+
+    static void Main(string[] args)
+    {
+        Task.Run((Action)Start).Wait();
+    }
+}
+```
+
+Compile and run:
+
+```
+C:\project\sample\bin\Debug> sample.exe
+Node.js welcomes .NET
+```
+
+### How to: intergate Node.js code into CLR code
+
+The Edge.js NuGet package contains a single managed assembly `EdgeJs.dll` with a single class `EdgeJs.Edge` exposing a single static function `Func`. The function accepts a string containing code in Node.js that constructs and *returns* a JavaScript function. The JavaScript function must have the signature required by Edge.js's prescriptive interop pattern: it must accept one parameter and a callback, and the callback must be called with an error and one return value: 
+
+```c#
+var func = Edge.Func(@"
+    return function (data, callback) {
+        callback(null, 'Hello, ' + data);
+    }
+");
+
+Edge.js creates a `Func<object,Task<object>>` delegate in CLR that allows .NET code to call the Node.js function asynchronously. You can use the standard TPL mechanisms or the async/await keywords to conveniently await completion of the asynchornous Node.js function:
+
+```c#
+var result = await func(".NET");
+// result == "Hello, .NET"
+```
+
+Note that the Node.js code snippet is not a function *definition*. Instead it must create and *return* a function instance. This allows you to initialize and maintain encapsulated Node.js state associated with the instance of the created function. The initialization code will execute only once when you call `Edge.Func`. Conceptually this is similar to defining a Node.js module that exports a single function (by returning it to the caller).  For example:
+
+```c#
+var increment = Edge.Func(@"
+    var current = 0;
+
+    return function (data, callback) {
+        current += data;
+        callback(null, current);
+    }
+");
+
+Console.WriteLine(await increment(4)); // outputs 4
+Console.WriteLine(await increment(7)); // outputs 11
+```
+
+Using multiline C# string literals is convenient for short Node.js code snippets, but you may want to store larger Node.js code in its own `*.js` file or files. 
+
+One pattern is to store your Node.js code in a `myfunc.js` file:
+
+```javascript
+return function (data, callback) {
+    callback(null, 'Node.js welcomes ' + data);
+}
+```
+
+And then load such file into memory with `File`:
+
+```c#
+var func = Edge.Func(File.ReadAllText("myfunc.js"));
+```
+
+Another pattern is to define a Node.js module that itself is a function:
+
+```javascript
+module.exports = function (data, callback) {
+    callback(null, 'Node.js welcomes ' + data);
+};
+```
+
+And then load and return this module with a short snippet of Node.js:
+
+```c#
+var func = Edge.Func(@"return require('./../myfunc.js')");
+```
+
+(Note the relative location of the file).
+
+### How to: use Node.js built-in modules
+
+You can use Node.js built-in modules out of the box. For example, you can set up a Node.js HTTP server hosted in a .NET application and call it from C#:
+
+```c#
+var createHttpServer = Edge.Func(@"
+    var http = require('http');
+
+    return function (port, cb) {
+        var server = http.createServer(function (req, res) {
+            res.end('Hello, world! ' + new Date());
+        }).listen(port, cb);
+    };
+");
+
+await createHttpServer(8080);
+Console.WriteLine(await new WebClient().DownloadStringTaskAsync("http://localhost:8080"));
+}
+```
+
+### How to: use external Node.js modules
+
+You can use external Node.js modules, for example modules installed from NPM. To install modules from NPM, you must first [install Node.js](http://nodejs.org) on your machine and use the `npm` package manager that comes with the Node.js installation. NPM modules must be installed in the directory where your build system binplaces the Edge.js NuGet package (most likely the same location as the rest of your application binaries), or any ancestor directory. Alternatively, you can install NPM modules globally on the machine using `npm install -g`:
+
+```
+C:\projects\websockets> npm install ws
+...
+ws@0.4.31 node_modules\ws
+├── tinycolor@0.0.1
+├── options@0.0.5
+├── nan@0.3.2
+└── commander@0.6.1
+```
+
+You can then use the installed `ws` module to create a WebSocket server inside of a .NET application:
+
+```c#
+class Program
+{
+    public static async void Start()
+    {
+        var createWebSocketServer = Edge.Func(@"
+            var WebSocketServer = require('ws').Server;
+
+            return function (port, cb) {
+                var wss = new WebSocketServer({ port: port });
+                wss.on('connection', function (ws) {
+                    ws.on('message', function (message) {
+                        ws.send(message.toUpperCase());
+                    });
+                    ws.send('Hello!');
+                });
+                cb();
+            };
+        ");
+
+        await createWebSocketServer(8080);
+    }
+
+    static void Main(string[] args)
+    {
+        Task.Run((Action)Start);
+        new ManualResetEvent(false).WaitOne();
+    }
+}
+```
+
+This WebSocket server sends a *Hello* message to the client when a new connection is established, and then echos a capitalized version of every message it receives back to the client. You can test this webserver with the `wscat` tool included with the `ws` module. To make it convenient to use, first install the `ws` module globally:
+
+```
+npm install ws -g
+```
+
+Then start the .NET application conatining the WebSocket server and establish a connection to it with `wscat`:
+
+```
+C:\projects\websockets> wscat -c ws://localhost:8080/
+
+connected (press CTRL+C to quit)
+
+< Hello!
+> foo
+< FOO
+> bar
+< BAR
+```
+
+A self-contained Node.js WebSocket server, even if running within a .NET application, is rather unexciting. After all, the same could be accomplished with a stand-alone Node.js process. Ideally you could extablish a WebSocket server in Node.js, but handle the messages in .NET. Let's do it - read on. 
+
+### How to: handle Node.js events in .NET
+
+It is often useful to handle certain events raised by the Node.js code within .NET. For example, you may want to establish a WebSocket server in Node.js, and handle the incoming messages in the .NET part of your application. This can be accomplished by passig a .NET callback function to Node.js when the the WebSocket server is created:
+
+```c#
+class Program
+{
+    public static async void Start()
+    {
+        // Define an event handler to be called for every message from the client
+
+        var onMessage = (Func<object, Task<object>>)(async (message) =>
+        {
+            return "Received string of length " + ((string)message).Length;
+        });
+
+        // The WebSocket server delegates handling of messages from clients
+        // to the supplied .NET handler
+
+        var createWebSocketServer = Edge.Func(@"
+            var WebSocketServer = require('ws').Server;
+
+            return function (options, cb) {
+                var wss = new WebSocketServer({ port: options.port });
+                wss.on('connection', function (ws) {
+                    ws.on('message', function (message) {
+                        options.onMessage(message, function (error, result) {
+                            if (error) throw error;
+                            ws.send(result);
+                        });
+                    });
+                    ws.send('Hello!');
+                });
+                cb();
+            };
+        ");
+
+        // Create a WebSocket server on a specific TCP port and using the .NET event handler
+
+        await createWebSocketServer(new
+        {
+            port = 8080,
+            onMessage = onMessage
+        });
+    }
+
+    static void Main(string[] args)
+    {
+        Task.Run((Action)Start);
+        new ManualResetEvent(false).WaitOne();
+    }
+}
+```
+
+Using `wscat`, you can verify the .NET handler is indeed invoked for every websocket message:
+
+```
+C:\projects\websockets> wscat -c ws://localhost:8080/
+
+connected (press CTRL+C to quit)
+
+< Hello!
+> Foo
+< Received string of length 3
+> FooBar
+< Received string of length 6
+>
+```
+
+This example showed how Edge.js can create JavaScript proxies to .NET functions and marshal the calls betweent he V8 and CLR boundary. Read more about [data marshaling between Node.js and CLR](#how-to-marshal-data-between-c-and-nodejs).
+
+### How to: expose Node.js state to .NET
+
+In the previous example [a Node.js HTTP server was created and started from .NET](#use-nodejs-built-in-modules). Suppose at some point you want to stop the HTTP server from your .NET code. Given that all references to it are embedded within Node.js code, it is not possible. However, just as Edge.js can [pass a .NET function to Node.js](#handle-nodejs-events-in-NET), it also can export a Node.js function to .NET. Moreover, that function can be implemented as a closure over Node.js state. This is how it would work:
+
+```c#
+var createHttpServer = Edge.Func(@"
+    var http = require('http');
+
+    return function (port, cb) {
+        var server = http.createServer(function (req, res) {
+            res.end('Hello, world! ' + new Date());
+        }).listen(port, function (error) {
+            cb(error, function (data, cb) {
+                server.close();
+                cb();
+            });
+        });
+    };
+");
+
+var closeHttpServer = (Func<object,Task<object>>)await createHttpServer1(8080);
+Console.WriteLine(await new WebClient().DownloadStringTaskAsync("http://localhost:8080"));
+await closeHttpServer(null);
+```
+
+Notice how the `createHttpServer` function, in addition to starting an HTTP server in Node.js, is also returning a .NET proxy to a JavaScript function that allows that server to be stopped. 
+
+### How to: use Node.js in ASP.NET web applications
+
+Using Node.js via Edge.js in ASP.NET web applications is no different than in .NET console applications. The Edge.js NuGet package must be referenced in your ASP.NET web application. if you are using any external Node.js modules, the entire `node_modules` subdirectory structure must be binplaced to the `bin` folder of you web application, and deployed that way to the server. 
+
+### Building Edge.js NuGet package
+
+**Note** This mechanism requires hardening, expect the road ahead to be bumpy. 
+
+These are unstructions for building the Edge.js NuGet package on Windows. The package will support running apps in both x86 and x64 architectures using a selected version of Node.js. The resulting NuGet package is all-inclusive with the only dependency being .NET 4.5. 
+
+Preprequisties:
+
+* Visual Studio 2013  
+* Node.js (tested with v0.10.28)  
+* Python 2.7.x  
+* node-gyp  
+
+To buid the NuGet package, open the Visual Studio 2013 Developer Command Prompt and call:
+
+```
+tools\build_double.bat 0.10.28
+```
+
+(you can substitite another version of Node.js, but no other than 0.10.28 were tested).
+
+The script takes several minutes to complete and does the following:
+
+* builds a few helper tools in C#  
+* downloads sources of the selected Node.js version  
+* downloads nuget.exe from http://nuget.org  
+* builds Node.js shared library for the x86 and x64 flavor
+* builds Edge.js module for the x86 and x64 flavor
+* builds managed EdgeJs.dll library that bootstraps running Node.js in a CLR process and provides the Edge.Func programming model  
+* packs everything into a NuGet package
+
+If everything goes well, the resulting NuGet package is located in the `tools\build\nuget` directory. 
+
+### Running tests of scripting Node.js in C#
+
+There are functional tests in `test\double\double_test` and stress tests in `test\double\double_stress`. Before you can compile these tests, you must register the location of the built NuGet package as a local NuGet feed through the NuGet configuration manager in Visual Studio. 
+
+After you have compiled the function tests, the best way to run them is from the command line:
+
+```
+C:\projects\edge\test\double\double_tests\bin\Release> mstest /testcontainer:double_test.dll /noisolation
+```
+
+After you have compiled the stress tests, simply launch the executable, attach resource monitor to the process, and leave it running to observe stability:
+
+```
+C:\projects\edge\test\double\double_stress\bin\Release> double_stress.exe
 ```
 
 ## Contribution and derived work
