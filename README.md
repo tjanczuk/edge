@@ -1184,12 +1184,12 @@ If you are writing a CLR application (e.g. a C# console application or ASP.NET w
 You need Windows with:
 
 * [.NET 4.5](http://www.microsoft.com/en-us/download/details.aspx?id=30653)  
-* [Edge.js NuGet package](http://nuget.org)  
+* [Edge.js NuGet package](https://www.nuget.org/packages/Edge.js)  
 * [Node.js](http://nodejs.org) (optional, if you want to use additional NPM packages)
 
 Edge.js support for scripting Node.js ships as a NuGet Package called `Edge.js`. It comes with everything you need to get started writing applications for x86 and x64 architectures. However, if you want to use additional Node.js packages from NPM, you must separately install Node.js runtime to access the NPM package manager. Edge.js has been developed and tested with Node.js v0.10.28. If you choose a different version of Node.js to install NPM packages, your mileage can vary. 
 
-You can install the [Edge.js NuGet package](http://nuget.org) using the Visual Studio built-in NuGet package management functionality or using the stand-alone [NuGet client](http://docs.nuget.org/docs/start-here/installing-nuget). 
+You can install the [Edge.js NuGet package](https://www.nuget.org/packages/Edge.js) using the Visual Studio built-in NuGet package management functionality or using the stand-alone [NuGet client](http://docs.nuget.org/docs/start-here/installing-nuget). 
 
 ### How to: Node.js hello, world
 
