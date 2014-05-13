@@ -48,19 +48,26 @@
 
         <section>
           <h1>Edge.js</h1>
-          <h3>Run Node.js and .NET code in-process</h3>
-          <h3>On Windows, <span style="color: red">Mac OS, and Linux (NEW!)</span></h3>
-          <p>&nbsp;</p>
-          <p>An edge connects two nodes</p>
+          <h3>Run Node.js and .NET in-process</h3>
+          <h5>A software play in two acts</h5>
+          <p>{ Act I }</p>
+          <h3>Where Node.js scripts .NET in-process<br>on Windows, <span style="color: red">Mac OS, and Linux (NEW!)</span></h3>
+          <p>{ Act II }</p>
+          <h3>Where .NET<span style="color: red"> scripts Node.js in-process (NEW!)</span></h3>
+<!--           <p>An edge connects two nodes</p>
           <p>This edge connects Node.js with .NET</p>
-          <p>&nbsp;</p>
+ -->         
+          <p><small><a href="#/10">skip to act I</a> | <a href="#/46">skip to act II</a></small></p>
           <p>
-            <small>Brought to you by <a href="http://tomasz.janczuk.org">Tomasz Janczuk</a> / <a href="http://twitter.com/tjanczuk">@tjanczuk</a></small>
+            <small>Brought to you by <a href="http://tomasz.janczuk.org">Tomasz Janczuk</a> / <a href="http://twitter.com/tjanczuk">@tjanczuk</a><br>(Use space or arrow keys to navigate)</small>
           </p>  
-          <p>&nbsp;</p>
-          <p>
-            <small>(Use space or arrow keys to navigate)</small>
-          </p>                    
+        </section>
+
+        <section>
+          <h1>Prologue</h1>
+          <h3>Where Node.js meets .NET in-process<br>and the intrigue begins</h3>
+          <h5><br><br>{ Tess }<br><i>What problems does Edge.js solve?</i>
+            <br><br>{ Scott Hanselman }<br><i><a href="https://twitter.com/shanselman/status/461532471037677568">Ah, whatever problem you have. If you have this problem, this solves it.</a></i></h5>
         </section>
 
         <section>
@@ -103,13 +110,79 @@ hello('Node.js', function (error, result) {
         </section>  
 
         <section>
+          <h2>Node.js welcomes .NET</h2>
+          <p><small>Call Node.js functions from .NET</small></p>
+          <pre><code>
+using EdgeJs;
+
+public static async void Start() 
+{
+    var func = Edge.Func(@"
+        return function (data, cb) {
+            cb(null, 'Node.js ' + process.version + ' welcomes ' + data);
+        }
+    ");
+
+    Console.WriteLine(await func(".NET"));
+}
+          </code></pre>     
+          <a href="https://github.com/tjanczuk/edge/tree/master#scripting-nodejs-from-clr"><small>read more</small></a>
+          <pre><code>
+> sample.exe
+Node.js v0.10.28 welcomes .NET
+          </code></pre>                  
+        </section>
+
+        <section>
+          <h2>On Windows (Mac/Linux coming)</h2>
+          <img src="https://cloud.githubusercontent.com/assets/822369/2958781/9ec82c32-daac-11e3-9bc2-ac5dee993f20.PNG" alt="Scripting Node from C#">               
+        </section>  
+
+        <section>
+          <h2>One interop model</h2>
+          <p><small>Async, in-process calling convention between CLR and Node.js</small></p>
+           <img src="https://f.cloud.github.com/assets/822369/234085/b305625c-8768-11e2-8de0-e03ae98e7249.PNG" alt="Edge.js interop model" /> 
+        </section>   
+
+        <section>
             <h2>Edge.js connects</h2>
             <p><small>Node.js and .NET ecosystems</small></p>
             <p><small>JavaScript with C#, F#, Python, and PowerShell</small></p>
             <p><small>loose typing with strong typing</small></p>
             <p><small>IO-bound single threaded with CPU-bound multi-threaded</small></p>
             <p><small>cool with awesome</small></p>
+            <p><small>on Windows, MacOS, and Linux</small></p>
             <h3>in one process</h3>
+        </section>
+
+        <section>
+          <h1>Act I</h1>
+          <h3>Where Node.js scripts .NET in-process<br>on Windows, <span style="color: red">Mac OS, and Linux (NEW!)</span></h3>
+          <a href="https://github.com/tjanczuk/edge/tree/master#scripting-clr-from-nodejs"><small>docs</small></a>
+        </section>        
+
+        <section>
+          <h2>C# welcomes Node.js</h2>
+          <p><small>Call C# async lambda from Node.js</small></p>
+          <pre><code>
+var edge = require('edge');
+
+var hello = edge.func(function () {/*
+    async (input) => { 
+        return "CSharp welcomes " + input.ToString(); 
+    }
+*/});
+
+hello('Node.js', function (error, result) {
+    if (error) throw error;
+    console.log(result);
+});
+          </code></pre>     
+          <a href="https://github.com/tjanczuk/edge/blob/master/samples/101_hello_lambda.js"><small>see full code</small></a>
+          <pre><code>
+> node sample.js
+CSharp welcomes Node.js
+          </code></pre>                  
         </section>
 
         <section>
@@ -216,13 +289,7 @@ var helloPy = edge.func('py', ...); // Python
 var helloFo = edge.func('foo', ...); // Your CLR/Mono language or DSL here
             </code></pre>            
           <a href="https://github.com/tjanczuk/edge/wiki/Add-support-for-a-CLR-language"><small>learn more</small></a>
-        </section>      
-
-        <section>
-          <h2>Interop model</h2>
-          <p><small>Async, in-process calling convention between CLR and Node.js</small></p>
-           <img src="https://f.cloud.github.com/assets/822369/234085/b305625c-8768-11e2-8de0-e03ae98e7249.PNG" alt="Edge.js interop model" /> 
-        </section>          
+        </section>             
 
         <section>
           <h2>Bind to library</h2>
@@ -629,26 +696,6 @@ convertImageToJpg('.\\edge.png', function (error) { ... });
         </section>    
 
         <section>
-          <h2>WebSockets in .NET</h2>
-          <p><small>Expose WebSockets to .NET using Edge.js, including on Windows Server 2008 or Windows 7</small></p>
-          <pre><code class="javscript">
-var createMyNetWebSocket = require('edge').func(function () {/*
-  // .NET WebSocket application in C# - see full code 
-*/})
-
-var wss = new require('ws').Server(...);
-
-wss.on('connection', function(ws) {
-    var onMessage = createMyNetWebSocket(ws.send, true);
-    ws.on('message', onMessage);
-});
-
-wss.listen(8080);
-         </code></pre>
-         <a href="https://github.com/tjanczuk/edge/blob/master/samples/209_websocket.js"><small>see full code</small></a>
-        </section>    
-
-        <section>
           <h2>Express.js handler in C#</h2>
           <p><small>Plug in .NET OWIN apps as connect middleware or express handlers</small></p>
           <pre><code class="javscript">
@@ -663,7 +710,7 @@ app.get('/node', function (req, res) {
 
 app.listen(3000);
          </code></pre>
-         <a href="https://github.com/bbaia/connect-owin"><small>see bbaia/connect-owin</small></a>
+         <a href="https://github.com/bbaia/connect-owin"><small>bbaia/connect-owin</small></a>
         </section>          
 
         <section>
@@ -699,6 +746,161 @@ public class Startup {
          </code></pre>
          <a href="https://github.com/tjanczuk/edge/blob/master/samples/205_soap.csx"><small>see full code</small></a>
         </section>     
+
+        <section>
+          <h1>Intermission</h1>
+          <h5>Before Act II begins, you may enjoy a moment with art</h5>
+          <img src="https://cloud.githubusercontent.com/assets/822369/2959324/b63f0a2a-dab1-11e3-8738-dbdf485ae973.jpg" alt="Salvador Dali, Sleep, 1937">
+        </section>             
+
+        <section>
+          <h1>Act II</h1>
+          <h3>Where .NET <span style="color: red">scripts Node.js in-process (NEW!)</span></h3>
+          <a href="https://github.com/tjanczuk/edge/tree/master#scripting-nodejs-from-clr"><small>docs</small></a>
+        </section>          
+
+        <section>
+          <h2>Script Node.js from .NET</h2>
+          <p><small>Asynchronously call Node.js functions in .NET</small></p>
+          <pre><code class="c#">
+using EdgeJs;
+
+var func = Edge.Func(@"
+    return function (data, cb) {
+        cb(null, 'Node.js ' + process.version + ' welcomes ' + data);
+    }
+");
+
+Console.WriteLine(await func(".NET"));
+         </code></pre>
+         <a href="https://github.com/tjanczuk/edge/tree/master#how-to-nodejs-hello-world"><small>more</small></a>
+        </section>     
+
+        <section>
+          <h2>...In console applications...</h2>
+          <img src="https://cloud.githubusercontent.com/assets/822369/2958781/9ec82c32-daac-11e3-9bc2-ac5dee993f20.PNG" alt="Script Node.js in .NET console applications">
+          <p><a href="https://github.com/tjanczuk/edge/tree/master#how-to-nodejs-hello-world"><small>more</small></a></p>
+        </section>     
+
+        <section>
+          <h2>...In ASP.NET web applications...</h2>
+          <img src="https://cloud.githubusercontent.com/assets/822369/2959625/e9f6f1cc-dab4-11e3-85d5-a06b1a2c1962.png" alt="Script Node.js in .NET console applications">
+          <p><a href="https://github.com/tjanczuk/edge/tree/master#how-to-use-nodejs-in-aspnet-web-applications"><small>more</small></a></p>
+        </section>     
+
+        <section>
+          <h2>Use built-in modules</h2>
+          <p><small>Core Node.js modules are included with Edge.js</small></p>
+          <pre><code class="c#">
+using EdgeJs;
+
+async void Start() {
+    var createHttpServer = Edge.Func(@"
+        var http = require('http');
+
+        return function (port, cb) {
+            http.createServer(function (req, res) {
+                res.end('Hello, world! ' + new Date());
+            }).listen(port, cb);
+        };
+    ");
+
+    await createHttpServer(8080);
+}
+         </code></pre>
+         <a href="https://github.com/tjanczuk/edge/tree/master#how-to-use-nodejs-built-in-module"><small>more</small></a>
+        </section>  
+
+        <section>
+          <h2>Use NPM modules</h2>
+          <p><small>Additional Node.js modules can be installed from NPM</small></p>
+          <pre>
+> npm install ws
+...
+ws@0.4.31 node_modules\ws
+</pre>
+          <pre><code class="c#">
+using EdgeJs;
+
+var createWebSocketServer = Edge.Func(@"
+    var WebSocketServer = require('ws').Server;
+
+    return function (port, cb) {
+        var wss = new WebSocketServer({ port: port });
+        wss.on('connection', function (ws) { /* ... */ });
+        cb();
+    };
+");
+         </code></pre>
+         <a href="https://github.com/tjanczuk/edge/tree/master#how-to-use-external-nodejs-modules"><small>more</small></a>
+        </section>          
+
+        <section>
+          <h2>Expose Node.js state</h2>
+          <p><small>Wrap Node.js state in a closure</small></p>
+          <pre><code class="c#">
+using EdgeJs;
+
+var increment = Edge.Func(@"
+    var current = 0;
+
+    return function (data, callback) {
+        current += data;
+        callback(null, current);
+    }
+");
+
+Console.WriteLine(await increment(4)); // outputs 4
+Console.WriteLine(await increment(7)); // outputs 11
+         </code></pre>
+         <a href="https://github.com/tjanczuk/edge/tree/master#how-to-intergate-nodejs-code-into-clr-code"><small>more</small></a>
+        </section>  
+
+        <section>
+          <h2>Export Node.js functions</h2>
+          <pre><code class="c#">
+using EdgeJs;
+
+var createServer = Edge.Func(@"
+    var http = require('http');
+
+    return function (port, cb) {
+        var server = http.createServer(...);
+        cb(null, function (data, cb) {
+            server.close(); cb();
+        });
+    }
+");
+
+var closeServer = (Func&lt;object,Task&lt;object&gt;&gt;)await createServer(8080);
+// ...
+await closeServer(null);
+         </code></pre>
+         <a href="https://github.com/tjanczuk/edge/tree/master#how-to-expose-nodejs-state-to-net"><small>more</small></a>
+        </section>  
+
+        <section>
+          <h2>.NET handlers for Node.js events</h2>
+          <pre><code class="c#">
+var onMessage = async (msg) => { return ((string)msg).ToUpper(); };
+
+var createWebSocketServer = Edge.Func(@"
+  var WebSocketServer = require('ws').Server;
+
+  return function (params, cb) {
+    var wss = new WebSocketServer({ port: params.port });
+    wss.on('connection', function (ws) { 
+      ws.on('message', function (msg) {
+          params.onMessage(msg, function (error, res) { ws.send(res); });
+      });
+    });
+    cb();
+  };");
+
+await createWebSocketServer(new { port = 8080, onMessage = onMessage });
+         </code></pre>
+         <a href="https://github.com/tjanczuk/edge/tree/master#how-to-handle-nodejs-events-in-net"><small>more</small></a>
+        </section>  
 
         <section>
           <h1>Edge.js</h1>
