@@ -19,7 +19,7 @@ var measure = function (func) {
 			tags: [ '.NET', 'node.js', 'CLR', 'V8', 'interop']			
 		}, function (error, callbck) {
 			if (error) throw error;
-			if (++i < callCount) process.nextTick(one);
+			if (++i < callCount) setImmediate(one);
 			else finish();
 		});
 	}
