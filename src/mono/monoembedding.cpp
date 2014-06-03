@@ -4,6 +4,7 @@
 #include "edge.h"
 
 #include "mono/metadata/assembly.h"
+#include "mono/metadata/mono-config.h"
 #include "mono/jit/jit.h"
 
 
@@ -20,6 +21,7 @@ void MonoEmbedding::Initialize()
     strcpy(fullPath, dirname(fullPath));
     strcat(fullPath, "/MonoEmbedding.exe");
 
+    mono_config_parse (NULL);
     mono_jit_init (fullPath);
     assembly = mono_domain_assembly_open (mono_domain_get(), fullPath);
     MonoClass* klass = mono_class_from_name(mono_assembly_get_image(assembly), "", "MonoEmbedding");
