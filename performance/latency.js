@@ -38,8 +38,7 @@ if (process.argv[2] === 'i') {
                 setImmediate(one_i);
         });
     }
-}
-if (process.argv[2] === 'c') {
+}else if (process.argv[2] === 'c') {
     var csharp = 'async (input) => { return ".NET welcomes " + input.ToString(); } /*';
 
     var edge = require('../lib/edge');
