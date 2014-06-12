@@ -38,15 +38,14 @@ if (process.argv[2] === 'i') {
                 setImmediate(one_i);
         });
     }
-}
-if (process.argv[2] === 'c') {
+}else if (process.argv[2] === 'c') {
     var csharp = 'async (input) => { return ".NET welcomes " + input.ToString(); } /*';
 
     var edge = require('../lib/edge');
     var M = N;
     var start = Date.now();
-    one_i();
-    function one_i() {
+    one_c();
+    function one_c() {
         var code = csharp + M +  '*/'; // force cache miss and recompile
         var func = edge.func(code);
         func('Node.js', function (error, result) {
@@ -56,7 +55,7 @@ if (process.argv[2] === 'c') {
                 console.log(delta, delta / N);
             }
             else 
-                setImmediate(one_i);
+                setImmediate(one_c);
         });
     }
 }
