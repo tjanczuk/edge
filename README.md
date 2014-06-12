@@ -268,7 +268,7 @@ If you integrate C# code into your Node.js application by specifying C# source u
 var clrMethod = edge.func({
     assemblyFile: 'My.Edge.Samples.dll',
     typeName: 'Samples.FooBar.MyType',
-    methodName: 'MyMethod'
+    methodName: 'MyMethod' // This must be Func<object,Task<object>>
 });
 ```
 
