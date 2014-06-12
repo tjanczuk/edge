@@ -7,7 +7,7 @@ sudo -u ${THE_USER} mkdir ~/tmp
 
 # install prerequisities
 
-apt-get -y install curl g++ pkg-config
+apt-get -y install curl g++ pkg-config libgdiplus
 
 # download and build Node.js
 
@@ -30,6 +30,8 @@ sudo -u ${THE_USER} curl http://download.mono-project.com/sources/mono/mono-3.4.
 sudo -u ${THE_USER} tar -xvf mono-3.4.0.tar.bz2
 sudo -u ${THE_USER} curl https://raw.githubusercontent.com/tjanczuk/edge/master/tools/Microsoft.Portable.Common.targets > ./mono-3.4.0/mcs/tools/xbuild/targets/Microsoft.Portable.Common.targets
 cd mono-3.4.0
+# see http://stackoverflow.com/questions/15627951/mono-dllnotfound-error
+sudo -u ${THE_USER} bash -c 'sed -i "s/\@prefix\@\/lib\///g" ./data/config.in'
 sudo -u ${THE_USER} bash -c './configure --prefix=/usr/local --with-glib=embedded --enable-nls=no'
 sudo -u ${THE_USER} make
 make install
