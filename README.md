@@ -242,7 +242,7 @@ var add7 = edge.func(function() {/*
         public async Task<object> Invoke(object input)
         {
             int v = (int)input;
-            return Helper::AddSeven(v);
+            return Helper.AddSeven(v);
         }
     }
 
