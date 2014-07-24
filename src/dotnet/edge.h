@@ -34,7 +34,7 @@ using namespace System::Web::Script::Serialization;
 Handle<v8::String> stringCLR2V8(System::String^ text);
 System::String^ stringV82CLR(Handle<v8::String> text);
 System::String^ exceptionV82stringCLR(Handle<v8::Value> exception);
-Handle<String> exceptionCLR2stringV8(System::Exception^ exception);
+Handle<Value> exceptionCLR2stringV8(System::Exception^ exception);
 Handle<Value> throwV8Exception(System::Exception^ exception);
 
 typedef struct clrActionContext {
