@@ -114,7 +114,7 @@ Handle<v8::Value> ClrFunc::Initialize(const v8::Arguments& args)
     }
     catch (System::Exception^ e)
     {
-        return scope.Close(throwV8Exception(e));
+        return scope.Close(throwV8Exception(ClrFunc::MarshalCLRExceptionToV8(e)));
     }
 }
 
@@ -256,6 +256,10 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(System::Object^ netdata)
     {
         jsdata = ClrFunc::Initialize((System::Func<System::Object^,Task<System::Object^>^>^)netdata);
     }
+	else if (System::Exception::typeid->IsAssignableFrom(type))
+	{
+		jsdata = ClrFunc::MarshalCLRExceptionToV8((System::Exception^)netdata);
+	}
     else
     {
         jsdata = ClrFunc::MarshalCLRObjectToV8(netdata);
@@ -264,12 +268,51 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(System::Object^ netdata)
     return scope.Close(jsdata);
 }
 
-Handle<v8::Value> ClrFunc::MarshalCLRObjectToV8(System::Object^ netdata)
+Handle<v8::Value> ClrFunc::MarshalCLRExceptionToV8(System::Exception^ exception)
 {
+    DBG("ClrFunc::MarshalCLRExceptionToV8");
+    HandleScope scope;
+	Handle<v8::Object> result;
+	Handle<v8::String> Message;
+	Handle<v8::String> Name;
+    if (exception == nullptr)
+    {
+		result = v8::Object::New();
+		
+		Message = v8::String::New("Unrecognized exception thrown by CLR.");
+		Name = v8::String::New("InternalException");
+    }
+    else
+    {
+		result = ClrFunc::MarshalCLRObjectToV8(exception);
+		
+		Message = stringCLR2V8(exception->Message);
+		Name = stringCLR2V8(exception->GetType()->FullName);
+	}	
+		
+	//Construct an error that is just used for the prototype - not verify efficient
+	//but 'typeof Error' should work in JavaScript
+	result->SetPrototype(v8::Exception::Error(Message));
+	result->Set(String::NewSymbol("message"), Message);
+	
+	//Recording the actual type - 'name' seems to be the common used property
+	result->Set(String::NewSymbol("name"), Name);
+	//Record the whole toString for those who are interested
+	//result->Set(String::NewSymbol("ToString"), stringCLR2V8(exception->ToString()));
+
+	return scope.Close(result);
+}
+
+Handle<v8::Object> ClrFunc::MarshalCLRObjectToV8(System::Object^ netdata)
+{
+    DBG("ClrFunc::MarshalCLRObjectToV8");
     HandleScope scope;
     Handle<v8::Object> result = v8::Object::New();
     System::Type^ type = netdata->GetType();
-
+	if (0 == System::String::Compare(type->FullName, "System.Reflection.RuntimeMethodInfo")) {
+		//Avoid stack overflow due to self-referencing reflection elements
+		return scope.Close(result);
+	}
     for each (FieldInfo^ field in type->GetFields(BindingFlags::Public | BindingFlags::Instance))
     {
         result->Set(
@@ -412,6 +455,7 @@ Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> cal
         Task<System::Object^>^ task = this->func(context->Payload);
         if (task->IsCompleted)
         {
+            DBG("Complete 1. pass");
             // Completed synchronously. Return a value or invoke callback based on call pattern.
             context->Task = task;
             return scope.Close(context->CompleteOnV8Thread());
@@ -425,6 +469,7 @@ Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> cal
         }
         else 
         {
+            DBG("Complete 2. pass");
             // Create a GC root around the ClrFuncInvokeContext to ensure it is not garbage collected
             // while the CLR function executes asynchronously. 
             context->InitializeAsyncOperation();
@@ -436,7 +481,8 @@ Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> cal
     }
     catch (System::Exception^ e)
     {
-        return scope.Close(throwV8Exception(e));
+        DBG("Exception 1. pass");
+        return scope.Close(throwV8Exception(ClrFunc::MarshalCLRExceptionToV8(e)));
     }
 
     return scope.Close(Undefined());    

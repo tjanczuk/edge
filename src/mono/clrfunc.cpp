@@ -83,7 +83,7 @@ Handle<v8::Value> ClrFunc::Initialize(const v8::Arguments& args)
         MonoException* exc = NULL;
         MonoObject* func = MonoEmbedding::GetClrFuncReflectionWrapFunc(*assemblyFile, *nativeTypeName, *nativeMethodName, &exc);
         if(exc)
-            return scope.Close(throwV8Exception(exc));
+            return scope.Close(throwV8Exception(ClrFunc::MarshalCLRExceptionToV8(exc)));
         result = ClrFunc::Initialize(func);
     }
     else
@@ -98,7 +98,7 @@ Handle<v8::Value> ClrFunc::Initialize(const v8::Arguments& args)
         MonoMethod* ctor = mono_class_get_method_from_name(compilerClass, ".ctor", 0);
         mono_runtime_invoke(ctor, compilerInstance, NULL, (MonoObject**)&exc);
         if(exc)
-            return scope.Close(throwV8Exception(exc));
+            return scope.Close(throwV8Exception(ClrFunc::MarshalCLRExceptionToV8(exc)));
 
         MonoMethod* compileFunc = mono_class_get_method_from_name(compilerClass, "CompileFunc", -1);
         MonoReflectionMethod* methodInfo = mono_method_get_object(mono_domain_get(),compileFunc, compilerClass);
@@ -116,7 +116,7 @@ Handle<v8::Value> ClrFunc::Initialize(const v8::Arguments& args)
         params[1] = methodInfoParams;
         MonoObject* func = mono_runtime_invoke(invoke, methodInfo, params, (MonoObject**)&exc);
         if (exc)
-            return scope.Close(throwV8Exception(exc));
+            return scope.Close(throwV8Exception(ClrFunc::MarshalCLRExceptionToV8(exc)));
         result = ClrFunc::Initialize(func);
     }
 
@@ -295,6 +295,10 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata, MonoException** e
     {
         jsdata = ClrFunc::Initialize(netdata);
     }
+	else if (mono_class_is_assignable_from(mono_get_exception_class(), klass))
+	{
+		jsdata = ClrFunc::MarshalCLRExceptionToV8((MonoException*)netdata);
+	}
     else
     {
         jsdata = ClrFunc::MarshalCLRObjectToV8(netdata, exc);
@@ -308,8 +312,57 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata, MonoException** e
     return scope.Close(jsdata);
 }
 
-Handle<v8::Value> ClrFunc::MarshalCLRObjectToV8(MonoObject* netdata, MonoException** exc)
+Handle<v8::Object> ClrFunc::MarshalCLRExceptionToV8(MonoException* exception)
 {
+    DBG("ClrFunc::MarshalCLRExceptionToV8");
+    HandleScope scope;
+	Handle<v8::Object> result;
+	Handle<v8::String> Message;
+	Handle<v8::String> Name;
+	MonoException* exc = NULL;
+        
+    if (exception == NULL)
+    {
+		result = v8::Object::New();
+
+		Message = v8::String::New("Unrecognized exception thrown by CLR.");
+		Name = v8::String::New("InternalException");
+    }
+    else
+    {
+		result = ClrFunc::MarshalCLRObjectToV8((MonoObject*)exception, &exc);
+
+		MonoProperty* prop = mono_class_get_property_from_name(mono_get_exception_class(), "Message");
+        Message = stringCLR2V8((MonoString*)mono_property_get_value(prop, exception, NULL, NULL));
+
+	    MonoClass* klass = mono_object_get_class((MonoObject*)exception);
+        const char* namespaceName = mono_class_get_namespace(klass);
+        const char* className = mono_class_get_name(klass);
+        // This looks horrible - it is 2014...
+        char result[strlen(namespaceName) + 1 + strlen(className) + 1]; 
+        strcpy(result,namespaceName);
+        strcat(result, ".");
+        strcat(result, className);
+		Name = stringCLR2V8(mono_string_new_wrapper(result));
+	}	
+	
+	//Construct an error that is just used for the prototype - not verify efficient
+	//but 'typeof Error' should work in JavaScript
+	result->SetPrototype(v8::Exception::Error(Message));
+    
+	result->Set(String::NewSymbol("message"), Message);
+	
+	//Recording the actual type - 'name' seems to be the common used property
+	result->Set(String::NewSymbol("name"), Name);
+	//Record the whole toString for those who are interested
+	//result->Set(String::NewSymbol("ToString"), stringCLR2V8(exception->ToString()));
+
+	return scope.Close(result);
+}
+
+Handle<v8::Object> ClrFunc::MarshalCLRObjectToV8(MonoObject* netdata, MonoException** exc)
+{
+    DBG("ClrFunc::MarshalCLRObjectToV8");
     HandleScope scope;
     Handle<v8::Object> result = v8::Object::New();
     MonoClass* klass = mono_object_get_class(netdata);
@@ -317,9 +370,12 @@ Handle<v8::Value> ClrFunc::MarshalCLRObjectToV8(MonoObject* netdata, MonoExcepti
     MonoProperty* prop;
     void* iter = NULL;
     *exc = NULL;
+    DBG("ClrFunc::MarshalCLRObjectToV8");
 
     while (NULL != (field = mono_class_get_fields(klass, &iter)) && !*exc)
     {
+        const char* name = mono_field_get_name(field);
+        printf(name);
         // magic numbers
         static uint32_t field_attr_static = 0x0010;
         static uint32_t field_attr_public = 0x0006;
@@ -327,7 +383,6 @@ Handle<v8::Value> ClrFunc::MarshalCLRObjectToV8(MonoObject* netdata, MonoExcepti
             continue;
         if (!(mono_field_get_flags(field) & field_attr_public))
             continue;
-        const char* name = mono_field_get_name(field);
         MonoObject* value = mono_field_get_value_object(mono_domain_get(), field, netdata);
         result->Set(
             v8::String::New(name), 
@@ -371,6 +426,7 @@ Handle<v8::Value> ClrFunc::MarshalCLRObjectToV8(MonoObject* netdata, MonoExcepti
         }
 
         const char* name = mono_property_get_name(prop);
+        printf(name);
         MonoObject* value = mono_runtime_invoke(getMethod, netdata, NULL, (MonoObject**)exc);
         if (!*exc)
         {
@@ -382,7 +438,8 @@ Handle<v8::Value> ClrFunc::MarshalCLRObjectToV8(MonoObject* netdata, MonoExcepti
 
     if (*exc) 
     {
-        return scope.Close(Undefined());
+        //return scope.Close(Undefined());
+	return scope.Close(ClrFunc::MarshalCLRExceptionToV8(*exc));
     }
 
     return scope.Close(result);
@@ -390,6 +447,7 @@ Handle<v8::Value> ClrFunc::MarshalCLRObjectToV8(MonoObject* netdata, MonoExcepti
 
 MonoObject* ClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata)
 {
+    DBG("ClrFunc::MarshalV8ToCLR");
     HandleScope scope;
 
     if (jsdata->IsFunction())
@@ -486,46 +544,52 @@ Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> cal
     void* params[1];
     params[0] = c->Payload();
     MonoMethod* invoke = mono_class_get_method_from_name(mono_object_get_class(func), "Invoke", -1);
+    //This is different from dotnet. From the documentation http://www.mono-project.com/Embedding_Mono: 
     MonoObject* task = mono_runtime_invoke(invoke, func, params, (MonoObject**)&exc);
     if (exc)
     {
-        delete c;
-        c = NULL;
-        return scope.Close(throwV8Exception(exc));
+        DBG("Exception 1. pass");
+        task = MonoEmbedding::CreateFaultedTask(exc);
+        c->Task(task);
+        return scope.Close(c->CompleteOnV8Thread(true));
     }
 
     MonoProperty* prop = mono_class_get_property_from_name(mono_object_get_class(task), "IsCompleted");
     MonoObject* isCompletedObject = mono_property_get_value(prop, task, NULL, (MonoObject**)&exc);
     if (exc)
     {
-        delete c;
-        c = NULL;
-        return scope.Close(throwV8Exception(exc));
+        DBG("Exception 2. pass");
+        task = MonoEmbedding::CreateFaultedTask(exc);
+        c->Task(task);
+        return scope.Close(c->CompleteOnV8Thread(true));
     }
 
     bool isCompleted = *(bool*)mono_object_unbox(isCompletedObject);
     if(isCompleted)
     {
+        DBG("Complete 1. pass");
         // Completed synchronously. Return a value or invoke callback based on call pattern.
         c->Task(task);
         return scope.Close(c->CompleteOnV8Thread(true));
     }
     else if (c->Sync())
     {
-        return scope.Close(throwV8Exception(mono_get_exception_invalid_operation("The JavaScript function was called synchronously "
+        return scope.Close(throwV8Exception(ClrFunc::MarshalCLRExceptionToV8(mono_get_exception_invalid_operation("The JavaScript function was called synchronously "
             "but the underlying CLR function returned without completing the Task. Call the "
-            "JavaScript function asynchronously.")));
+            "JavaScript function asynchronously."))));
     }
     else
     {
+        DBG("Complete 2. pass");
         c->InitializeAsyncOperation();
 
         MonoEmbedding::ContinueTask(task, c->GetMonoObject(), &exc);
         if (exc)
         {
+            DBG("Exception 3. pass");
             delete c;
             c = NULL;
-            return scope.Close(throwV8Exception(exc));
+            return scope.Close(throwV8Exception(ClrFunc::MarshalCLRExceptionToV8(exc)));
         }
     }
 
