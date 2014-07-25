@@ -893,11 +893,49 @@ var clrFunc = edge.func(function () {/*
 */});
 
 clrFunc(null, function (error, result) {
-    if (error) throw error;
+    if (error) {
+		console.log('Is Error?', error instanceof Error);
+		console.log(error);
+		return;
+	}
 });
 ```
 
-Running this Node.js application shows that the CLR exception was indeed received by the Node.js callback. The `error` parameter contains the full stack trace including the CLR code path:
+Running this Node.js application shows that the CLR exception was indeed received by the Node.js callback. The `error` parameter contains an Error object having most of the properties of the Exceptions copied over:
+```
+Is Error? true
+{ [System.AggregateException: One or more errors occurred.]
+  message: 'One or more errors occurred.',
+  name: 'System.AggregateException',
+  InnerExceptions: 'System.Collections.ObjectModel.ReadOnlyCollection`1[[System.Exception, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]',
+  Message: 'One or more errors occurred.',
+  Data: 'System.Collections.ListDictionaryInternal',
+  InnerException:
+   { [System.Exception: Sample exception]
+     message: 'Sample exception',
+     name: 'System.Exception',
+     Message: 'Sample exception',
+     Data: 'System.Collections.ListDictionaryInternal',
+     TargetSite: 'System.Reflection.RuntimeMethodInfo',
+     StackTrace: '   at Startup.<<Invoke>b__0>d__2.MoveNext() in c:\\Users\\Sebastian.Just\\Source\\Repos\\eCash2\\test\\edge2.js:line 7\r\n--- End of stack trace from previous location where exception was thrown ---\r\n   at System.Runtime.CompilerServices.TaskAwaiter.ThrowForNonSuccess(Task task)\r\n   at System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task task)\r\n   at System.Runtime.CompilerServices.TaskAwaiter`1.GetResult()\r\n   atStartup.<Invoke>d__4.MoveNext() in c:\\Users\\Sebastian.Just\\Source\\Repos\\eCash2\\test\\edge2.js:line 5',
+     Source: 'aclkeg4e',
+     HResult: -2146233088 },
+  HResult: -2146233088 }
+```
+Currently supported property types and their JavaScript counter part:
+* String -> String
+* Byte, Int16, Int32 -> Number
+* Single, Double -> Number
+* Exception -> Error
+* Boolean -> Boolean
+* Guid -> String
+* Stacktrace[] -> String
+
+Also nested Exceptions are supported. Properties representing lists return only their type name (see `InnerExceptions` in the example above).
+
+To represent the Exception type, its full name is stored as `name`.
+To follow the JavaScript convention for Errors, the `Message` is also stored as the property `message`.
+All other property names of the source Exception are used literally.
 
 ```
 $>node sample.js
