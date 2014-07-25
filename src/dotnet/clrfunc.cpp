@@ -271,27 +271,35 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(System::Object^ netdata)
 Handle<v8::Value> ClrFunc::MarshalCLRExceptionToV8(System::Exception^ exception)
 {
     HandleScope scope;
+	Handle<v8::Object> result;
+	Handle<v8::String> Message;
+	Handle<v8::String> Name;
     if (exception == nullptr)
     {
-        return scope.Close(v8::String::New("Unrecognized exception thrown by CLR."));
+		result = v8::Object::New();
+		
+		Message = v8::String::New("Unrecognized exception thrown by CLR.");
+		Name = v8::String::New("InternalException");
     }
     else
     {
-		Handle<v8::Object> result = ClrFunc::MarshalCLRObjectToV8(exception);
+		result = ClrFunc::MarshalCLRObjectToV8(exception);
 		
-		Handle<v8::String> Message = stringCLR2V8(exception->Message);
-		//Construct an error that is just used for the prototype - not verify efficient
-		//but 'typeof Error' should work in JavaScript
-		result->SetPrototype(v8::Exception::Error(Message));
-		result->Set(String::NewSymbol("message"), Message);
+		Message = stringCLR2V8(exception->Message);
+		Name = stringCLR2V8(exception->GetType()->FullName);
+	}	
 		
-		//Recording the actual type - 'name' seems to be the common used property
-		result->Set(String::NewSymbol("name"), stringCLR2V8(exception->GetType()->FullName));
-		//Record the whole toString for those who are interested
-		//result->Set(String::NewSymbol("ToString"), stringCLR2V8(exception->ToString()));
+	//Construct an error that is just used for the prototype - not verify efficient
+	//but 'typeof Error' should work in JavaScript
+	result->SetPrototype(v8::Exception::Error(Message));
+	result->Set(String::NewSymbol("message"), Message);
+	
+	//Recording the actual type - 'name' seems to be the common used property
+	result->Set(String::NewSymbol("name"), Name);
+	//Record the whole toString for those who are interested
+	//result->Set(String::NewSymbol("ToString"), stringCLR2V8(exception->ToString()));
 
-		return scope.Close(result);
-    }
+	return scope.Close(result);
 }
 
 Handle<v8::Object> ClrFunc::MarshalCLRObjectToV8(System::Object^ netdata)
