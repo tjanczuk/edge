@@ -256,6 +256,10 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(System::Object^ netdata)
     {
         jsdata = ClrFunc::Initialize((System::Func<System::Object^,Task<System::Object^>^>^)netdata);
     }
+	else if (System::Exception::typeid->IsAssignableFrom(type))
+	{
+		jsdata = ClrFunc::MarshalCLRExceptionToV8((System::Exception^)netdata);
+	}
     else
     {
         jsdata = ClrFunc::MarshalCLRObjectToV8(netdata);
@@ -284,7 +288,7 @@ Handle<v8::Value> ClrFunc::MarshalCLRExceptionToV8(System::Exception^ exception)
 		//Recording the actual type - 'name' seems to be the common used property
 		result->Set(String::NewSymbol("name"), stringCLR2V8(exception->GetType()->FullName));
 		//Record the whole toString for those who are interested
-		result->Set(String::NewSymbol("ToString"), stringCLR2V8(exception->ToString()));
+		//result->Set(String::NewSymbol("ToString"), stringCLR2V8(exception->ToString()));
 
 		return scope.Close(result);
     }

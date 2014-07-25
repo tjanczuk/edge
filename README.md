@@ -908,35 +908,22 @@ Running this Node.js application shows that the CLR exception was indeed receive
 Is Error? true
 -----------------
 { [System.AggregateException: One or more errors occurred.]
-  InnerExceptions:
-   [ { Message: 'Sample exception',
-       Data: {},
-       InnerException: null,
-       TargetSite: {},
-       StackTrace: '   at Startup.<<Invoke>b__0>d__2.MoveNext() in c:\\Users\\Sebastian.Just\\Source\\Repos\\eCash2\\test\\edge2.js:line 7\r\n--- End of stack trace from previous location where exception was thrown ---\r\n   at System.Runtime.CompilerServices.TaskAwaiter.ThrowForNonSuccess(Task task)\r\n   at System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task task)\r\n   at System.Runtime.CompilerServices.TaskAwaiter`1.GetResult()\r\n   at Startup.<Invoke>d__4.MoveNext() in c:\\Users\\Sebastian.Just\\Source\\Repos\\eCash2\\test\\edge2.js:line 5',
-       HelpLink: null,
-       Source: '1tmcfvhv',
-       HResult: -2146233088 },
-     [length]: 1 ],
-  Message: 'One or more errors occurred.',
-  Data: {},
-  InnerException:
-   { Message: 'Sample exception',
-     Data: {},
-     InnerException: null,
-     TargetSite: {},
-     StackTrace: '   at Startup.<<Invoke>b__0>d__2.MoveNext() in c:\\Users\\Sebastian.Just\\Source\\Repos\\eCash2\\test\\edge2.js:line 7\r\n--- End of stack trace from previous location where exception was thrown ---\r\n   at System.Runtime.CompilerServices.TaskAwaiter.ThrowForNonSuccess(Task task)\r\n   at System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task task)\r\n   at System.Runtime.CompilerServices.TaskAwaiter`1.GetResult()\r\n   at Startup.<Invoke>d__4.MoveNext() in c:\\Users\\Sebastian.Just\\Source\\Repos\\eCash2\\test\\edge2.js:line 5',
-     HelpLink: null,
-     Source: '1tmcfvhv',
-     HResult: -2146233088 },
-  TargetSite: null,
-  StackTrace: null,
-  HelpLink: null,
-  Source: null,
-  HResult: -2146233088,
   message: 'One or more errors occurred.',
   name: 'System.AggregateException',
-  ToString: 'System.AggregateException: One or more errors occurred. ---> System.Exception: Sample exception\r\n   at Startup.<<Invoke>b__0>d__2.MoveNext() in c:\\Users\\Sebastian.Just\\Source\\Repos\\eCash2\\test\\edge2.js:line 7\r\n--- End of stack trace from previous location where exception was thrown ---\r\n   at System.Runtime.CompilerServices.TaskAwaiter.ThrowForNonSuccess(Task task)\r\n   at System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task task)\r\n   at System.Runtime.CompilerServices.TaskAwaiter`1.GetResult()\r\n   at Startup.<Invoke>d__4.MoveNext() in c:\\Users\\Sebastian.Just\\Source\\Repos\\eCash2\\test\\edge2.js:line 5\r\n   --- End of inner exception stack trace ---\r\n---> (Inner Exception #0) System.Exception: Sample exception\r\n   at Startup.<<Invoke>b__0>d__2.MoveNext() in c:\\Users\\Sebastian.Just\\Source\\Repos\\eCash2\\test\\edge2.js:line 7\r\n--- End of stack trace from previous location where exception was thrown ---\r\n   at System.Runtime.CompilerServices.TaskAwaiter.ThrowForNonSuccess(Task task)\r\n   at System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task task)\r\n   at System.Runtime.CompilerServices.TaskAwaiter`1.GetResult()\r\n   at Startup.<Invoke>d__4.MoveNext() in c:\\Users\\Sebastian.Just\\Source\\Repos\\eCash2\\test\\edge2.js:line 5<---\r\n' }
+  InnerExceptions: 'System.Collections.ObjectModel.ReadOnlyCollection`1[[System.Exception, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]',
+  Message: 'One or more errors occurred.',
+  Data: 'System.Collections.ListDictionaryInternal',
+  InnerException:
+   { [System.Exception: Sample exception]
+     message: 'Sample exception',
+     name: 'System.Exception',
+     Message: 'Sample exception',
+     Data: 'System.Collections.ListDictionaryInternal',
+     TargetSite: 'System.Reflection.RuntimeMethodInfo',
+     StackTrace: '   at Startup.<<Invoke>b__0>d__2.MoveNext() in c:\\Users\\User.Name\\Source\\Repos\\eCash2\\test\\edge2.js:line 7\r\n--- End of stack trace from previous location where exception was thrown ---\r\n   at System.Runtime.CompilerServices.TaskAwaiter.ThrowForNonSuccess(Task task)\r\n   at System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task task)\r\n   at System.Runtime.CompilerServices.TaskAwaiter`1.GetResult()\r\n   at Startup.<Invoke>d__4.MoveNext() in c:\\Users\\User.Name\\Source\\Repos\\eCash2\\test\\edge2.js:line 5',
+     Source: 'cp2luegt',
+     HResult: -2146233088 },
+  HResult: -2146233088 }
 ```
 The exception is copied back as Error object like every normal result object from the .NET world to JavaScript. 
 Therefore all properties and their values are available on the Error object.
@@ -944,7 +931,7 @@ Therefore all properties and their values are available on the Error object.
 Additionally, the following happens during the mapping:
 * To represent the Exception type, its full name is stored as `name`.
 * To follow the [JavaScript convention for Errors](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error), the `Message` is also stored as the property `message`.
-* System::Reflection::RuntimeMethodInfo are not copied to avoid stack overflows
+* `System::Reflection::RuntimeMethodInfo`s are not copied to avoid stack overflows
 
 ```
 $>node sample.js
