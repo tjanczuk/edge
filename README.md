@@ -896,7 +896,8 @@ var clrFunc = edge.func(function () {/*
 clrFunc(null, function (error, result) {
     if (error) {
 		console.log('Is Error?', error instanceof Error);
-		console.log(error);
+		console.log('-----------------');
+		console.log(util.inspect(error, showHidden=true, depth=99, colorize=false));
 		return;
 	}
 });
@@ -905,39 +906,45 @@ clrFunc(null, function (error, result) {
 Running this Node.js application shows that the CLR exception was indeed received by the Node.js callback. The `error` parameter contains an Error object having most of the properties of the Exceptions copied over:
 ```
 Is Error? true
+-----------------
 { [System.AggregateException: One or more errors occurred.]
+  InnerExceptions:
+   [ { Message: 'Sample exception',
+       Data: {},
+       InnerException: null,
+       TargetSite: {},
+       StackTrace: '   at Startup.<<Invoke>b__0>d__2.MoveNext() in c:\\Users\\Sebastian.Just\\Source\\Repos\\eCash2\\test\\edge2.js:line 7\r\n--- End of stack trace from previous location where exception was thrown ---\r\n   at System.Runtime.CompilerServices.TaskAwaiter.ThrowForNonSuccess(Task task)\r\n   at System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task task)\r\n   at System.Runtime.CompilerServices.TaskAwaiter`1.GetResult()\r\n   at Startup.<Invoke>d__4.MoveNext() in c:\\Users\\Sebastian.Just\\Source\\Repos\\eCash2\\test\\edge2.js:line 5',
+       HelpLink: null,
+       Source: '1tmcfvhv',
+       HResult: -2146233088 },
+     [length]: 1 ],
+  Message: 'One or more errors occurred.',
+  Data: {},
+  InnerException:
+   { Message: 'Sample exception',
+     Data: {},
+     InnerException: null,
+     TargetSite: {},
+     StackTrace: '   at Startup.<<Invoke>b__0>d__2.MoveNext() in c:\\Users\\Sebastian.Just\\Source\\Repos\\eCash2\\test\\edge2.js:line 7\r\n--- End of stack trace from previous location where exception was thrown ---\r\n   at System.Runtime.CompilerServices.TaskAwaiter.ThrowForNonSuccess(Task task)\r\n   at System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task task)\r\n   at System.Runtime.CompilerServices.TaskAwaiter`1.GetResult()\r\n   at Startup.<Invoke>d__4.MoveNext() in c:\\Users\\Sebastian.Just\\Source\\Repos\\eCash2\\test\\edge2.js:line 5',
+     HelpLink: null,
+     Source: '1tmcfvhv',
+     HResult: -2146233088 },
+  TargetSite: null,
+  StackTrace: null,
+  HelpLink: null,
+  Source: null,
+  HResult: -2146233088,
   message: 'One or more errors occurred.',
   name: 'System.AggregateException',
-  InnerExceptions: 'System.Collections.ObjectModel.ReadOnlyCollection`1[[System.Exception, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]',
-  Message: 'One or more errors occurred.',
-  Data: 'System.Collections.ListDictionaryInternal',
-  InnerException:
-   { [System.Exception: Sample exception]
-     message: 'Sample exception',
-     name: 'System.Exception',
-     Message: 'Sample exception',
-     Data: 'System.Collections.ListDictionaryInternal',
-     TargetSite: 'System.Reflection.RuntimeMethodInfo',
-     StackTrace: '   at Startup.<<Invoke>b__0>d__2.MoveNext() in c:\\Users\\Sebastian.Just\\Source\\Repos\\eCash2\\test\\edge2.js:line 7\r\n--- End of stack trace from previous location where exception was thrown ---\r\n   at System.Runtime.CompilerServices.TaskAwaiter.ThrowForNonSuccess(Task task)\r\n   at System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task task)\r\n   at System.Runtime.CompilerServices.TaskAwaiter`1.GetResult()\r\n   atStartup.<Invoke>d__4.MoveNext() in c:\\Users\\Sebastian.Just\\Source\\Repos\\eCash2\\test\\edge2.js:line 5',
-     Source: 'aclkeg4e',
-     HResult: -2146233088 },
-  HResult: -2146233088 }
+  ToString: 'System.AggregateException: One or more errors occurred. ---> System.Exception: Sample exception\r\n   at Startup.<<Invoke>b__0>d__2.MoveNext() in c:\\Users\\Sebastian.Just\\Source\\Repos\\eCash2\\test\\edge2.js:line 7\r\n--- End of stack trace from previous location where exception was thrown ---\r\n   at System.Runtime.CompilerServices.TaskAwaiter.ThrowForNonSuccess(Task task)\r\n   at System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task task)\r\n   at System.Runtime.CompilerServices.TaskAwaiter`1.GetResult()\r\n   at Startup.<Invoke>d__4.MoveNext() in c:\\Users\\Sebastian.Just\\Source\\Repos\\eCash2\\test\\edge2.js:line 5\r\n   --- End of inner exception stack trace ---\r\n---> (Inner Exception #0) System.Exception: Sample exception\r\n   at Startup.<<Invoke>b__0>d__2.MoveNext() in c:\\Users\\Sebastian.Just\\Source\\Repos\\eCash2\\test\\edge2.js:line 7\r\n--- End of stack trace from previous location where exception was thrown ---\r\n   at System.Runtime.CompilerServices.TaskAwaiter.ThrowForNonSuccess(Task task)\r\n   at System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task task)\r\n   at System.Runtime.CompilerServices.TaskAwaiter`1.GetResult()\r\n   at Startup.<Invoke>d__4.MoveNext() in c:\\Users\\Sebastian.Just\\Source\\Repos\\eCash2\\test\\edge2.js:line 5<---\r\n' }
 ```
-Currently supported property types and their JavaScript counter part:
-* String -> String
-* Byte, Int16, Int32 -> Number
-* Single, Double -> Number
-* Exception -> Error
-* Boolean -> Boolean
-* Guid -> String
-* Stacktrace[] -> String
+The exception is copied back as Error object like every normal result object from the .NET world to JavaScript. 
+Therefore all properties and their values are available on the Error object.
 
-Also nested Exceptions are supported. Properties representing lists return only their type name (see `InnerExceptions` in the example above).
-
-To represent the Exception type, its full name is stored as `name`.
-To follow the [JavaScript convention for Errors](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error), the `Message` is also stored as the property `message`.
-
-All other property names of the source Exception are used literally.
+Additionally, the following happens during the mapping:
+* To represent the Exception type, its full name is stored as `name`.
+* To follow the [JavaScript convention for Errors](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error), the `Message` is also stored as the property `message`.
+* System::Reflection::RuntimeMethodInfo are not copied to avoid stack overflows
 
 ```
 $>node sample.js
