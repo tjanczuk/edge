@@ -80,6 +80,7 @@ Listen to the [Edge.js podcast on Herdingcode](http://herdingcode.com/herding-co
 &nbsp;&nbsp;&nbsp;&nbsp;[How to: script T-SQL in a Node.js application](#how-to-script-t-sql-in-a-nodejs-application)  
 &nbsp;&nbsp;&nbsp;&nbsp;[How to: support for other CLR languages](#how-to-support-for-other-clr-languages)  
 &nbsp;&nbsp;&nbsp;&nbsp;[How to: exceptions](#how-to-exceptions)  
+&nbsp;&nbsp;&nbsp;&nbsp;[How to: app.config](#how-to-app-config)  
 &nbsp;&nbsp;&nbsp;&nbsp;[How to: debugging](#how-to-debugging)  
 &nbsp;&nbsp;&nbsp;&nbsp;[Performance](#performance)  
 &nbsp;&nbsp;&nbsp;&nbsp;[Building on Windows](#building-on-windows)  
@@ -992,6 +993,10 @@ System.Exception: Error: Sample JavaScript error
    at System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task task)
    at Edge.Sample.Startup.<Invoke>d__0.MoveNext()
 ```
+
+### How to: app.config
+
+When running C# code within Node.js app, the app config file is node.exe.config and should be located right next to the node.exe file.
 
 ### How to: debugging
 
