@@ -934,7 +934,7 @@ Currently supported property types and their JavaScript counter part:
 Also nested Exceptions are supported. Properties representing lists return only their type name (see `InnerExceptions` in the example above).
 
 To represent the Exception type, its full name is stored as `name`.
-To follow the (JavaScript convention for Errors)[https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error], the `Message` is also stored as the property `message`.
+To follow the [JavaScript convention for Errors](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error), the `Message` is also stored as the property `message`.
 
 All other property names of the source Exception are used literally.
 
