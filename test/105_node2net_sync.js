@@ -57,7 +57,13 @@ describe('sync call from node.js to .net', function () {
 		*/});
 		assert.throws(
 			function() { func(null, true); },
-			/Test .NET exception/
+			function(error) {
+				if ( (error instanceof Error) && error.InnerException.Message.match(/Test .NET exception/)) {
+					return true;
+				}
+				return false;
+			},
+			'Unexpected result'
 		);
 	});
 
