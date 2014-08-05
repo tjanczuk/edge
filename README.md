@@ -1227,7 +1227,7 @@ C:\project\sample\bin\Debug> sample.exe
 Node.js welcomes .NET
 ```
 
-### How to: intergate Node.js code into CLR code
+### How to: integrate Node.js code into CLR code
 
 The Edge.js NuGet package contains a single managed assembly `EdgeJs.dll` with a single class `EdgeJs.Edge` exposing a single static function `Func`. The function accepts a string containing code in Node.js that constructs and *returns* a JavaScript function. The JavaScript function must have the signature required by Edge.js's prescriptive interop pattern: it must accept one parameter and a callback, and the callback must be called with an error and one return value: 
 
