@@ -89,7 +89,7 @@ Listen to the [Edge.js podcast on Herdingcode](http://herdingcode.com/herding-co
 [Scripting Node.js from CLR](#scripting-nodejs-from-clr)  
 &nbsp;&nbsp;&nbsp;&nbsp;[What you need](#what-you-need-1)  
 &nbsp;&nbsp;&nbsp;&nbsp;[How to: Node.js hello, world](#how-to-nodejs-hello-world)  
-&nbsp;&nbsp;&nbsp;&nbsp;[How to: integrate Node.js into CLR code](#how-to-intergate-nodejs-code-into-clr-code)  
+&nbsp;&nbsp;&nbsp;&nbsp;[How to: integrate Node.js into CLR code](#how-to-integrate-nodejs-code-into-clr-code)  
 &nbsp;&nbsp;&nbsp;&nbsp;[How to: use Node.js built-in modules](#how-to-use-nodejs-built-in-modules)  
 &nbsp;&nbsp;&nbsp;&nbsp;[How to: use external Node.js modules](#how-to-use-external-nodejs-modules)  
 &nbsp;&nbsp;&nbsp;&nbsp;[How to: handle Node.js events in .NET](#how-to-handle-nodejs-events-in-net)  
