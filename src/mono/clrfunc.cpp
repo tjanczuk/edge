@@ -332,7 +332,11 @@ Handle<v8::Object> ClrFunc::MarshalCLRExceptionToV8(MonoException* exception)
 		
 		MonoMethod* method = mono_class_get_method_from_name(mono_get_exception_class(), "ToString", -1);
         Message = stringCLR2V8((MonoString*)mono_runtime_invoke(method, exception, NULL, NULL));
-		Name = Message;//Name = stringCLR2V8(exception->GetType()->FullName);
+		
+		method = mono_class_get_method_from_name(mono_get_exception_class(), "GetType", -1);
+		MonoObject* type = mono_runtime_invoke(method, exception, NULL, NULL);
+		method = mono_class_get_method_from_name(mono_get_object_class(), "FullName", -1);
+		Name = stringCLR2V8((MonoString*)mono_runtime_invoke(method, exception, NULL, NULL));
 	}	
 		
 	//Construct an error that is just used for the prototype - not verify efficient
