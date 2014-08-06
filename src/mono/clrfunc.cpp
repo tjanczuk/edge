@@ -312,13 +312,13 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata, MonoException** e
     return scope.Close(jsdata);
 }
 
-Handle<v8::Value> ClrFunc::MarshalCLRExceptionToV8(System::Exception* exception)
+Handle<v8::Value> ClrFunc::MarshalCLRExceptionToV8(MonoException* exception)
 {
     HandleScope scope;
 	Handle<v8::Object> result;
 	Handle<v8::String> Message;
 	Handle<v8::String> Name;
-    if (exception == nullptr)
+    if (false/*exception == nullptr*/)
     {
 		result = v8::Object::New();
 		
