@@ -297,7 +297,7 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata, MonoException** e
     }
 	else if (false/*System::Exception::typeid->IsAssignableFrom(type)*/)
 	{
-		jsdata = ClrFunc::MarshalCLRExceptionToV8((MonoException*)netdata, exc);
+		jsdata = ClrFunc::MarshalCLRExceptionToV8((MonoException*)netdata);
 	}
     else
     {
