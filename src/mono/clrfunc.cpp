@@ -318,7 +318,8 @@ Handle<v8::Value> ClrFunc::MarshalCLRExceptionToV8(MonoException* exception)
 	Handle<v8::Object> result;
 	Handle<v8::String> Message;
 	Handle<v8::String> Name;
-    if (false/*exception == nullptr*/)
+	MonoException** exc = NULL;
+    if (exception == NULL)
     {
 		result = v8::Object::New();
 		
@@ -327,7 +328,7 @@ Handle<v8::Value> ClrFunc::MarshalCLRExceptionToV8(MonoException* exception)
     }
     else
     {
-		result = ClrFunc::MarshalCLRObjectToV8(exception);
+		result = ClrFunc::MarshalCLRObjectToV8(exception, exc);
 		
 		Message = stringCLR2V8(exception->Message);
 		Name = stringCLR2V8(exception->GetType()->FullName);
