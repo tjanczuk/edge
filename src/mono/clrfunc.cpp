@@ -83,7 +83,7 @@ Handle<v8::Value> ClrFunc::Initialize(const v8::Arguments& args)
         MonoException* exc = NULL;
         MonoObject* func = MonoEmbedding::GetClrFuncReflectionWrapFunc(*assemblyFile, *nativeTypeName, *nativeMethodName, &exc);
         if(exc)
-            return scope.Close(throwV8Exception(exc));
+            return scope.Close(throwV8Exception(ClrFunc::MarshalCLRExceptionToV8(exc)));
         result = ClrFunc::Initialize(func);
     }
     else
@@ -98,7 +98,7 @@ Handle<v8::Value> ClrFunc::Initialize(const v8::Arguments& args)
         MonoMethod* ctor = mono_class_get_method_from_name(compilerClass, ".ctor", 0);
         mono_runtime_invoke(ctor, compilerInstance, NULL, (MonoObject**)&exc);
         if(exc)
-            return scope.Close(throwV8Exception(exc));
+            return scope.Close(throwV8Exception(ClrFunc::MarshalCLRExceptionToV8(exc)));
 
         MonoMethod* compileFunc = mono_class_get_method_from_name(compilerClass, "CompileFunc", -1);
         MonoReflectionMethod* methodInfo = mono_method_get_object(mono_domain_get(),compileFunc, compilerClass);
@@ -116,7 +116,7 @@ Handle<v8::Value> ClrFunc::Initialize(const v8::Arguments& args)
         params[1] = methodInfoParams;
         MonoObject* func = mono_runtime_invoke(invoke, methodInfo, params, (MonoObject**)&exc);
         if (exc)
-            return scope.Close(throwV8Exception(exc));
+            return scope.Close(throwV8Exception(ClrFunc::MarshalCLRExceptionToV8(exc)));
         result = ClrFunc::Initialize(func);
     }
 
@@ -529,7 +529,7 @@ Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> cal
     {
         delete c;
         c = NULL;
-        return scope.Close(throwV8Exception(exc));
+        return scope.Close(throwV8Exception(ClrFunc::MarshalCLRExceptionToV8(exc)));
     }
 
     MonoProperty* prop = mono_class_get_property_from_name(mono_object_get_class(task), "IsCompleted");
@@ -538,7 +538,7 @@ Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> cal
     {
         delete c;
         c = NULL;
-        return scope.Close(throwV8Exception(exc));
+        return scope.Close(throwV8Exception(ClrFunc::MarshalCLRExceptionToV8(exc)));
     }
 
     bool isCompleted = *(bool*)mono_object_unbox(isCompletedObject);
@@ -563,7 +563,7 @@ Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> cal
         {
             delete c;
             c = NULL;
-            return scope.Close(throwV8Exception(exc));
+            return scope.Close(throwV8Exception(ClrFunc::MarshalCLRExceptionToV8(exc)));
         }
     }
 
