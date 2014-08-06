@@ -30,20 +30,6 @@ MonoString* exceptionV82stringCLR(Handle<v8::Value> exception)
     return stringV82CLR(Handle<v8::String>::Cast(exception));
 }
 
-Handle<String> exceptionCLR2stringV8(MonoException* exception)
-{
-    HandleScope scope;
-    if (exception == NULL)
-    {
-        return scope.Close(v8::String::New("Unrecognized exception thrown by CLR."));
-    }
-    else
-    {
-        MonoMethod* method = mono_class_get_method_from_name(mono_get_exception_class(), "ToString", -1);
-        return scope.Close(stringCLR2V8((MonoString*)mono_runtime_invoke(method, exception, NULL, NULL)));
-    }
-}
-
 Handle<Value> throwV8Exception(Handle<Value> exception)
 {
     HandleScope scope;
