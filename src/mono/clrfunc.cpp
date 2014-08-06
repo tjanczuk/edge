@@ -331,7 +331,7 @@ Handle<v8::Value> ClrFunc::MarshalCLRExceptionToV8(MonoException* exception)
 		result = ClrFunc::MarshalCLRObjectToV8((MonoObject*)exception, exc);
 		
 		Message = stringCLR2V8(exception->Message);
-		Name = stringCLR2V8(exception->GetType()->FullName);
+		Name = Message;//Name = stringCLR2V8(exception->GetType()->FullName);
 	}	
 		
 	//Construct an error that is just used for the prototype - not verify efficient
