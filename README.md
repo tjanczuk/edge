@@ -85,7 +85,7 @@ Listen to the [Edge.js podcast on Herdingcode](http://herdingcode.com/herding-co
 &nbsp;&nbsp;&nbsp;&nbsp;[Performance](#performance)  
 &nbsp;&nbsp;&nbsp;&nbsp;[Building on Windows](#building-on-windows)  
 &nbsp;&nbsp;&nbsp;&nbsp;[Building on OSX](#building-on-osx)  
-&nbsp;&nbsp;&nbsp;&nbsp;[Building on Ubuntu](#building-on-ubuntu)  
+&nbsp;&nbsp;&nbsp;&nbsp;[Building on Linux](#building-on-linux)  
 &nbsp;&nbsp;&nbsp;&nbsp;[Running tests](#running-tests)  
 [Scripting Node.js from CLR](#scripting-nodejs-from-clr)  
 &nbsp;&nbsp;&nbsp;&nbsp;[What you need](#what-you-need-1)  
@@ -142,7 +142,7 @@ Edge.js runs on Windows, Linux, and MacOS and requires Node.js 0.8 or later, as 
 
 * Node.js 0.8.x or later (developed and tested with v0.10.26 x64)  
 * Mono 3.4.0 x64  
-* Check out [Ubuntu 12.04 setup instructions](#building-on-ubuntu)
+* Check out [Ubuntu 12.04 setup instructions](#building-on-linux)
 
 ![image](https://cloud.githubusercontent.com/assets/822369/2808077/03f92874-cd0e-11e3-88ea-79f67b8b1d49.png)
 
@@ -1172,9 +1172,29 @@ node-gyp configure build -debug
 export EDGE_NATIVE=/Users/tomek/edge/build/Debug/edge.node
 ```
 
-### Building on Ubuntu
+### Building on Linux 
 
-These instructions were tested on Ubuntu 12.04 x64. High level, you must have Node.js x64 and Mono x64 installed on the machine before you can install Edge.js. There are two ways of getting there.
+These instructions were tested on Ubuntu 12.04 x64 and Debian Wheezy x64. High level, you must have Node.js x64 and Mono x64 installed on the machine before you can install Edge.js. There are two ways of getting there.
+
+### Debian, starting from a clean VM (i.e. taking the high road)
+
+If you have a fresh Debian Wheezy x64 installation, the most convenient way of installing Edge.js with all prerequisites is by running:
+
+```bash
+export USERNAME=YourUserNameHere
+sudo bash -c 'bash <(wget -qO- https://raw.githubusercontent.com/tjanczuk/edge/master/tools/debian_wheezy_clean_install.sh)'
+```
+
+This will do the following:
+
+* Download Node.js v0.10.26 sources, build, and install Node.js x64
+* Download Mono 3.4.0 sources, build, and install Mono x64
+* Download and install node-gyp and mocha
+* Download Edge.js sources and build x64 release
+* Run Edge.js tests
+
+This process takes about 15 minutes on a Debian Wheezy x64 running on a 4 core with 16GB RAM. If successful, your machine will have all the prerequisites to `npm install edge`.
+
 
 ### Ubuntu, starting from a clean VM (i.e. taking the high road)
 
