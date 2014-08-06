@@ -330,7 +330,7 @@ Handle<v8::Value> ClrFunc::MarshalCLRExceptionToV8(MonoException* exception)
     {
 		result = ClrFunc::MarshalCLRObjectToV8((MonoObject*)exception, exc);
 		
-		Message = stringCLR2V8(exception->Message);
+		Message = v8::String::New("InternalException");//stringCLR2V8(exception->Message);
 		Name = Message;//Name = stringCLR2V8(exception->GetType()->FullName);
 	}	
 		
