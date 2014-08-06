@@ -312,7 +312,7 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata, MonoException** e
     return scope.Close(jsdata);
 }
 
-Handle<v8::Value> ClrFunc::MarshalCLRExceptionToV8(MonoException* exception)
+Handle<v8::Object> ClrFunc::MarshalCLRExceptionToV8(MonoException* exception)
 {
     HandleScope scope;
 	Handle<v8::Object> result;
@@ -330,7 +330,7 @@ Handle<v8::Value> ClrFunc::MarshalCLRExceptionToV8(MonoException* exception)
     {
 		result = ClrFunc::MarshalCLRObjectToV8((MonoObject*)exception, exc);
 		
-		Message = v8::String::New("InternalException");//stringCLR2V8(exception->Message);
+		Message =  v8::String::New("Message");//stringCLR2V8(exception->Message);
 		Name = Message;//Name = stringCLR2V8(exception->GetType()->FullName);
 	}	
 		
@@ -421,7 +421,8 @@ Handle<v8::Object> ClrFunc::MarshalCLRObjectToV8(MonoObject* netdata, MonoExcept
 
     if (*exc) 
     {
-        return scope.Close(Undefined());
+        //return scope.Close(Undefined());
+	return scope.Close(ClrFunc::MarshalCLRExceptionToV8(*exc));
     }
 
     return scope.Close(result);
