@@ -551,9 +551,9 @@ Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> cal
     }
     else if (c->Sync())
     {
-        return scope.Close(throwV8Exception(mono_get_exception_invalid_operation("The JavaScript function was called synchronously "
+        return scope.Close(throwV8Exception(ClrFunc::MarshalCLRExceptionToV8(mono_get_exception_invalid_operation("The JavaScript function was called synchronously "
             "but the underlying CLR function returned without completing the Task. Call the "
-            "JavaScript function asynchronously.")));
+            "JavaScript function asynchronously."))));
     }
     else
     {
