@@ -44,10 +44,10 @@ Handle<String> exceptionCLR2stringV8(MonoException* exception)
     }
 }
 
-Handle<Value> throwV8Exception(MonoException* exception)
+Handle<Value> throwV8Exception(Handle<Value> exception)
 {
     HandleScope scope;
-    return scope.Close(ThrowException(exceptionCLR2stringV8(exception)));
+    return scope.Close(ThrowException(exception));
 }
 
 // vim: ts=4 sw=4 et: 

@@ -16,7 +16,7 @@ Handle<v8::String> stringCLR2V8(MonoString* text);
 MonoString* stringV82CLR(Handle<v8::String> text);
 MonoString* exceptionV82stringCLR(Handle<v8::Value> exception);
 Handle<String> exceptionCLR2stringV8(MonoException* exception);
-Handle<Value> throwV8Exception(MonoException* exception);
+Handle<Value> throwV8Exception(Handle<Value> exception);
 
 class MonoEmbedding
 {
