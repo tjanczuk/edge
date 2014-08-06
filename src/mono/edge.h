@@ -132,7 +132,7 @@ private:
 
     ClrFunc();
 
-    static Handle<v8::Value> MarshalCLRObjectToV8(MonoObject* netdata, MonoException** exc);
+    static Handle<v8::Object> MarshalCLRObjectToV8(MonoObject* netdata, MonoException** exc);
 
 public:
     static Handle<v8::Value> Initialize(const v8::Arguments& args);

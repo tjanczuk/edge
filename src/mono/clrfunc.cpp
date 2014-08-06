@@ -347,7 +347,7 @@ Handle<v8::Value> ClrFunc::MarshalCLRExceptionToV8(MonoException* exception)
 	return scope.Close(result);
 }
 
-Handle<v8::Value> ClrFunc::MarshalCLRObjectToV8(MonoObject* netdata, MonoException** exc)
+Handle<v8::Object> ClrFunc::MarshalCLRObjectToV8(MonoObject* netdata, MonoException** exc)
 {
     HandleScope scope;
     Handle<v8::Object> result = v8::Object::New();
