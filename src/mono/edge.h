@@ -156,7 +156,7 @@ public:
     Handle<v8::Value> Call(Handle<v8::Value> payload, Handle<v8::Value> callback);
     static Handle<v8::Value> MarshalCLRToV8(MonoObject* netdata, MonoException** exc);
 	static Handle<v8::Value> MarshalCLRExceptionToV8(MonoException* exception);
-    static MonoObdject* MarshalV8ToCLR(Handle<v8::Value> jsdata);    
+    static MonoObject* MarshalV8ToCLR(Handle<v8::Value> jsdata);    
 };
 
 typedef struct clrFuncWrap {
