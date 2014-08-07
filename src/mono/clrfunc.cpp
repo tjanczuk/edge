@@ -333,7 +333,7 @@ Handle<v8::Object> ClrFunc::MarshalCLRExceptionToV8(MonoException* exception)
 		result = ClrFunc::MarshalCLRObjectToV8((MonoObject*)exception, &exc);
 
 		MonoProperty* prop = mono_class_get_property_from_name(mono_get_exception_class(), "Message");
-        Message = stringCLR2V8((MonoString*)mono_property_get_value(prop, exception));
+        Message = stringCLR2V8((MonoString*)mono_property_get_value(prop, exception, NULL, NULL));
 
 	    MonoClass* klass = mono_object_get_class((MonoObject*)exception);
 		Name = stringCLR2V8(mono_string_new_wrapper(mono_class_get_name(klass)));
