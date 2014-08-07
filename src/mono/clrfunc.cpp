@@ -338,6 +338,7 @@ Handle<v8::Object> ClrFunc::MarshalCLRExceptionToV8(MonoException* exception)
 	    MonoClass* klass = mono_object_get_class((MonoObject*)exception);
         const char* namespaceName = mono_class_get_namespace(klass);
         const char* className = mono_class_get_name(klass);
+        // This looks horrible - it is 2014...
         char result[strlen(namespaceName) + 1 + strlen(className) + 1]; 
         strcpy(result,namespaceName);
         strcat(result, ".");
