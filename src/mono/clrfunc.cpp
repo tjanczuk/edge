@@ -321,32 +321,36 @@ Handle<v8::Object> ClrFunc::MarshalCLRExceptionToV8(MonoException* exception)
 	MonoException** exc = NULL;
     if (exception == NULL)
     {
+    printf("null1");
 		result = v8::Object::New();
-		
+	printf("null2");	
 		Message = v8::String::New("Unrecognized exception thrown by CLR.");
+        printf("null3");
 		Name = v8::String::New("InternalException");
     }
     else
     {
+    printf("notnull1");
 		result = ClrFunc::MarshalCLRObjectToV8((MonoObject*)exception, exc);
-		
+	printf("notnull2");	
 		MonoMethod* method = mono_class_get_method_from_name(mono_get_exception_class(), "ToString", -1);
         Message = stringCLR2V8((MonoString*)mono_runtime_invoke(method, exception, NULL, NULL));
-
+printf("notnull3");
 	    MonoClass* klass = mono_object_get_class((MonoObject*)exception);
 		Name = stringCLR2V8(mono_string_new_wrapper(mono_class_get_name(klass)));
 	}	
-		
+		printf("all1");
 	//Construct an error that is just used for the prototype - not verify efficient
 	//but 'typeof Error' should work in JavaScript
 	result->SetPrototype(v8::Exception::Error(Message));
+    printf("all2");
 	result->Set(String::NewSymbol("message"), Message);
-	
+	printf("all3");
 	//Recording the actual type - 'name' seems to be the common used property
 	result->Set(String::NewSymbol("name"), Name);
 	//Record the whole toString for those who are interested
 	//result->Set(String::NewSymbol("ToString"), stringCLR2V8(exception->ToString()));
-
+printf("all4");
 	return scope.Close(result);
 }
 
