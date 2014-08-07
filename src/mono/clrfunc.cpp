@@ -295,7 +295,7 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata, MonoException** e
     {
         jsdata = ClrFunc::Initialize(netdata);
     }
-	else if (false/*mono_class_is_assignable_from(mono_get_exception_class(), klass)*/)
+	else if (mono_class_is_assignable_from(mono_get_exception_class(), klass))
 	{
 		jsdata = ClrFunc::MarshalCLRExceptionToV8((MonoException*)netdata);
 	}
@@ -328,7 +328,7 @@ Handle<v8::Object> ClrFunc::MarshalCLRExceptionToV8(MonoException* exception)
     }
     else
     {
-		result = ClrFunc::MarshalCLRObjectToV8(exception, exc);
+		result = ClrFunc::MarshalCLRObjectToV8((MonoObject*)exception, exc);
 		
 		MonoMethod* method = mono_class_get_method_from_name(mono_get_exception_class(), "ToString", -1);
         Message = stringCLR2V8((MonoString*)mono_runtime_invoke(method, exception, NULL, NULL));
