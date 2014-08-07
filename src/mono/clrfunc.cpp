@@ -336,7 +336,9 @@ Handle<v8::Object> ClrFunc::MarshalCLRExceptionToV8(MonoException* exception)
         Message = stringCLR2V8((MonoString*)mono_property_get_value(prop, exception, NULL, NULL));
 
 	    MonoClass* klass = mono_object_get_class((MonoObject*)exception);
-		Name = stringCLR2V8(mono_string_new_wrapper(mono_class_get_name(klass)));
+        const char* namespaceName = mono_class_get_namespace(klass);
+        const char* className = mono_class_get_name(klass);
+		Name = stringCLR2V8(mono_string_new_wrapper(strcat(namespaceName, className)));
 	}	
 	
 	//Construct an error that is just used for the prototype - not verify efficient
