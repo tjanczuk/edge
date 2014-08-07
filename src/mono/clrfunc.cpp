@@ -319,7 +319,7 @@ Handle<v8::Object> ClrFunc::MarshalCLRExceptionToV8(MonoException* exception)
 	Handle<v8::Object> result;
 	Handle<v8::String> Message;
 	Handle<v8::String> Name;
-	MonoException** exc = NULL;
+	MonoException* exc = NULL;
     
     if (exception == NULL)
     {
@@ -330,7 +330,7 @@ Handle<v8::Object> ClrFunc::MarshalCLRExceptionToV8(MonoException* exception)
     }
     else
     {
-		result = ClrFunc::MarshalCLRObjectToV8((MonoObject*)exception, exc);
+		result = ClrFunc::MarshalCLRObjectToV8((MonoObject*)exception, &exc);
 
 		MonoMethod* method = mono_class_get_method_from_name(mono_get_exception_class(), "ToString", -1);
         Message = stringCLR2V8((MonoString*)mono_runtime_invoke(method, exception, NULL, NULL));
