@@ -330,9 +330,10 @@ Handle<v8::Object> ClrFunc::MarshalCLRExceptionToV8(MonoException* exception)
 		Name = v8::String::New("InternalException");
     }
     else
-    {
+    {printf("notnull0");
+    MonoObject* o = (MonoObject*)exception;
     printf("notnull1");
-		result = ClrFunc::MarshalCLRObjectToV8((MonoObject*)exception, exc);
+		result = ClrFunc::MarshalCLRObjectToV8(o, exc);
 	printf("notnull2");	
 		MonoMethod* method = mono_class_get_method_from_name(mono_get_exception_class(), "ToString", -1);
         Message = stringCLR2V8((MonoString*)mono_runtime_invoke(method, exception, NULL, NULL));
