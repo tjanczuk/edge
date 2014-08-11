@@ -374,7 +374,7 @@ Handle<v8::Object> ClrFunc::MarshalCLRObjectToV8(MonoObject* netdata, MonoExcept
     while (NULL != (field = mono_class_get_fields(klass, &iter)) && !*exc)
     {
         const char* name = mono_field_get_name(field);
-        DGB(name);
+        DBG(name);
         // magic numbers
         static uint32_t field_attr_static = 0x0010;
         static uint32_t field_attr_public = 0x0006;
@@ -425,7 +425,7 @@ Handle<v8::Object> ClrFunc::MarshalCLRObjectToV8(MonoObject* netdata, MonoExcept
         }
 
         const char* name = mono_property_get_name(prop);
-        DGB(name);
+        DBG(name);
         MonoObject* value = mono_runtime_invoke(getMethod, netdata, NULL, (MonoObject**)exc);
         if (!*exc)
         {
