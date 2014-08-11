@@ -314,7 +314,7 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata, MonoException** e
 
 Handle<v8::Object> ClrFunc::MarshalCLRExceptionToV8(MonoException* exception)
 {
-    printf("MarshalCLRExceptionToV8");
+    DBG("MarshalCLRExceptionToV8");
     HandleScope scope;
 	Handle<v8::Object> result;
 	Handle<v8::String> Message;
