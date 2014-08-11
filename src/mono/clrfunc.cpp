@@ -320,7 +320,7 @@ Handle<v8::Object> ClrFunc::MarshalCLRExceptionToV8(MonoException* exception)
 	Handle<v8::String> Message;
 	Handle<v8::String> Name;
 	MonoException* exc = NULL;
-    
+        
     if (exception == NULL)
     {
 		result = v8::Object::New();
@@ -372,6 +372,8 @@ Handle<v8::Object> ClrFunc::MarshalCLRObjectToV8(MonoObject* netdata, MonoExcept
 
     while (NULL != (field = mono_class_get_fields(klass, &iter)) && !*exc)
     {
+        const char* name = mono_field_get_name(field);
+        printf("CLR->V8 class field: %s\n", name);
         // magic numbers
         static uint32_t field_attr_static = 0x0010;
         static uint32_t field_attr_public = 0x0006;
@@ -379,7 +381,6 @@ Handle<v8::Object> ClrFunc::MarshalCLRObjectToV8(MonoObject* netdata, MonoExcept
             continue;
         if (!(mono_field_get_flags(field) & field_attr_public))
             continue;
-        const char* name = mono_field_get_name(field);
         MonoObject* value = mono_field_get_value_object(mono_domain_get(), field, netdata);
         result->Set(
             v8::String::New(name), 
@@ -423,6 +424,7 @@ Handle<v8::Object> ClrFunc::MarshalCLRObjectToV8(MonoObject* netdata, MonoExcept
         }
 
         const char* name = mono_property_get_name(prop);
+        printf("CLR->V8 class property: %s\n", name);
         MonoObject* value = mono_runtime_invoke(getMethod, netdata, NULL, (MonoObject**)exc);
         if (!*exc)
         {
