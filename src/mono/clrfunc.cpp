@@ -369,12 +369,12 @@ Handle<v8::Object> ClrFunc::MarshalCLRObjectToV8(MonoObject* netdata, MonoExcept
     MonoProperty* prop;
     void* iter = NULL;
     *exc = NULL;
-        printf("MarshalCLRObjectToV8");
+    DBG("ClrFunc::MarshalCLRObjectToV8");
 
     while (NULL != (field = mono_class_get_fields(klass, &iter)) && !*exc)
     {
         const char* name = mono_field_get_name(field);
-        printf("CLR->V8 class field: %s\n", name);
+        DBB(name);
         // magic numbers
         static uint32_t field_attr_static = 0x0010;
         static uint32_t field_attr_public = 0x0006;
@@ -425,7 +425,7 @@ Handle<v8::Object> ClrFunc::MarshalCLRObjectToV8(MonoObject* netdata, MonoExcept
         }
 
         const char* name = mono_property_get_name(prop);
-        printf("CLR->V8 class property: %s\n", name);
+        DGB(name);
         MonoObject* value = mono_runtime_invoke(getMethod, netdata, NULL, (MonoObject**)exc);
         if (!*exc)
         {
