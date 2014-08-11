@@ -369,6 +369,7 @@ Handle<v8::Object> ClrFunc::MarshalCLRObjectToV8(MonoObject* netdata, MonoExcept
     MonoProperty* prop;
     void* iter = NULL;
     *exc = NULL;
+        printf("MarshalCLRObjectToV8");
 
     while (NULL != (field = mono_class_get_fields(klass, &iter)) && !*exc)
     {
