@@ -113,7 +113,7 @@ public static class MonoEmbedding
         task.ContinueWith(new Action<Task<object>, object>(edgeAppCompletedOnCLRThread), state);
     }
 
-    static public void CreateFaultedTask(Exception exc)
+    static public Task<object> CreateFaultedTask(Exception exc)
     {
         var tcs = new TaskCompletionSource<object>();
         tcs.SetException(exc);
