@@ -108,13 +108,13 @@ describe('edge-cs', function () {
     it('fails with malformed literal lambda', function () {
         assert.throws(
             function () { edge.func('async_foo (input) => { return "Hello, " + input.ToString(); }'); },
-			function(error) {
-				if ( (error instanceof Error) && error.InnerException.Message.match(/Invalid expression term '=>'|Unexpected symbol `=>'/)) {
-					return true;
-				}
-				return false;
-			},
-			'Unexpected result'
+            function (error) {
+                if ((error instanceof Error) && error.InnerException.Message.match(/Invalid expression term '=>'|Unexpected symbol `=>'/)) {
+                    return true;
+                }
+                return false;
+            },
+            'Unexpected result'
         );
     });
 
@@ -133,13 +133,13 @@ describe('edge-cs', function () {
                     }
                 */});
             },
-			function(error) {
-				if ( (error instanceof Error) && error.InnerException.Message.match(/Expected class, delegate, enum, interface, or|expecting `class', `delegate', `enum', `interface', `partial', or `struct'/)) {
-					return true;
-				}
-				return false;
-			},
-			'Unexpected result'
+            function (error) {
+                if ((error instanceof Error) && error.InnerException.Message.match(/Expected class, delegate, enum, interface, or|expecting `class', `delegate', `enum', `interface', `partial', or `struct'/)) {
+                    return true;
+                }
+                return false;
+            },
+            'Unexpected result'
         );
     });
 
@@ -158,13 +158,13 @@ describe('edge-cs', function () {
                     }
                 */});
              },
-			function(error) {
-				if ( (error instanceof Error) && error.InnerException.Message.match(/Unable to access CLR method to wrap through reflection/)) {
-					return true;
-				}
-				return false;
-			},
-			'Unexpected result'
+            function (error) {
+                if ((error instanceof Error) && error.InnerException.Message.match(/Unable to access CLR method to wrap through reflection/)) {
+                    return true;
+                }
+                return false;
+            },
+            'Unexpected result'
         );
     });
 
@@ -183,13 +183,13 @@ describe('edge-cs', function () {
                     }           
                 */});
             },
-			function(error) {
-				if ( (error instanceof Error) && error.InnerException.Message.match(/Could not load type 'Startup'/)) {
-					return true;
-				}
-				return false;
-			},
-			'Unexpected result'
+            function(error) {
+                if ( (error instanceof Error) && error.InnerException.Message.match(/Could not load type 'Startup'/)) {
+                    return true;
+                }
+                return false;
+            },
+            'Unexpected result'
         );
     });
 

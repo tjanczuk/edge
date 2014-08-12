@@ -59,14 +59,14 @@ describe('call patterns', function () {
         var lambda = func(null, true);
         assert.equal(typeof lambda, 'function');
         assert.throws(
-            function() { lambda(null, true); },
-			function(error) {
-				if ( (error instanceof Error) && error.InnerException.Message.match(/Test .NET exception/)) {
-					return true;
-				}
-				return false;
-			},
-			'Unexpected result'
+            function () { lambda(null, true); },
+            function (error) {
+                if ((error instanceof Error) && error.InnerException.Message.match(/Test .NET exception/)) {
+                    return true;
+                }
+                return false;
+            },
+            'Unexpected result'
         );
     });
 
@@ -92,13 +92,13 @@ describe('call patterns', function () {
         lambda(null, function (error, result) {
             assert.throws(
                 function () { throw error; },
-				function(error) {
-				if ( (error instanceof Error) && error.InnerException.Message.match(/Test .NET exception/)) {
-					return true;
-				}
-				return false;
-			},
-			'Unexpected result'
+                function (error) {
+                if ((error instanceof Error) && error.InnerException.Message.match(/Test .NET exception/)) {
+                    return true;
+                }
+                return false;
+            },
+            'Unexpected result'
             );
             done();
         });
@@ -135,11 +135,11 @@ describe('call patterns', function () {
         var results = [];
 
         edgetest(
-            function(data, callback) {
+            function (data, callback) {
                 results.push(data);
                 callback();
             },
-            function(error, result) {
+            function (error, result) {
                 assert.ifError(error);
                 assert.equal(results.length, 5000);
                 assert.equal(result, 5000);
@@ -293,13 +293,13 @@ describe('call patterns', function () {
 
         assert.throws(
             function () { callout(null, true); }, 
-			function(error) {
-				if ( (error instanceof Error) && error.InnerException.Message.match(/I have no name/)) {
-					return true;
-				}
-				return false;
-			},
-			'Unexpected result'
+            function (error) {
+                if ((error instanceof Error) && error.InnerException.Message.match(/I have no name/)) {
+                    return true;
+                }
+                return false;
+            },
+            'Unexpected result'
         );
     }); 
 
