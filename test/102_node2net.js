@@ -86,8 +86,8 @@ describe('async call from node.js to .net', function () {
 		});
 		func(null, function (error, result) {
 			assert.equal(result, undefined);
-			assert.equal(typeof error, 'string');
-			assert.ok(error.indexOf('Test .NET exception') > 0);
+			assert.equal(typeof error, Error);
+			assert.ok(error.message.indexOf('Test .NET exception') > 0);
 			done();
 		});
 	});
