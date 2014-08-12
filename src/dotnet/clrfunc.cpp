@@ -127,7 +127,6 @@ void edgeAppCompletedOnCLRThread(Task<System::Object^>^ task, System::Object^ st
 
 Handle<v8::Value> ClrFunc::MarshalCLRToV8(System::Object^ netdata)
 {
-    DBG("ClrFunc::MarshalCLRToV8");
     HandleScope scope;
     Handle<v8::Value> jsdata;
 
