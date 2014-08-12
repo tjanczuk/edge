@@ -536,7 +536,6 @@ Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> cal
     DBG("ClrFunc::Call instance");
     HandleScope scope;
     MonoException* exc = NULL;
-    MonoException* exc2 = NULL;
 
     ClrFuncInvokeContext* c = new ClrFuncInvokeContext(callback);
     c->Payload(ClrFunc::MarshalV8ToCLR(payload));
@@ -545,13 +544,16 @@ Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> cal
     void* params[1];
     params[0] = c->Payload();
     MonoMethod* invoke = mono_class_get_method_from_name(mono_object_get_class(func), "Invoke", -1);
-    MonoObject* task = mono_runtime_invoke(invoke, func, params, (MonoObject**)&exc2);
+    MonoObject* task = mono_runtime_invoke(invoke, func, params, (MonoObject**)&exc);
     if (exc)
     {
         DBG("Exception 1. pass");
+        mono_object_describe(exc);
+        DBG("----");
+        mono_object_describe_fields(exc);
         delete c;
         c = NULL;
-        return scope.Close(throwV8Exception(ClrFunc::MarshalCLRExceptionToV8(exc2)));
+        return scope.Close(throwV8Exception(ClrFunc::MarshalCLRExceptionToV8(exc)));
     }
 
     MonoProperty* prop = mono_class_get_property_from_name(mono_object_get_class(task), "IsCompleted");
