@@ -366,6 +366,13 @@ Handle<v8::Object> ClrFunc::MarshalCLRObjectToV8(MonoObject* netdata, MonoExcept
     void* iter = NULL;
     *exc = NULL;
 
+    if (0 == strcmp(mono_class_get_name(klass), "MonoType")
+        && 0 == strcmp(mono_class_get_namespace(klass), "System"))
+    {
+        // Avoid stack overflow due to self-referencing reflection elements
+        return scope.Close(result);        
+    }
+
     while (NULL != (field = mono_class_get_fields(klass, &iter)) && !*exc)
     {
         // magic numbers
