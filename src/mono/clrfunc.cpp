@@ -548,7 +548,7 @@ Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> cal
     MonoObject* task = mono_runtime_invoke(invoke, func, params, (MonoObject**)&exc);
     if (exc)
     {
-        task = new Task();
+        task = MonoEmbedding::CreateFaultedTask(exc);
         c->Task(task);
         DBG("Exception 1. pass");
         delete c;
