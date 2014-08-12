@@ -81,6 +81,7 @@ Handle<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread()
     if (!this->Sync && !this->callback)
     {
         // this was an async call without callback specified
+        DBG("ClrFuncInvokeContext::CompleteOnV8Thread - async without callback");
         return handleScope.Close(Undefined());
     }
 
@@ -125,15 +126,18 @@ Handle<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread()
             node::FatalException(try_catch);
         }        
 
+        DBG("ClrFuncInvokeContext::CompleteOnV8Thread - async with callback");
         return handleScope.Close(Undefined());
     }
     else if (1 == argc) 
     {
+        DBG("ClrFuncInvokeContext::CompleteOnV8Thread - handleScope.Close(ThrowException(argv[0]))");
         // complete the synchronous call to C# by re-throwing the resulting exception
         return handleScope.Close(ThrowException(argv[0]));
     }
     else
     {
+        DBG("ClrFuncInvokeContext::CompleteOnV8Thread - handleScope.Close(argv[1])");
         // complete the synchronous call to C# by returning the result
         return handleScope.Close(argv[1]);
     }
