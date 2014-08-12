@@ -33,7 +33,7 @@ public:
     static MonoClass* GetFuncClass();
     static MonoArray* IEnumerableToArray(MonoObject* ienumerable, MonoException** exc);
     static MonoArray* IDictionaryToFlatArray(MonoObject* dictionary, MonoException** exc);
-    static MonoObject* CreateFaultedTask(MonoObject* exc);
+    static MonoObject* CreateFaultedTask(MonoException* exc);
     static void ContinueTask(MonoObject* task, MonoObject* state, MonoException** exc);
     static double GetDateValue(MonoObject* dt, MonoException** exc);
     static MonoString* ToString(MonoObject* o, MonoException** exc);
