@@ -284,6 +284,14 @@ Handle<v8::Value> ClrFunc::MarshalCLRExceptionToV8(System::Exception^ exception)
     }
     else
     {
+        // Remove AggregateException wrapper from around singleton InnerExceptions
+        if (System::AggregateException::typeid->IsAssignableFrom(exception->GetType()))
+        {
+            System::AggregateException^ aggregate = (System::AggregateException^)exception;
+            if (aggregate->InnerExceptions->Count == 1)
+                exception = aggregate->InnerExceptions[0];
+        }
+
         result = ClrFunc::MarshalCLRObjectToV8(exception);
         message = stringCLR2V8(exception->Message);
         name = stringCLR2V8(exception->GetType()->FullName);

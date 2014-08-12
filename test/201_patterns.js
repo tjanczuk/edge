@@ -61,7 +61,7 @@ describe('call patterns', function () {
         assert.throws(
             function () { lambda(null, true); },
             function (error) {
-                if ((error instanceof Error) && error.InnerException.Message.match(/Test .NET exception/)) {
+                if ((error instanceof Error) && error.Message.match(/Test .NET exception/)) {
                     return true;
                 }
                 return false;
@@ -93,7 +93,7 @@ describe('call patterns', function () {
             assert.throws(
                 function () { throw error; },
                 function (error) {
-                if ((error instanceof Error) && error.InnerException.Message.match(/Test .NET exception/)) {
+                if ((error instanceof Error) && error.Message.match(/Test .NET exception/)) {
                     return true;
                 }
                 return false;
