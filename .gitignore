@@ -29,3 +29,5 @@ Sample105.*
 .DS_Store
 *.sublime-project
 *.sublime-workspace
+
+adhoc/

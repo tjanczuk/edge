@@ -34,8 +34,7 @@ using namespace System::Web::Script::Serialization;
 Handle<v8::String> stringCLR2V8(System::String^ text);
 System::String^ stringV82CLR(Handle<v8::String> text);
 System::String^ exceptionV82stringCLR(Handle<v8::Value> exception);
-Handle<String> exceptionCLR2stringV8(System::Exception^ exception);
-Handle<Value> throwV8Exception(System::Exception^ exception);
+Handle<Value> throwV8Exception(Handle<Value> exception);
 
 typedef struct clrActionContext {
     gcroot<System::Action^> action;
@@ -132,13 +131,14 @@ private:
 
     ClrFunc();
 
-    static Handle<v8::Value> MarshalCLRObjectToV8(System::Object^ netdata);
+    static Handle<v8::Object> MarshalCLRObjectToV8(System::Object^ netdata);
 
 public:
     static Handle<v8::Value> Initialize(const v8::Arguments& args);
     static Handle<v8::Function> Initialize(System::Func<System::Object^,Task<System::Object^>^>^ func);
     Handle<v8::Value> Call(Handle<v8::Value> payload, Handle<v8::Value> callback);
     static Handle<v8::Value> MarshalCLRToV8(System::Object^ netdata);
+    static Handle<v8::Value> MarshalCLRExceptionToV8(System::Exception^ exception);
     static System::Object^ MarshalV8ToCLR(Handle<v8::Value> jsdata);    
 };
 

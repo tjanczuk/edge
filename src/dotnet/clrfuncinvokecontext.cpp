@@ -81,6 +81,7 @@ Handle<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread()
     if (!this->Sync && !this->callback)
     {
         // this was an async call without callback specified
+        DBG("ClrFuncInvokeContext::CompleteOnV8Thread - async without callback");
         return handleScope.Close(Undefined());
     }
 
@@ -93,7 +94,7 @@ Handle<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread()
         break;
         case TaskStatus::Faulted:
             if (this->Task->Exception != nullptr) {
-                argv[0] = exceptionCLR2stringV8(this->Task->Exception);
+                argv[0] = ClrFunc::MarshalCLRExceptionToV8(this->Task->Exception);
             }
             else {
                 argv[0] = v8::String::New("The operation has failed with an undetermined error.");
@@ -109,7 +110,7 @@ Handle<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread()
             }
             catch (System::Exception^ e) {
                 argc = 1;
-                argv[0] = exceptionCLR2stringV8(e);
+                argv[0] = ClrFunc::MarshalCLRExceptionToV8(e);
             }
         break;
     };
@@ -125,15 +126,18 @@ Handle<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread()
             node::FatalException(try_catch);
         }        
 
+        DBG("ClrFuncInvokeContext::CompleteOnV8Thread - async with callback");
         return handleScope.Close(Undefined());
     }
     else if (1 == argc) 
     {
+        DBG("ClrFuncInvokeContext::CompleteOnV8Thread - handleScope.Close(ThrowException(argv[0]))");
         // complete the synchronous call to C# by re-throwing the resulting exception
         return handleScope.Close(ThrowException(argv[0]));
     }
     else
     {
+        DBG("ClrFuncInvokeContext::CompleteOnV8Thread - handleScope.Close(argv[1])");
         // complete the synchronous call to C# by returning the result
         return handleScope.Close(argv[1]);
     }

@@ -14,12 +14,12 @@ public static class MonoEmbedding
         return 0;
     }
 
-    static public Type GetIDictionaryStringObjectType() 
+    static public Type GetIDictionaryStringObjectType()
     {
         return typeof(IDictionary<string, Object>);
     }
 
-    static public Type GetUriType() 
+    static public Type GetUriType()
     {
         return typeof(Uri);
     }
@@ -31,7 +31,7 @@ public static class MonoEmbedding
         return new Func<Object, Task<Object>>(wrap.Call);
     }
 
-    static public DateTime CreateDateTime(double ticks) 
+    static public DateTime CreateDateTime(double ticks)
     {
         return new DateTime((Int64)ticks * 10000 + MinDateTimeTicks, DateTimeKind.Utc);
     }
@@ -49,7 +49,7 @@ public static class MonoEmbedding
             dt = new DateTime(dt.Ticks, DateTimeKind.Utc);
         Int64 value = (dt.Ticks - MinDateTimeTicks) / 10000;
 
-        return (double)value;        
+        return (double)value;
     }
 
     static public object[] IDictionaryToFlatArray(object dictionary)
@@ -58,18 +58,18 @@ public static class MonoEmbedding
         IDictionary<string, object> dso = dictionary as IDictionary<string, object>;
         if (dso != null)
         {
-            foreach (var kv in dso) 
+            foreach (var kv in dso)
             {
                 list.Add(kv.Key);
                 list.Add(kv.Value);
             }
         }
-        else 
+        else
         {
             System.Collections.IDictionary d = dictionary as System.Collections.IDictionary;
             if (d != null)
             {
-                foreach (System.Collections.DictionaryEntry kv in d) 
+                foreach (System.Collections.DictionaryEntry kv in d)
                 {
                     if ((kv.Key as string) != null)
                     {
@@ -78,7 +78,7 @@ public static class MonoEmbedding
                     }
                 }
             }
-            else 
+            else
             {
                 throw new InvalidOperationException("Expected a dictionary.");
             }
@@ -111,6 +111,13 @@ public static class MonoEmbedding
     {
         // Will complete asynchronously. Schedule continuation to finish processing.
         task.ContinueWith(new Action<Task<object>, object>(edgeAppCompletedOnCLRThread), state);
+    }
+
+    static public Task<object> CreateFaultedTask(Exception exc)
+    {
+        var tcs = new TaskCompletionSource<object>();
+        tcs.SetException(exc);
+        return tcs.Task;
     }
 
     static public string ObjectToString(object o)
