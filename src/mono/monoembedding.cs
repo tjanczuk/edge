@@ -116,6 +116,7 @@ public static class MonoEmbedding
     static public Task<object> CreateFaultedTask(Exception exc)
     {
         var tcs = new TaskCompletionSource<object>();
+Console.Write(exc);
         tcs.SetException(exc);
         return tcs.Task;
     }
