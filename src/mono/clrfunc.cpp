@@ -545,6 +545,7 @@ Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> cal
     MonoObject* task = mono_runtime_invoke(invoke, func, params, (MonoObject**)&exc);
     if (exc)
     {
+        DBG("Exception 1. pass");
         delete c;
         c = NULL;
         return scope.Close(throwV8Exception(ClrFunc::MarshalCLRExceptionToV8(exc)));
@@ -554,6 +555,7 @@ Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> cal
     MonoObject* isCompletedObject = mono_property_get_value(prop, task, NULL, (MonoObject**)&exc);
     if (exc)
     {
+        DBG("Exception 2. pass");
         delete c;
         c = NULL;
         return scope.Close(throwV8Exception(ClrFunc::MarshalCLRExceptionToV8(exc)));
@@ -562,6 +564,7 @@ Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> cal
     bool isCompleted = *(bool*)mono_object_unbox(isCompletedObject);
     if(isCompleted)
     {
+        DBG("Complete 1. pass");
         // Completed synchronously. Return a value or invoke callback based on call pattern.
         c->Task(task);
         return scope.Close(c->CompleteOnV8Thread(true));
@@ -574,11 +577,13 @@ Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> cal
     }
     else
     {
+        DBG("Complete 2. pass");
         c->InitializeAsyncOperation();
 
         MonoEmbedding::ContinueTask(task, c->GetMonoObject(), &exc);
         if (exc)
         {
+            DBG("Exception 3. pass");
             delete c;
             c = NULL;
             return scope.Close(throwV8Exception(ClrFunc::MarshalCLRExceptionToV8(exc)));
