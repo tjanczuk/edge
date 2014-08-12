@@ -548,9 +548,6 @@ Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> cal
     if (exc)
     {
         DBG("Exception 1. pass");
-        mono_object_describe(exc);
-        DBG("----");
-        mono_object_describe_fields(exc);
         delete c;
         c = NULL;
         return scope.Close(throwV8Exception(ClrFunc::MarshalCLRExceptionToV8(exc)));
