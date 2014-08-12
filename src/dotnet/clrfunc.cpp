@@ -455,6 +455,7 @@ Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> cal
         Task<System::Object^>^ task = this->func(context->Payload);
         if (task->IsCompleted)
         {
+            DBG("Complete 1. pass");
             // Completed synchronously. Return a value or invoke callback based on call pattern.
             context->Task = task;
             return scope.Close(context->CompleteOnV8Thread());
@@ -468,6 +469,7 @@ Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> cal
         }
         else 
         {
+            DBG("Complete 2. pass");
             // Create a GC root around the ClrFuncInvokeContext to ensure it is not garbage collected
             // while the CLR function executes asynchronously. 
             context->InitializeAsyncOperation();
@@ -479,6 +481,7 @@ Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> cal
     }
     catch (System::Exception^ e)
     {
+        DBG("Exception 1. pass");
         return scope.Close(throwV8Exception(ClrFunc::MarshalCLRExceptionToV8(e)));
     }
 
