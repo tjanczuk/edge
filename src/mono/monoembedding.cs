@@ -117,7 +117,7 @@ public static class MonoEmbedding
     {
         var tcs = new TaskCompletionSource<object>();
         tcs.SetException(exc);
-        return tcs.Task
+        return tcs.Task;
     }
 
     static public string ObjectToString(object o)
