@@ -189,7 +189,7 @@ MonoArray* MonoEmbedding::IDictionaryToFlatArray(MonoObject* dictionary, MonoExc
     return values;
 }
 
-MonoObject* MonoEmbedding::CreateFaultedTask(MonoException* exc)
+MonoObject* MonoEmbedding::CreateFaultedTask(MonoException* exception)
 {
     static MonoMethod* method;
     MonoException* exc = NULL;
@@ -198,8 +198,8 @@ MonoObject* MonoEmbedding::CreateFaultedTask(MonoException* exc)
     {
         method = mono_class_get_method_from_name(MonoEmbedding::GetClass(), "CreateFaultedTask", 1);
     }
-    MonoException** params = new MonoException*[1];
-    params[0] = exc;
+    void** params = new void*[1];
+    params[0] = exception;
     MonoObject* task = mono_runtime_invoke(method, NULL, params, (MonoObject**)&exc);
 
     return task;
