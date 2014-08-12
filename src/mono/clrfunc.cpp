@@ -362,6 +362,7 @@ Handle<v8::Object> ClrFunc::MarshalCLRExceptionToV8(MonoException* exception)
 
 Handle<v8::Object> ClrFunc::MarshalCLRObjectToV8(MonoObject* netdata, MonoException** exc)
 {
+    DBG("ClrFunc::MarshalCLRObjectToV8");
     HandleScope scope;
     Handle<v8::Object> result = v8::Object::New();
     MonoClass* klass = mono_object_get_class(netdata);
@@ -446,6 +447,7 @@ Handle<v8::Object> ClrFunc::MarshalCLRObjectToV8(MonoObject* netdata, MonoExcept
 
 MonoObject* ClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata)
 {
+    DBG("ClrFunc::MarshalV8ToCLR");
     HandleScope scope;
 
     if (jsdata->IsFunction())

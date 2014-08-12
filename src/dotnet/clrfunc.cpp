@@ -127,6 +127,7 @@ void edgeAppCompletedOnCLRThread(Task<System::Object^>^ task, System::Object^ st
 
 Handle<v8::Value> ClrFunc::MarshalCLRToV8(System::Object^ netdata)
 {
+    DBG("ClrFunc::MarshalCLRToV8");
     HandleScope scope;
     Handle<v8::Value> jsdata;
 
@@ -270,6 +271,7 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(System::Object^ netdata)
 
 Handle<v8::Value> ClrFunc::MarshalCLRExceptionToV8(System::Exception^ exception)
 {
+    DBG("ClrFunc::MarshalCLRExceptionToV8");
     HandleScope scope;
 	Handle<v8::Object> result;
 	Handle<v8::String> Message;
@@ -304,6 +306,7 @@ Handle<v8::Value> ClrFunc::MarshalCLRExceptionToV8(System::Exception^ exception)
 
 Handle<v8::Object> ClrFunc::MarshalCLRObjectToV8(System::Object^ netdata)
 {
+    DBG("ClrFunc::MarshalCLRObjectToV8");
     HandleScope scope;
     Handle<v8::Object> result = v8::Object::New();
     System::Type^ type = netdata->GetType();
