@@ -82,7 +82,7 @@ Handle<v8::Value> ClrFunc::Initialize(const v8::Arguments& args)
         String::Utf8Value nativeMethodName(options->Get(String::NewSymbol("methodName")));
         MonoException* exc = NULL;
         MonoObject* func = MonoEmbedding::GetClrFuncReflectionWrapFunc(*assemblyFile, *nativeTypeName, *nativeMethodName, &exc);
-        if(exc)
+        if (exc) 
             return scope.Close(throwV8Exception(ClrFunc::MarshalCLRExceptionToV8(exc)));
         result = ClrFunc::Initialize(func);
     }
@@ -329,12 +329,14 @@ Handle<v8::Object> ClrFunc::MarshalCLRExceptionToV8(MonoException* exception)
     }
     else
     {
+        MonoEmbedding::NormalizeException(&exception);
+
         result = ClrFunc::MarshalCLRObjectToV8((MonoObject*)exception, &exc);
 
-        MonoProperty* prop = mono_class_get_property_from_name(mono_get_exception_class(), "Message");
+        MonoClass* klass = mono_object_get_class((MonoObject*)exception);
+        MonoProperty* prop = mono_class_get_property_from_name(klass, "Message");
         message = stringCLR2V8((MonoString*)mono_property_get_value(prop, exception, NULL, NULL));
 
-        MonoClass* klass = mono_object_get_class((MonoObject*)exception);
         const char* namespaceName = mono_class_get_namespace(klass);
         const char* className = mono_class_get_name(klass);
         char full_name[strlen(namespaceName) + 1 + strlen(className) + 1]; 
@@ -546,18 +548,18 @@ Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> cal
     MonoObject* task = mono_runtime_invoke(invoke, func, params, (MonoObject**)&exc);
     if (exc)
     {
-        task = MonoEmbedding::CreateFaultedTask(exc);
-        c->Task(task);
-        return scope.Close(c->CompleteOnV8Thread(true));
+        delete c;
+        c = NULL;
+        return scope.Close(throwV8Exception(ClrFunc::MarshalCLRExceptionToV8(exc)));
     }
 
     MonoProperty* prop = mono_class_get_property_from_name(mono_object_get_class(task), "IsCompleted");
     MonoObject* isCompletedObject = mono_property_get_value(prop, task, NULL, (MonoObject**)&exc);
     if (exc)
     {
-        task = MonoEmbedding::CreateFaultedTask(exc);
-        c->Task(task);
-        return scope.Close(c->CompleteOnV8Thread(true));
+        delete c;
+        c = NULL;
+        return scope.Close(throwV8Exception(ClrFunc::MarshalCLRExceptionToV8(exc)));
     }
 
     bool isCompleted = *(bool*)mono_object_unbox(isCompletedObject);

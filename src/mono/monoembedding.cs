@@ -14,6 +14,24 @@ public static class MonoEmbedding
         return 0;
     }
 
+    static public Exception NormalizeException(Exception e)
+    {
+        AggregateException aggregate = e as AggregateException;
+        if (aggregate != null && aggregate.InnerExceptions.Count == 1)
+        {
+            e = aggregate.InnerExceptions[0];
+        }
+        else {
+            TargetInvocationException target = e as TargetInvocationException;
+            if (target != null && target.InnerException != null)
+            {
+                e = target.InnerException;
+            }
+        }
+
+        return e;
+    }
+
     static public Type GetIDictionaryStringObjectType()
     {
         return typeof(IDictionary<string, Object>);
@@ -111,13 +129,6 @@ public static class MonoEmbedding
     {
         // Will complete asynchronously. Schedule continuation to finish processing.
         task.ContinueWith(new Action<Task<object>, object>(edgeAppCompletedOnCLRThread), state);
-    }
-
-    static public Task<object> CreateFaultedTask(Exception exc)
-    {
-        var tcs = new TaskCompletionSource<object>();
-        tcs.SetException(exc);
-        return tcs.Task;
     }
 
     static public string ObjectToString(object o)
