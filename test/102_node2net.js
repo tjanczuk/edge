@@ -76,7 +76,7 @@ describe('async call from node.js to .net', function () {
         assert.throws(
             func,
             function (error) {
-                if ((error instanceof Error) && error.InnerException.Message.match(/Test .NET exception/)) {
+                if ((error instanceof Error) && error.Message.match(/Test .NET exception/)) {
                     return true;
                 }
                 return false;

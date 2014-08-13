@@ -291,6 +291,11 @@ Handle<v8::Value> ClrFunc::MarshalCLRExceptionToV8(System::Exception^ exception)
             if (aggregate->InnerExceptions->Count == 1)
                 exception = aggregate->InnerExceptions[0];
         }
+        else if (System::Reflection::TargetInvocationException::typeid->IsAssignableFrom(exception->GetType())
+            && exception->InnerException != nullptr)
+        {
+            exception = exception->InnerException;
+        }
 
         result = ClrFunc::MarshalCLRObjectToV8(exception);
         message = stringCLR2V8(exception->Message);

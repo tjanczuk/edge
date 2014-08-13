@@ -294,7 +294,7 @@ describe('call patterns', function () {
         assert.throws(
             function () { callout(null, true); }, 
             function (error) {
-                if ((error instanceof Error) && error.InnerException.Message.match(/I have no name/)) {
+                if ((error instanceof Error) && error.message.match(/I have no name/)) {
                     return true;
                 }
                 return false;
@@ -331,7 +331,7 @@ describe('call patterns', function () {
 
         callout(false, function (error, result) {
             assert.equal(true, error instanceof Error);
-            assert.ok(error.InnerException.Message.match(/I have no name/));
+            assert.ok(error.message.match(/I have no name/));
             done();
         });
 
