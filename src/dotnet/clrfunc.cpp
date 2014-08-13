@@ -92,8 +92,14 @@ Handle<v8::Value> ClrFunc::Initialize(const v8::Arguments& args)
         }
         else {
             // reference .NET code throgh embedded source code that needs to be compiled
-            String::Utf8Value compilerFile(options->Get(String::NewSymbol("compiler")));
-            assembly = Assembly::UnsafeLoadFrom(gcnew System::String(*compilerFile));
+            String::Value compilerFile(options->Get(String::NewSymbol("compiler")));
+            cli::array<unsigned char>^ buffer = gcnew cli::array<unsigned char>(compilerFile.length() * 2);
+            for (int k = 0; k < compilerFile.length(); k++)
+            {
+                buffer[k * 2] = (*compilerFile)[k] & 255;
+                buffer[k * 2 + 1] = (*compilerFile)[k] >> 8;
+            }
+            assembly = Assembly::UnsafeLoadFrom(System::Text::Encoding::Unicode->GetString(buffer));
             System::Type^ compilerType = assembly->GetType("EdgeCompiler", true, true);
             System::Object^ compilerInstance = System::Activator::CreateInstance(compilerType, false);
             MethodInfo^ compileFunc = compilerType->GetMethod("CompileFunc", BindingFlags::Instance | BindingFlags::Public);
