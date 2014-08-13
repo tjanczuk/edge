@@ -19,8 +19,8 @@
 NodejsFunc::NodejsFunc(Handle<Function> function)
 {
     DBG("NodejsFunc::NodejsFunc");
-    this->Func = new Persistent<Function>;
-    *(this->Func) = Persistent<Function>::New(function);
+	this->Func = new Persistent<Function, CopyablePersistentTraits<Function>>();
+	*(this->Func) = Persistent<Function, CopyablePersistentTraits<Function>>(Isolate::GetCurrent(), function);
 }
 
 NodejsFunc::~NodejsFunc()

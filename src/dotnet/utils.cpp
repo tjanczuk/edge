@@ -1,23 +1,25 @@
 #include "edge.h"
 
-Handle<v8::String> stringCLR2V8(System::String^ text)
+Local<v8::String> stringCLR2V8(System::String^ text)
 {
-    HandleScope scope;
+	Isolate* isolate = Isolate::GetCurrent();
+    EscapableHandleScope scope(isolate);
     if (text->Length > 0)
     {
         array<unsigned char>^ utf8 = System::Text::Encoding::UTF8->GetBytes(text);
         pin_ptr<unsigned char> ch = &utf8[0];
-        return scope.Close(v8::String::New((char*)ch));
+		return scope.Escape(v8::String::NewFromUtf8(isolate, (char*)ch));
     }
     else
     {
-        return scope.Close(v8::String::Empty());
+        return scope.Escape(v8::String::Empty(isolate));
     }
 }
 
 System::String^ stringV82CLR(Handle<v8::String> text)
 {
-    HandleScope scope;
+	Isolate* isolate = Isolate::GetCurrent();
+	HandleScope scope(isolate);
     String::Utf8Value utf8text(text);
     if (*utf8text)
     {
@@ -32,10 +34,12 @@ System::String^ stringV82CLR(Handle<v8::String> text)
 
 System::String^ exceptionV82stringCLR(Handle<v8::Value> exception)
 {
-    HandleScope scope;
-    if (exception->IsObject())
+	Isolate* isolate = Isolate::GetCurrent();
+	HandleScope scope(isolate);
+	if (exception->IsObject())
     {
-        Handle<Value> stack = exception->ToObject()->Get(v8::String::NewSymbol("stack"));
+		//... TJF -- this is an out and out guess!
+        Handle<Value> stack = exception->ToObject()->Get(v8::String::NewFromUtf8(isolate, "stack", v8::String::kInternalizedString ));
         if (stack->IsString())
         {
             return gcnew System::String(stringV82CLR(stack->ToString()));
@@ -45,8 +49,23 @@ System::String^ exceptionV82stringCLR(Handle<v8::Value> exception)
     return gcnew System::String(stringV82CLR(Handle<v8::String>::Cast(exception)));
 }
 
-Handle<Value> throwV8Exception(Handle<Value> exception)
+Local<String> exceptionCLR2stringV8(System::Exception^ exception)
 {
-    HandleScope scope;
-    return scope.Close(ThrowException(exception));
+	Isolate* isolate = Isolate::GetCurrent();
+	EscapableHandleScope scope(isolate);
+	if (exception == nullptr)
+    {
+		return scope.Escape(v8::String::NewFromUtf8(isolate, "Unrecognized exception thrown by CLR."));
+    }
+    else
+    {
+        return scope.Escape(stringCLR2V8(exception->ToString()));
+    }
+}
+
+Local<Value> throwV8Exception(System::Exception^ exception)
+{
+	Isolate* isolate = Isolate::GetCurrent();
+	EscapableHandleScope scope(isolate);
+	return scope.Escape(isolate->ThrowException(exceptionCLR2stringV8(exception)));
 }

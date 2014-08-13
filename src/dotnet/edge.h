@@ -31,10 +31,11 @@ using namespace System::Threading::Tasks;
 using namespace System::Threading;
 using namespace System::Web::Script::Serialization;
 
-Handle<v8::String> stringCLR2V8(System::String^ text);
+Local<v8::String> stringCLR2V8(System::String^ text);
 System::String^ stringV82CLR(Handle<v8::String> text);
 System::String^ exceptionV82stringCLR(Handle<v8::Value> exception);
-Handle<Value> throwV8Exception(Handle<Value> exception);
+Local<v8::String> exceptionCLR2stringV8(System::Exception^ exception);
+Local<v8::Value> throwV8Exception(System::Exception^ exception);
 
 typedef struct clrActionContext {
     gcroot<System::Action^> action;
@@ -43,7 +44,7 @@ typedef struct clrActionContext {
 
 ref class ClrFuncInvokeContext {
 private:
-    Persistent<Function>* callback;
+    Persistent<Function,CopyablePersistentTraits<Function>>* callback;
     uv_edge_async_t* uv_edge_async;
 
     void DisposeCallback();
@@ -65,7 +66,7 @@ public:
 ref class NodejsFunc {
 public:
 
-    property Persistent<Function>* Func;
+	property Persistent<Function, CopyablePersistentTraits<Function>>* Func;
 
     NodejsFunc(Handle<Function> function);
     ~NodejsFunc();
@@ -131,14 +132,13 @@ private:
 
     ClrFunc();
 
-    static Handle<v8::Object> MarshalCLRObjectToV8(System::Object^ netdata);
+    static Handle<v8::Value> MarshalCLRObjectToV8(System::Object^ netdata);
 
 public:
-    static Handle<v8::Value> Initialize(const v8::Arguments& args);
+	static void Initialize(const v8::FunctionCallbackInfo<Value>& args);
     static Handle<v8::Function> Initialize(System::Func<System::Object^,Task<System::Object^>^>^ func);
     Handle<v8::Value> Call(Handle<v8::Value> payload, Handle<v8::Value> callback);
     static Handle<v8::Value> MarshalCLRToV8(System::Object^ netdata);
-    static Handle<v8::Value> MarshalCLRExceptionToV8(System::Exception^ exception);
     static System::Object^ MarshalV8ToCLR(Handle<v8::Value> jsdata);    
 };
 

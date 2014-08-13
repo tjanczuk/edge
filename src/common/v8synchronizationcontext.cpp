@@ -16,12 +16,13 @@
  */
 #include "edge_common.h"
 
-void continueOnV8Thread(uv_async_t* handle, int status)
+void continueOnV8Thread(uv_async_t* handle)
 {
     // This executes on V8 thread
 
     DBG("continueOnV8Thread");
-    HandleScope handleScope;
+	Isolate* isolate = Isolate::GetCurrent();
+    HandleScope handleScope(isolate);
     uv_edge_async_t* uv_edge_async = (uv_edge_async_t*)handle;
     uv_async_edge_cb action = uv_edge_async->action;
     void* data = uv_edge_async->data;

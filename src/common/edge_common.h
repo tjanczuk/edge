@@ -59,10 +59,10 @@ typedef int BOOL;
 // http://sambro.is-super-awesome.com/2011/03/03/creating-a-proper-buffer-in-a-node-c-addon/
 extern BOOL debugMode;
 extern BOOL enableScriptIgnoreAttribute;
-extern Persistent<Function> bufferConstructor;
+extern Persistent<Function, CopyablePersistentTraits<Function>> bufferConstructor;
 
 #ifdef EDGE_PLATFORM_WINDOWS
-#define DBG(msg) if (debugMode) System::Console::WriteLine(msg);
+#define DBG(msg) if (debugMode) ::OutputDebugString(msg); // System::Console::WriteLine(msg);
 #else
 #define DBG(msg) if (debugMode) printf(msg "\n");
 #endif
