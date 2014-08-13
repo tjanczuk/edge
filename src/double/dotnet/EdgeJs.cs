@@ -15,14 +15,24 @@ namespace EdgeJs
         static Func<object, Task<object>> compileFunc;
         static ManualResetEvent waitHandle = new ManualResetEvent(false);
 
+        static string assemblyDirectory;
         static string AssemblyDirectory
         {
             get
             {
-                string codeBase = typeof(Edge).Assembly.CodeBase;
-                UriBuilder uri = new UriBuilder(codeBase);
-                string path = Uri.UnescapeDataString(uri.Path);
-                return Path.GetDirectoryName(path);
+                if (assemblyDirectory == null)
+                {
+                    assemblyDirectory = Environment.GetEnvironmentVariable("EDGE_BASE_DIR");
+                    if (string.IsNullOrEmpty(assemblyDirectory))
+                    {
+                        string codeBase = typeof(Edge).Assembly.CodeBase;
+                        UriBuilder uri = new UriBuilder(codeBase);
+                        string path = Uri.UnescapeDataString(uri.Path);
+                        assemblyDirectory = Path.GetDirectoryName(path);
+                    }
+                }
+
+                return assemblyDirectory;
             }
         }
 
