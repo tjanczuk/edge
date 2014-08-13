@@ -99,6 +99,28 @@ describe('async call from node.js to .net', function () {
         });
     });
 
+    it('successfuly marshals structured .net exception from .net to node.js', function (done) {
+        var func = edge.func(function () {/*
+            async (input) => {
+                throw new InvalidOperationException(
+                    "Outer exception", 
+                    new ArgumentException("Inner exception", "input")); 
+            }
+        */});
+
+        func(null, function (error, result) {
+            assert.ok(error instanceof Error);
+            assert.equal(error.message, 'Outer exception');
+            assert.equal(error.name, 'System.InvalidOperationException');
+            assert.ok(error.InnerException instanceof Error);
+            assert.equal(typeof error.InnerException.message, 'string');
+            assert.ok(error.InnerException.message.match(/Inner exception/));
+            assert.equal(error.InnerException.name, 'System.ArgumentException');
+            assert.equal(error.InnerException.ParamName, 'input');
+            done();
+        });
+    });    
+
     it('successfuly marshals empty buffer', function (done) {
         var func = edge.func(function () {/*
             async (object input) => {
