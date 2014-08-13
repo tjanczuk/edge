@@ -239,5 +239,28 @@ namespace Edge.Tests
             result.SetResult(succeed);
             return result.Task;
         }
+
+        public async Task<object> MarshalObjectHierarchy(dynamic input)
+        {
+            var result = new B();
+            result.A_field = "a_field";
+            result.A_prop = "a_prop";
+            result.B_field = "b_field";
+            result.B_prop = "b_prop";
+
+            return result;
+        }
+
+        class A 
+        {
+            public string A_field;
+            public string A_prop { get; set; }
+        }
+
+        class B : A 
+        {
+            public string B_field;
+            public string B_prop { get; set; }
+        }
     }
 }

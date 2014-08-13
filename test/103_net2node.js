@@ -75,6 +75,21 @@ describe('async call from .net to node.js', function () {
 		});
 	});
 
+	it('successfuly marshals object hierarchy from .net to node.js', function (done) {
+		var func = edge.func({
+			assemblyFile: edgeTestDll,
+			methodName: 'MarshalObjectHierarchy'
+		});
+		func(null, function (error, result) {
+			assert.ifError(error);
+			assert.equal(result.A_field, 'a_field');
+			assert.equal(result.A_prop, 'a_prop');
+			assert.equal(result.B_field, 'b_field');
+			assert.equal(result.B_prop, 'b_prop');
+			done();
+		});
+	});
+
 	it('successfuly marshals data from node.js to .net', function (done) {
 		var func = edge.func({
 			assemblyFile: edgeTestDll,

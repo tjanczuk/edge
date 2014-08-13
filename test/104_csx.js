@@ -184,7 +184,7 @@ describe('edge-cs', function () {
                 */});
             },
             function(error) {
-                if ( (error instanceof Error) && error.Message.match(/Could not load type 'Startup'/)) {
+                if ( (error instanceof Error) && error.message.match(/Could not load type 'Startup'/)) {
                     return true;
                 }
                 return false;

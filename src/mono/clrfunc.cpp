@@ -363,77 +363,64 @@ Handle<v8::Object> ClrFunc::MarshalCLRObjectToV8(MonoObject* netdata, MonoExcept
     HandleScope scope;
     Handle<v8::Object> result = v8::Object::New();
     MonoClass* klass = mono_object_get_class(netdata);
+    MonoClass* current;
     MonoClassField* field;
     MonoProperty* prop;
     void* iter = NULL;
     *exc = NULL;
 
-    if (0 == strcmp(mono_class_get_name(klass), "MonoType")
+    if ((0 == strcmp(mono_class_get_name(klass), "MonoType")
         && 0 == strcmp(mono_class_get_namespace(klass), "System"))
+        || 0 == strcmp(mono_class_get_namespace(klass), "System.Reflection"))
     {
         // Avoid stack overflow due to self-referencing reflection elements
         return scope.Close(result);        
     }
 
-    while (NULL != (field = mono_class_get_fields(klass, &iter)) && !*exc)
+    for (current = klass; !*exc && current; current = mono_class_get_parent(current))
     {
-        // magic numbers
-        static uint32_t field_attr_static = 0x0010;
-        static uint32_t field_attr_public = 0x0006;
-        if (mono_field_get_flags(field) & field_attr_static)
-            continue;
-        if (!(mono_field_get_flags(field) & field_attr_public))
-            continue;
-        const char* name = mono_field_get_name(field);
-        MonoObject* value = mono_field_get_value_object(mono_domain_get(), field, netdata);
-        result->Set(
-            v8::String::New(name), 
-            ClrFunc::MarshalCLRToV8(value, exc));
+        iter = NULL;
+        while (NULL != (field = mono_class_get_fields(current, &iter)) && !*exc)
+        {
+            // magic numbers
+            static uint32_t field_attr_static = 0x0010;
+            static uint32_t field_attr_public = 0x0006;
+            if (mono_field_get_flags(field) & field_attr_static)
+                continue;
+            if (!(mono_field_get_flags(field) & field_attr_public))
+                continue;
+            const char* name = mono_field_get_name(field);
+            MonoObject* value = mono_field_get_value_object(mono_domain_get(), field, netdata);
+            result->Set(
+                v8::String::New(name), 
+                ClrFunc::MarshalCLRToV8(value, exc));
+        }
     }
 
-    iter = NULL;
-    while (!*exc && NULL != (prop = mono_class_get_properties(klass, &iter)))
+    for (current = klass; !*exc && current; current = mono_class_get_parent(current))
     {
-        // magic numbers
-        static uint32_t method_attr_static = 0x0010;
-        static uint32_t method_attr_public = 0x0006;
-        MonoMethod* getMethod = mono_property_get_get_method(prop);
-        if (!getMethod)
-            continue;
-        if (mono_method_get_flags(getMethod, NULL) & method_attr_static)
-            continue;
-        if (!(mono_method_get_flags(getMethod, NULL) & method_attr_public))
-            continue;
-
-        // TODO check signature for no paramters
-
-
-        if (enableScriptIgnoreAttribute)
+        iter = NULL;
+        while (!*exc && NULL != (prop = mono_class_get_properties(current, &iter)))
         {
-        //        if (property->IsDefined(System::Web::Script::Serialization::ScriptIgnoreAttribute::typeid, true))
-        //        {
-        //            continue;
-        //        }
+            // magic numbers
+            static uint32_t method_attr_static = 0x0010;
+            static uint32_t method_attr_public = 0x0006;
+            MonoMethod* getMethod = mono_property_get_get_method(prop);
+            if (!getMethod)
+                continue;
+            if (mono_method_get_flags(getMethod, NULL) & method_attr_static)
+                continue;
+            if (!(mono_method_get_flags(getMethod, NULL) & method_attr_public))
+                continue;
 
-        //        System::Web::Script::Serialization::ScriptIgnoreAttribute^ attr =
-        //            (System::Web::Script::Serialization::ScriptIgnoreAttribute^)System::Attribute::GetCustomAttribute(
-        //            property, 
-        //            System::Web::Script::Serialization::ScriptIgnoreAttribute::typeid,
-        //            true);
-
-        //        if (attr != nullptr && attr->ApplyToOverrides)
-        //        {
-        //            continue;
-        //        }
-        }
-
-        const char* name = mono_property_get_name(prop);
-        MonoObject* value = mono_runtime_invoke(getMethod, netdata, NULL, (MonoObject**)exc);
-        if (!*exc)
-        {
-            result->Set(
-                v8::String::New(name),
-                ClrFunc::MarshalCLRToV8(value, exc));
+            const char* name = mono_property_get_name(prop);       
+            MonoObject* value = mono_runtime_invoke(getMethod, netdata, NULL, (MonoObject**)exc);
+            if (!*exc)
+            {
+                result->Set(
+                    v8::String::New(name),
+                    ClrFunc::MarshalCLRToV8(value, exc));
+            }
         }
     }
 
