@@ -19,10 +19,13 @@
 ClrFuncInvokeContext::ClrFuncInvokeContext(Handle<v8::Value> callbackOrSync)
 {
     DBG("ClrFuncInvokeContext::ClrFuncInvokeContext");
-    if (callbackOrSync->IsFunction())
+
+	Isolate* isolate = Isolate::GetCurrent();
+	
+	if (callbackOrSync->IsFunction())
     {
-        this->callback = new Persistent<Function>;
-        *(this->callback) = Persistent<Function>::New(Handle<Function>::Cast(callbackOrSync));
+		this->callback = new Persistent<Function, CopyablePersistentTraits<Function>>();
+		*(this->callback) = Persistent<Function, CopyablePersistentTraits<Function>>(isolate, Handle<Function>::Cast(callbackOrSync));
         this->Sync = false;
     }
     else 
@@ -38,8 +41,7 @@ void ClrFuncInvokeContext::DisposeCallback()
     if (this->callback)
     {
         DBG("ClrFuncInvokeContext::DisposeCallback");
-        (*(this->callback)).Dispose();
-        (*(this->callback)).Clear();
+		(*(this->callback)).Reset();
         delete this->callback;
         this->callback = NULL;        
     }
@@ -65,7 +67,8 @@ void ClrFuncInvokeContext::InitializeAsyncOperation()
 
 void ClrFuncInvokeContext::CompleteOnV8ThreadAsynchronous()
 {
-    HandleScope scope;
+	Isolate* isolate = Isolate::GetCurrent();
+    HandleScope scope(isolate);
     this->CompleteOnV8Thread();
 }
 
@@ -73,7 +76,8 @@ Handle<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread()
 {
     DBG("ClrFuncInvokeContext::CompleteOnV8Thread");
 
-    HandleScope handleScope;
+	Isolate* isolate = Isolate::GetCurrent();
+	EscapableHandleScope handleScope(isolate);
 
     // The uv_edge_async was already cleaned up in V8SynchronizationContext::ExecuteAction
     this->uv_edge_async = NULL;
@@ -82,26 +86,29 @@ Handle<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread()
     {
         // this was an async call without callback specified
         DBG("ClrFuncInvokeContext::CompleteOnV8Thread - async without callback");
-        return handleScope.Close(Undefined());
+        return handleScope.Escape(Local<Value>::New(isolate, Undefined(isolate)));
     }
 
-    Handle<Value> argv[] = { Undefined(), Undefined() };
+	Local<Value> argv[] = { 
+		Local<Value>::New(isolate, Undefined(isolate)), 
+		Local<Value>::New(isolate, Undefined(isolate))
+	};
     int argc = 1;
 
     switch (this->Task->Status) {
         default:
-            argv[0] = v8::String::New("The operation reported completion in an unexpected state.");
+			argv[0] = v8::String::NewFromUtf8( isolate, "The operation reported completion in an unexpected state.");
         break;
         case TaskStatus::Faulted:
             if (this->Task->Exception != nullptr) {
                 argv[0] = ClrFunc::MarshalCLRExceptionToV8(this->Task->Exception);
             }
             else {
-                argv[0] = v8::String::New("The operation has failed with an undetermined error.");
+                argv[0] = v8::String::NewFromUtf8( isolate, "The operation has failed with an undetermined error.");
             }
         break;
         case TaskStatus::Canceled:
-            argv[0] = v8::String::New("The operation was cancelled.");
+            argv[0] = v8::String::NewFromUtf8( isolate, "The operation was cancelled.");
         break;
         case TaskStatus::RanToCompletion:
             argc = 2;
@@ -119,7 +126,8 @@ Handle<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread()
     {
         // complete the asynchronous call to C# by invoking a callback in JavaScript
         TryCatch try_catch;
-        (*(this->callback))->Call(v8::Context::GetCurrent()->Global(), argc, argv);
+		Local<Function> localFunctionCall = Local<Function>::New(isolate, *(this->callback));
+		localFunctionCall->Call(isolate->GetCurrentContext()->Global(), argc, argv);
         this->DisposeCallback();
         if (try_catch.HasCaught()) 
         {
@@ -127,18 +135,18 @@ Handle<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread()
         }        
 
         DBG("ClrFuncInvokeContext::CompleteOnV8Thread - async with callback");
-        return handleScope.Close(Undefined());
+        return handleScope.Escape(Local<Value>::New( isolate, Undefined(isolate)));
     }
     else if (1 == argc) 
     {
-        DBG("ClrFuncInvokeContext::CompleteOnV8Thread - handleScope.Close(ThrowException(argv[0]))");
+        DBG("ClrFuncInvokeContext::CompleteOnV8Thread - handleScope.Escape(ThrowException(argv[0]))");
         // complete the synchronous call to C# by re-throwing the resulting exception
-        return handleScope.Close(ThrowException(argv[0]));
+        return handleScope.Escape(isolate->ThrowException(argv[0]));
     }
     else
     {
-        DBG("ClrFuncInvokeContext::CompleteOnV8Thread - handleScope.Close(argv[1])");
+        DBG("ClrFuncInvokeContext::CompleteOnV8Thread - handleScope.Escape(argv[1])");
         // complete the synchronous call to C# by returning the result
-        return handleScope.Close(argv[1]);
+        return handleScope.Escape(argv[1]);
     }
 }
