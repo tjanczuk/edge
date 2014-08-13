@@ -135,8 +135,7 @@ void ClrFunc::Initialize(const v8::FunctionCallbackInfo<Value>& args)
     }
     catch (System::Exception^ e)
     {
-		args.GetReturnValue().Set(throwV8Exception(e));
-//      return scope.Close(throwV8Exception(e));
+       args.GetReturnValue().Set( throwV8Exception(ClrFunc::MarshalCLRExceptionToV8(e)));
     }
 }
 
@@ -147,7 +146,7 @@ void edgeAppCompletedOnCLRThread(Task<System::Object^>^ task, System::Object^ st
     context->CompleteOnCLRThread(task);
 }
 
-Handle<v8::Value> ClrFunc::MarshalCLRToV8(System::Object^ netdata)
+Local<v8::Value> ClrFunc::MarshalCLRToV8(System::Object^ netdata)
 {
 	Isolate* isolate = Isolate::GetCurrent();
     EscapableHandleScope scope(isolate);
@@ -282,6 +281,10 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(System::Object^ netdata)
     {
         jsdata = ClrFunc::Initialize((System::Func<System::Object^,Task<System::Object^>^>^)netdata);
     }
+    else if (System::Exception::typeid->IsAssignableFrom(type))
+    {
+        jsdata = ClrFunc::MarshalCLRExceptionToV8((System::Exception^)netdata);
+    }
     else
     {
         jsdata = ClrFunc::MarshalCLRObjectToV8(netdata);
@@ -290,13 +293,50 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(System::Object^ netdata)
     return scope.Escape(jsdata);
 }
 
-Handle<v8::Value> ClrFunc::MarshalCLRObjectToV8(System::Object^ netdata)
+Local<v8::Value> ClrFunc::MarshalCLRExceptionToV8(System::Exception^ exception)
+{
+    DBG("ClrFunc::MarshalCLRExceptionToV8");
+	Isolate * isolate = Isolate::GetCurrent();
+	EscapableHandleScope scope( isolate );
+    Local<v8::Object> result;
+    Local<v8::String> message;
+    Local<v8::String> name;
+
+    if (exception == nullptr)
+    {
+        result = v8::Object::New( isolate );
+        message = v8::String::NewFromUtf8( isolate, "Unrecognized exception thrown by CLR.");
+        name = v8::String::NewFromUtf8( isolate, "InternalException");
+    }
+    else
+    {
+        result = ClrFunc::MarshalCLRObjectToV8(exception);
+        message = stringCLR2V8(exception->Message);
+        name = stringCLR2V8(exception->GetType()->FullName);
+    }   
+        
+    // Construct an error that is just used for the prototype - not verify efficient
+    // but 'typeof Error' should work in JavaScript
+    result->SetPrototype(v8::Exception::Error(message));
+    result->Set(String::NewFromUtf8( isolate, "message", v8::String::kInternalizedString ), message);
+    
+    // Recording the actual type - 'name' seems to be the common used property
+    result->Set(String::NewFromUtf8( isolate, "name", v8::String::kInternalizedString ), name);
+
+    return scope.Escape(result);
+}
+
+Local<v8::Object> ClrFunc::MarshalCLRObjectToV8(System::Object^ netdata)
 {
 	Isolate * isolate = Isolate::GetCurrent();
 	EscapableHandleScope scope( isolate );
     Local<v8::Object> result = v8::Object::New( isolate );
     System::Type^ type = netdata->GetType();
 
+    if (0 == System::String::Compare(type->FullName, "System.Reflection.RuntimeMethodInfo")) {
+        // Avoid stack overflow due to self-referencing reflection elements
+        return scope.Escape(result);
+    }
     for each (FieldInfo^ field in type->GetFields(BindingFlags::Public | BindingFlags::Instance))
     {
         result->Set(
@@ -465,7 +505,7 @@ Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> cal
     }
     catch (System::Exception^ e)
     {
-        return scope.Escape(throwV8Exception(e));
+		return scope.Escape(throwV8Exception(ClrFunc::MarshalCLRExceptionToV8(e)));
     }
 
     return scope.Escape(Local<Value>::New(isolate, Undefined(isolate)));    
