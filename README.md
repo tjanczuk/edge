@@ -449,7 +449,7 @@ $>node sample.js
 
 When data is marshalled from .NET to Node.js, no checks for circular references are made. They will typically result in stack overflows. Make sure the object graph you are passing from .NET to Node.js is a tree and does not contain any cycles. 
 
-**WINDOWS ONLY** When marshalling strongly typed objects (e.g. Person) form .NET to Node.js, you can optionally tell Edge.js to observe the [System.Web.Script.Serialization.ScriptIgnoreAttribute](http://msdn.microsoft.com/en-us/library/system.web.script.serialization.scriptignoreattribute.aspx). You opt in to this behavior by setting the `EDGE_ENABLE_SCRIPTIGNOREATTRIBUTE` environment variable:
+**WINDOWS ONLY** When marshalling strongly typed objects (e.g. Person) from .NET to Node.js, you can optionally tell Edge.js to observe the [System.Web.Script.Serialization.ScriptIgnoreAttribute](http://msdn.microsoft.com/en-us/library/system.web.script.serialization.scriptignoreattribute.aspx). You opt in to this behavior by setting the `EDGE_ENABLE_SCRIPTIGNOREATTRIBUTE` environment variable:
 
 ```
 set EDGE_ENABLE_SCRIPTIGNOREATTRIBUTE=1
