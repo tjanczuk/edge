@@ -2,7 +2,7 @@
 <package >
   <metadata>
     <id>Edge.js</id>
-    <version>0.9.1</version>
+    <version>0.9.2</version>
     <authors>Tomasz Janczuk</authors>
     <owners>Tomasz Janczuk</owners>
     <licenseUrl>https://raw.githubusercontent.com/tjanczuk/edge/master/LICENSE.txt</licenseUrl>
