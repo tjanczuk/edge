@@ -2,6 +2,7 @@
 
 BOOL debugMode;
 BOOL enableScriptIgnoreAttribute;
+BOOL enableMarshalEnumAsInt;
 Persistent<Function> bufferConstructor;
 
 Handle<Value> initializeClrFunc(const v8::Arguments& args)
@@ -17,6 +18,8 @@ void init(Handle<Object> target)
         Context::GetCurrent()->Global()->Get(String::New("Buffer")))); 
     debugMode = (0 < GetEnvironmentVariable("EDGE_DEBUG", NULL, 0));
     enableScriptIgnoreAttribute = (0 < GetEnvironmentVariable("EDGE_ENABLE_SCRIPTIGNOREATTRIBUTE", NULL, 0));
+	enableMarshalEnumAsInt = (0 < GetEnvironmentVariable("EDGE_MARSHAL_ENUM_AS_INT", NULL, 0));
+
     NODE_SET_METHOD(target, "initializeClrFunc", initializeClrFunc);
 }
 

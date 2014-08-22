@@ -59,6 +59,7 @@ typedef int BOOL;
 // http://sambro.is-super-awesome.com/2011/03/03/creating-a-proper-buffer-in-a-node-c-addon/
 extern BOOL debugMode;
 extern BOOL enableScriptIgnoreAttribute;
+extern BOOL enableMarshalEnumAsInt;
 extern Persistent<Function> bufferConstructor;
 
 #ifdef EDGE_PLATFORM_WINDOWS
