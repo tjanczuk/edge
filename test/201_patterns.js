@@ -90,16 +90,8 @@ describe('call patterns', function () {
         var lambda = func(null, true);
         assert.equal(typeof lambda, 'function');
         lambda(null, function (error, result) {
-            assert.throws(
-                function () { throw error; },
-                function (error) {
-                if ((error instanceof Error) && error.Message.match(/Test .NET exception/)) {
-                    return true;
-                }
-                return false;
-            },
-            'Unexpected result'
-            );
+            assert.ok(error instanceof Error);
+            assert.ok(error.Message.match(/Test .NET exception/));
             done();
         });
     });
