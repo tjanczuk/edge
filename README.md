@@ -775,6 +775,60 @@ helloFs('Node.js', function (error, result) {
 });
 ```
 
+### How to: run Lisp in a Node.js application
+
+**NOTE** This functionality has not been tested on non-Windows platforms. 
+
+The [edge-lsharp](https://github.com/richorama/edge-lsharp) extension uses [LSharp](https://github.com/RobBlackwell/LSharp) to compile and run Lisp to .NET.
+
+Install edge and edge-lsharp modules:
+
+```
+npm install edge
+npm install edge-lsharp
+```
+
+In your server.js:
+
+```javascript
+var edge = require('edge');
+var fact = edge.func('lsharp', function(){/*
+
+;; Factorial
+(def fact(n) 
+    (if (is n 0) 1 (* n (fact (- n 1)))))
+
+*/});
+
+fact([5], function(err, answer){
+    console.log(answer);
+    // = 120
+});
+```
+
+An LSharp filename can be passed in instead of the Lisp string/comment:
+
+```js
+var edge = require('edge');
+var lisp = edge.func('lsharp', 'lisp-func.ls');
+
+lisp(['arg1', 'arg2'], function(err, result){
+    
+});
+```
+
+In Lisp you can specify either a function (as shown in the first example) or just return a value:
+
+```js
+var edge = require('edge');
+var lisp = edge.func('lsharp', '(+ 2 3)');
+
+lisp([], function(err, answer){
+    console.log(answer);
+    // = 5
+});
+```
+
 ### How to: script T-SQL in a Node.js application
 
 **NOTE** This functionality has only been tested on Windows. Although ADO.NET exist in Mono, your mileage can vary. 
