@@ -77,6 +77,7 @@ Listen to the [Edge.js podcast on Herdingcode](http://herdingcode.com/herding-co
 &nbsp;&nbsp;&nbsp;&nbsp;[How to: script Python in a Node.js application](#how-to-script-python-in-a-nodejs-application)  
 &nbsp;&nbsp;&nbsp;&nbsp;[How to: script PowerShell in a Node.js application](#how-to-script-powershell-in-a-nodejs-application)  
 &nbsp;&nbsp;&nbsp;&nbsp;[How to: script F# in a Node.js application](#how-to-script-f-in-a-nodejs-application)  
+&nbsp;&nbsp;&nbsp;&nbsp;[How to: script Lisp in a Node.js application](#how-to-script-lisp-in-a-nodejs-application)  
 &nbsp;&nbsp;&nbsp;&nbsp;[How to: script T-SQL in a Node.js application](#how-to-script-t-sql-in-a-nodejs-application)  
 &nbsp;&nbsp;&nbsp;&nbsp;[How to: support for other CLR languages](#how-to-support-for-other-clr-languages)  
 &nbsp;&nbsp;&nbsp;&nbsp;[How to: exceptions](#how-to-exceptions)  
@@ -775,7 +776,7 @@ helloFs('Node.js', function (error, result) {
 });
 ```
 
-### How to: run Lisp in a Node.js application
+### How to: script Lisp in a Node.js application
 
 **NOTE** This functionality has not been tested on non-Windows platforms. 
 
