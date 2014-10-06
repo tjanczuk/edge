@@ -1,6 +1,6 @@
 Edge.js: .NET and Node.js in-process
 ====
-
+ 
 An edge connects two nodes. This edge connects Node.js and .NET. V8 and CLR/Mono - in process. On Windows, MacOS, and Linux. 
 
 ![image](https://cloud.githubusercontent.com/assets/822369/2807996/94b3ff4e-cd07-11e3-833c-b0474d25119a.png)
@@ -77,14 +77,16 @@ Listen to the [Edge.js podcast on Herdingcode](http://herdingcode.com/herding-co
 &nbsp;&nbsp;&nbsp;&nbsp;[How to: script Python in a Node.js application](#how-to-script-python-in-a-nodejs-application)  
 &nbsp;&nbsp;&nbsp;&nbsp;[How to: script PowerShell in a Node.js application](#how-to-script-powershell-in-a-nodejs-application)  
 &nbsp;&nbsp;&nbsp;&nbsp;[How to: script F# in a Node.js application](#how-to-script-f-in-a-nodejs-application)  
+&nbsp;&nbsp;&nbsp;&nbsp;[How to: script Lisp in a Node.js application](#how-to-script-lisp-in-a-nodejs-application)  
 &nbsp;&nbsp;&nbsp;&nbsp;[How to: script T-SQL in a Node.js application](#how-to-script-t-sql-in-a-nodejs-application)  
 &nbsp;&nbsp;&nbsp;&nbsp;[How to: support for other CLR languages](#how-to-support-for-other-clr-languages)  
 &nbsp;&nbsp;&nbsp;&nbsp;[How to: exceptions](#how-to-exceptions)  
+&nbsp;&nbsp;&nbsp;&nbsp;[How to: app.config](#how-to-app-config)  
 &nbsp;&nbsp;&nbsp;&nbsp;[How to: debugging](#how-to-debugging)  
 &nbsp;&nbsp;&nbsp;&nbsp;[Performance](#performance)  
 &nbsp;&nbsp;&nbsp;&nbsp;[Building on Windows](#building-on-windows)  
 &nbsp;&nbsp;&nbsp;&nbsp;[Building on OSX](#building-on-osx)  
-&nbsp;&nbsp;&nbsp;&nbsp;[Building on Ubuntu](#building-on-ubuntu)  
+&nbsp;&nbsp;&nbsp;&nbsp;[Building on Linux](#building-on-linux)  
 &nbsp;&nbsp;&nbsp;&nbsp;[Running tests](#running-tests)  
 [Scripting Node.js from CLR](#scripting-nodejs-from-clr)  
 &nbsp;&nbsp;&nbsp;&nbsp;[What you need](#what-you-need-1)  
@@ -141,7 +143,7 @@ Edge.js runs on Windows, Linux, and MacOS and requires Node.js 0.8 or later, as 
 
 * Node.js 0.8.x or later (developed and tested with v0.10.26 x64)  
 * Mono 3.4.0 x64  
-* Check out [Ubuntu 12.04 setup instructions](#building-on-ubuntu)
+* Check out [Ubuntu 12.04 setup instructions](#building-on-linux)
 
 ![image](https://cloud.githubusercontent.com/assets/822369/2808077/03f92874-cd0e-11e3-88ea-79f67b8b1d49.png)
 
@@ -242,7 +244,7 @@ var add7 = edge.func(function() {/*
         public async Task<object> Invoke(object input)
         {
             int v = (int)input;
-            return Helper::AddSeven(v);
+            return Helper.AddSeven(v);
         }
     }
 
@@ -448,7 +450,7 @@ $>node sample.js
 
 When data is marshalled from .NET to Node.js, no checks for circular references are made. They will typically result in stack overflows. Make sure the object graph you are passing from .NET to Node.js is a tree and does not contain any cycles. 
 
-**WINDOWS ONLY** When marshalling strongly typed objects (e.g. Person) form .NET to Node.js, you can optionally tell Edge.js to observe the [System.Web.Script.Serialization.ScriptIgnoreAttribute](http://msdn.microsoft.com/en-us/library/system.web.script.serialization.scriptignoreattribute.aspx). You opt in to this behavior by setting the `EDGE_ENABLE_SCRIPTIGNOREATTRIBUTE` environment variable:
+**WINDOWS ONLY** When marshalling strongly typed objects (e.g. Person) from .NET to Node.js, you can optionally tell Edge.js to observe the [System.Web.Script.Serialization.ScriptIgnoreAttribute](http://msdn.microsoft.com/en-us/library/system.web.script.serialization.scriptignoreattribute.aspx). You opt in to this behavior by setting the `EDGE_ENABLE_SCRIPTIGNOREATTRIBUTE` environment variable:
 
 ```
 set EDGE_ENABLE_SCRIPTIGNOREATTRIBUTE=1
@@ -774,6 +776,60 @@ helloFs('Node.js', function (error, result) {
 });
 ```
 
+### How to: script Lisp in a Node.js application
+
+**NOTE** This functionality has not been tested on non-Windows platforms. 
+
+The [edge-lsharp](https://github.com/richorama/edge-lsharp) extension uses [LSharp](https://github.com/RobBlackwell/LSharp) to compile and run Lisp to .NET.
+
+Install edge and edge-lsharp modules:
+
+```
+npm install edge
+npm install edge-lsharp
+```
+
+In your server.js:
+
+```javascript
+var edge = require('edge');
+var fact = edge.func('lsharp', function(){/*
+
+;; Factorial
+(def fact(n) 
+    (if (is n 0) 1 (* n (fact (- n 1)))))
+
+*/});
+
+fact([5], function(err, answer){
+    console.log(answer);
+    // = 120
+});
+```
+
+An LSharp filename can be passed in instead of the Lisp string/comment:
+
+```js
+var edge = require('edge');
+var lisp = edge.func('lsharp', 'lisp-func.ls');
+
+lisp(['arg1', 'arg2'], function(err, result){
+    
+});
+```
+
+In Lisp you can specify either a function (as shown in the first example) or just return a value:
+
+```js
+var edge = require('edge');
+var lisp = edge.func('lsharp', '(+ 2 3)');
+
+lisp([], function(err, answer){
+    console.log(answer);
+    // = 5
+});
+```
+
 ### How to: script T-SQL in a Node.js application
 
 **NOTE** This functionality has only been tested on Windows. Although ADO.NET exist in Mono, your mileage can vary. 
@@ -893,11 +949,44 @@ var clrFunc = edge.func(function () {/*
 */});
 
 clrFunc(null, function (error, result) {
-    if (error) throw error;
+    if (error) {
+		console.log('Is Error?', error instanceof Error);
+		console.log('-----------------');
+		console.log(util.inspect(error, showHidden=true, depth=99, colorize=false));
+		return;
+	}
 });
 ```
 
-Running this Node.js application shows that the CLR exception was indeed received by the Node.js callback. The `error` parameter contains the full stack trace including the CLR code path:
+Running this Node.js application shows that the CLR exception was indeed received by the Node.js callback. The `error` parameter contains an Error object having most of the properties of the Exceptions copied over:
+```
+Is Error? true
+-----------------
+{ [System.AggregateException: One or more errors occurred.]
+  message: 'One or more errors occurred.',
+  name: 'System.AggregateException',
+  InnerExceptions: 'System.Collections.ObjectModel.ReadOnlyCollection`1[[System.Exception, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]',
+  Message: 'One or more errors occurred.',
+  Data: 'System.Collections.ListDictionaryInternal',
+  InnerException:
+   { [System.Exception: Sample exception]
+     message: 'Sample exception',
+     name: 'System.Exception',
+     Message: 'Sample exception',
+     Data: 'System.Collections.ListDictionaryInternal',
+     TargetSite: 'System.Reflection.RuntimeMethodInfo',
+     StackTrace: '   at Startup.<<Invoke>b__0>d__2.MoveNext() in c:\\Users\\User.Name\\Source\\Repos\\eCash2\\test\\edge2.js:line 7\r\n--- End of stack trace from previous location where exception was thrown ---\r\n   at System.Runtime.CompilerServices.TaskAwaiter.ThrowForNonSuccess(Task task)\r\n   at System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task task)\r\n   at System.Runtime.CompilerServices.TaskAwaiter`1.GetResult()\r\n   at Startup.<Invoke>d__4.MoveNext() in c:\\Users\\User.Name\\Source\\Repos\\eCash2\\test\\edge2.js:line 5',
+     Source: 'cp2luegt',
+     HResult: -2146233088 },
+  HResult: -2146233088 }
+```
+The exception is copied back as Error object like every normal result object from the .NET world to JavaScript. 
+Therefore all properties and their values are available on the Error object.
+
+Additionally, the following happens during the mapping:
+* To represent the Exception type, its full name is stored as `name`.
+* To follow the [JavaScript convention for Errors](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error), the `Message` is also stored as the property `message`.
+* `System::Reflection::RuntimeMethodInfo`s are not copied to avoid stack overflows
 
 ```
 $>node sample.js
@@ -953,6 +1042,10 @@ System.Exception: Error: Sample JavaScript error
    at System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task task)
    at Edge.Sample.Startup.<Invoke>d__0.MoveNext()
 ```
+
+### How to: app.config
+
+When running C# code within Node.js app, the app config file is node.exe.config and should be located right next to the node.exe file.
 
 ### How to: debugging
 
@@ -1134,9 +1227,29 @@ node-gyp configure build -debug
 export EDGE_NATIVE=/Users/tomek/edge/build/Debug/edge.node
 ```
 
-### Building on Ubuntu
+### Building on Linux 
 
-These instructions were tested on Ubuntu 12.04 x64. High level, you must have Node.js x64 and Mono x64 installed on the machine before you can install Edge.js. There are two ways of getting there.
+These instructions were tested on Ubuntu 12.04 x64 and Debian Wheezy x64. High level, you must have Node.js x64 and Mono x64 installed on the machine before you can install Edge.js. There are two ways of getting there.
+
+### Debian, starting from a clean VM (i.e. taking the high road)
+
+If you have a fresh Debian Wheezy x64 installation, the most convenient way of installing Edge.js with all prerequisites is by running:
+
+```bash
+export USERNAME=YourUserNameHere
+sudo bash -c 'bash <(wget -qO- https://raw.githubusercontent.com/tjanczuk/edge/master/tools/debian_wheezy_clean_install.sh)'
+```
+
+This will do the following:
+
+* Download Node.js v0.10.26 sources, build, and install Node.js x64
+* Download Mono 3.4.0 sources, build, and install Mono x64
+* Download and install node-gyp and mocha
+* Download Edge.js sources and build x64 release
+* Run Edge.js tests
+
+This process takes about 15 minutes on a Debian Wheezy x64 running on a 4 core with 16GB RAM. If successful, your machine will have all the prerequisites to `npm install edge`.
+
 
 ### Ubuntu, starting from a clean VM (i.e. taking the high road)
 

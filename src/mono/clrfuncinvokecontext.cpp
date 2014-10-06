@@ -107,7 +107,7 @@ Handle<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread(bool completedSynchro
         break;
     case Task::Faulted:
         if (Task::Exception(this->Task()) != NULL) {
-            argv[0] = exceptionCLR2stringV8(Task::Exception(this->Task()));
+            argv[0] = ClrFunc::MarshalCLRExceptionToV8(Task::Exception(this->Task()));
         }
         else {
             argv[0] = v8::String::New("The operation has failed with an undetermined error.");
@@ -123,7 +123,7 @@ Handle<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread(bool completedSynchro
         if (exc) 
         {
             argc = 1;
-            argv[0] = exceptionCLR2stringV8(exc);
+            argv[0] = ClrFunc::MarshalCLRExceptionToV8(exc);
         }
         break;
     };

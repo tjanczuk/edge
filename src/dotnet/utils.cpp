@@ -45,21 +45,8 @@ System::String^ exceptionV82stringCLR(Handle<v8::Value> exception)
     return gcnew System::String(stringV82CLR(Handle<v8::String>::Cast(exception)));
 }
 
-Handle<String> exceptionCLR2stringV8(System::Exception^ exception)
+Handle<Value> throwV8Exception(Handle<Value> exception)
 {
     HandleScope scope;
-    if (exception == nullptr)
-    {
-        return scope.Close(v8::String::New("Unrecognized exception thrown by CLR."));
-    }
-    else
-    {
-        return scope.Close(stringCLR2V8(exception->ToString()));
-    }
-}
-
-Handle<Value> throwV8Exception(System::Exception^ exception)
-{
-    HandleScope scope;
-    return scope.Close(ThrowException(exceptionCLR2stringV8(exception)));
+    return scope.Close(ThrowException(exception));
 }

@@ -92,8 +92,14 @@ Handle<v8::Value> ClrFunc::Initialize(const v8::Arguments& args)
         }
         else {
             // reference .NET code throgh embedded source code that needs to be compiled
-            String::Utf8Value compilerFile(options->Get(String::NewSymbol("compiler")));
-            assembly = Assembly::UnsafeLoadFrom(gcnew System::String(*compilerFile));
+            String::Value compilerFile(options->Get(String::NewSymbol("compiler")));
+            cli::array<unsigned char>^ buffer = gcnew cli::array<unsigned char>(compilerFile.length() * 2);
+            for (int k = 0; k < compilerFile.length(); k++)
+            {
+                buffer[k * 2] = (*compilerFile)[k] & 255;
+                buffer[k * 2 + 1] = (*compilerFile)[k] >> 8;
+            }
+            assembly = Assembly::UnsafeLoadFrom(System::Text::Encoding::Unicode->GetString(buffer));
             System::Type^ compilerType = assembly->GetType("EdgeCompiler", true, true);
             System::Object^ compilerInstance = System::Activator::CreateInstance(compilerType, false);
             MethodInfo^ compileFunc = compilerType->GetMethod("CompileFunc", BindingFlags::Instance | BindingFlags::Public);
@@ -114,7 +120,7 @@ Handle<v8::Value> ClrFunc::Initialize(const v8::Arguments& args)
     }
     catch (System::Exception^ e)
     {
-        return scope.Close(throwV8Exception(e));
+        return scope.Close(throwV8Exception(ClrFunc::MarshalCLRExceptionToV8(e)));
     }
 }
 
@@ -256,6 +262,10 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(System::Object^ netdata)
     {
         jsdata = ClrFunc::Initialize((System::Func<System::Object^,Task<System::Object^>^>^)netdata);
     }
+    else if (System::Exception::typeid->IsAssignableFrom(type))
+    {
+        jsdata = ClrFunc::MarshalCLRExceptionToV8((System::Exception^)netdata);
+    }
     else
     {
         jsdata = ClrFunc::MarshalCLRObjectToV8(netdata);
@@ -264,11 +274,62 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(System::Object^ netdata)
     return scope.Close(jsdata);
 }
 
-Handle<v8::Value> ClrFunc::MarshalCLRObjectToV8(System::Object^ netdata)
+Handle<v8::Value> ClrFunc::MarshalCLRExceptionToV8(System::Exception^ exception)
 {
+    DBG("ClrFunc::MarshalCLRExceptionToV8");
+    HandleScope scope;
+    Handle<v8::Object> result;
+    Handle<v8::String> message;
+    Handle<v8::String> name;
+
+    if (exception == nullptr)
+    {
+        result = v8::Object::New();
+        message = v8::String::New("Unrecognized exception thrown by CLR.");
+        name = v8::String::New("InternalException");
+    }
+    else
+    {
+        // Remove AggregateException wrapper from around singleton InnerExceptions
+        if (System::AggregateException::typeid->IsAssignableFrom(exception->GetType()))
+        {
+            System::AggregateException^ aggregate = (System::AggregateException^)exception;
+            if (aggregate->InnerExceptions->Count == 1)
+                exception = aggregate->InnerExceptions[0];
+        }
+        else if (System::Reflection::TargetInvocationException::typeid->IsAssignableFrom(exception->GetType())
+            && exception->InnerException != nullptr)
+        {
+            exception = exception->InnerException;
+        }
+
+        result = ClrFunc::MarshalCLRObjectToV8(exception);
+        message = stringCLR2V8(exception->Message);
+        name = stringCLR2V8(exception->GetType()->FullName);
+    }   
+        
+    // Construct an error that is just used for the prototype - not verify efficient
+    // but 'typeof Error' should work in JavaScript
+    result->SetPrototype(v8::Exception::Error(message));
+    result->Set(String::NewSymbol("message"), message);
+    
+    // Recording the actual type - 'name' seems to be the common used property
+    result->Set(String::NewSymbol("name"), name);
+
+    return scope.Close(result);
+}
+
+Handle<v8::Object> ClrFunc::MarshalCLRObjectToV8(System::Object^ netdata)
+{
+    DBG("ClrFunc::MarshalCLRObjectToV8");
     HandleScope scope;
     Handle<v8::Object> result = v8::Object::New();
     System::Type^ type = netdata->GetType();
+
+    if (0 == System::String::Compare(type->FullName, "System.Reflection.RuntimeMethodInfo")) {
+        // Avoid stack overflow due to self-referencing reflection elements
+        return scope.Close(result);
+    }
 
     for each (FieldInfo^ field in type->GetFields(BindingFlags::Public | BindingFlags::Instance))
     {
@@ -436,7 +497,7 @@ Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> cal
     }
     catch (System::Exception^ e)
     {
-        return scope.Close(throwV8Exception(e));
+        return scope.Close(throwV8Exception(ClrFunc::MarshalCLRExceptionToV8(e)));
     }
 
     return scope.Close(Undefined());    
