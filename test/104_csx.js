@@ -108,7 +108,13 @@ describe('edge-cs', function () {
     it('fails with malformed literal lambda', function () {
         assert.throws(
             function () { edge.func('async_foo (input) => { return "Hello, " + input.ToString(); }'); },
-            /Invalid expression term '=>'|Unexpected symbol `=>'/
+            function (error) {
+                if ((error instanceof Error) && error.message.match(/Invalid expression term '=>'|Unexpected symbol `=>'/)) {
+                    return true;
+                }
+                return false;
+            },
+            'Unexpected result'
         );
     });
 
@@ -127,7 +133,13 @@ describe('edge-cs', function () {
                     }
                 */});
             },
-            /Expected class, delegate, enum, interface, or|expecting `class', `delegate', `enum', `interface', `partial', or `struct'/
+            function (error) {
+                if ((error instanceof Error) && error.message.match(/Expected class, delegate, enum, interface, or|expecting `class', `delegate', `enum', `interface', `partial', or `struct'/)) {
+                    return true;
+                }
+                return false;
+            },
+            'Unexpected result'
         );
     });
 
@@ -146,7 +158,13 @@ describe('edge-cs', function () {
                     }
                 */});
              },
-            /Unable to access CLR method to wrap through reflection/
+            function (error) {
+                if ((error instanceof Error) && error.message.match(/Unable to access CLR method to wrap through reflection/)) {
+                    return true;
+                }
+                return false;
+            },
+            'Unexpected result'
         );
     });
 
@@ -165,7 +183,13 @@ describe('edge-cs', function () {
                     }           
                 */});
             },
-            /Could not load type 'Startup'/
+            function(error) {
+                if ( (error instanceof Error) && error.message.match(/Could not load type 'Startup'/)) {
+                    return true;
+                }
+                return false;
+            },
+            'Unexpected result'
         );
     });
 

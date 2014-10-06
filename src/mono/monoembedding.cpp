@@ -37,6 +37,24 @@ void MonoEmbedding::Initialize()
     mono_add_internal_call("NodejsFunc::Release", (const void*)&NodejsFunc::Release); 
 }
 
+void MonoEmbedding::NormalizeException(MonoException** e) 
+{
+    static MonoMethod* method;
+
+    if (!method)
+    {
+        method = mono_class_get_method_from_name(MonoEmbedding::GetClass(), "NormalizeException", -1);
+    }
+
+    void *params[] = { *e };
+    MonoException *exc = NULL;
+    MonoException *en = (MonoException*)mono_runtime_invoke(method, NULL, params, (MonoObject**)exc);
+    if (NULL == exc)
+    {
+        *e = en;
+    }
+}
+
 MonoAssembly* MonoEmbedding::GetAssembly()
 {
     return assembly;

@@ -37,7 +37,7 @@
   <ItemGroup>
     <Reference Include="EdgeJs, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>packages\Edge.js.0.9.1\lib\EdgeJs.dll</HintPath>
+      <HintPath>packages\Edge.js.0.9.2\lib\EdgeJs.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System" />

@@ -59,8 +59,14 @@ describe('call patterns', function () {
         var lambda = func(null, true);
         assert.equal(typeof lambda, 'function');
         assert.throws(
-            function() { lambda(null, true); },
-            /Test .NET exception/
+            function () { lambda(null, true); },
+            function (error) {
+                if ((error instanceof Error) && error.Message.match(/Test .NET exception/)) {
+                    return true;
+                }
+                return false;
+            },
+            'Unexpected result'
         );
     });
 
@@ -84,10 +90,8 @@ describe('call patterns', function () {
         var lambda = func(null, true);
         assert.equal(typeof lambda, 'function');
         lambda(null, function (error, result) {
-            assert.throws(
-                function () { throw error; },
-                /Test .NET exception/
-            );
+            assert.ok(error instanceof Error);
+            assert.ok(error.Message.match(/Test .NET exception/));
             done();
         });
     });
@@ -123,11 +127,11 @@ describe('call patterns', function () {
         var results = [];
 
         edgetest(
-            function(data, callback) {
+            function (data, callback) {
                 results.push(data);
                 callback();
             },
-            function(error, result) {
+            function (error, result) {
                 assert.ifError(error);
                 assert.equal(results.length, 5000);
                 assert.equal(result, 5000);
@@ -280,8 +284,14 @@ describe('call patterns', function () {
         */});
 
         assert.throws(
-            function () { callout(null, true); },
-            /I have no name/
+            function () { callout(null, true); }, 
+            function (error) {
+                if ((error instanceof Error) && error.message.match(/I have no name/)) {
+                    return true;
+                }
+                return false;
+            },
+            'Unexpected result'
         );
     }); 
 
@@ -312,8 +322,8 @@ describe('call patterns', function () {
         */});
 
         callout(false, function (error, result) {
-            assert.equal(typeof error, 'string');
-            assert.ok(error.match(/I have no name/));
+            assert.equal(true, error instanceof Error);
+            assert.ok(error.message.match(/I have no name/));
             done();
         });
 
