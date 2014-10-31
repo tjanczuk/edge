@@ -33,7 +33,7 @@ ClrFuncInvokeContext::ClrFuncInvokeContext(Handle<v8::Value> callbackOrSync) : _
         *(this->callback) = Persistent<Function>::New(Handle<Function>::Cast(callbackOrSync));
         this->Sync(FALSE);
     }
-    else 
+    else
     {
         this->Sync(callbackOrSync->BooleanValue());
     }
@@ -41,7 +41,7 @@ ClrFuncInvokeContext::ClrFuncInvokeContext(Handle<v8::Value> callbackOrSync) : _
 
 void ClrFuncInvokeContext::InitializeAsyncOperation()
 {
-    // Create a uv_edge_async instance representing V8 async operation that will complete 
+    // Create a uv_edge_async instance representing V8 async operation that will complete
     // when the CLR function completes. The ClrActionContext is used to ensure the ClrFuncInvokeContext
     // remains GC-rooted while the CLR function executes.
 
@@ -49,7 +49,7 @@ void ClrFuncInvokeContext::InitializeAsyncOperation()
     if (!getAction)
         getAction = mono_class_get_method_from_name(
             GetClrFuncInvokeContextClass(), "GetCompleteOnV8ThreadAsynchronousAction", -1);
-    
+
     ClrActionContext* data = new ClrActionContext;
     data->action = mono_gchandle_new( // released in ClrActionContext::ActionCallback
         mono_runtime_invoke(getAction, mono_gchandle_get_target(this->_this), NULL, NULL), FALSE);
@@ -64,7 +64,7 @@ ClrFuncInvokeContext::~ClrFuncInvokeContext()
         (*(this->callback)).Dispose();
         (*(this->callback)).Clear();
         delete this->callback;
-        this->callback = NULL;        
+        this->callback = NULL;
     }
     mono_gchandle_free(this->_this);
 }
@@ -95,10 +95,10 @@ Handle<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread(bool completedSynchro
     {
         // this was an async call without callback specified
         delete this;
-        return handleScope.Close(Undefined());
+        return handleScope.Close(NanUndefined());
     }
 
-    Handle<Value> argv[] = { Undefined(), Undefined() };
+    Handle<Value> argv[] = { NanUndefined(), NanUndefined() };
     int argc = 1;
 
     switch (Task::Status(this->Task())) {
@@ -120,7 +120,7 @@ Handle<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread(bool completedSynchro
         argc = 2;
         MonoException* exc = NULL;
         argv[1] = ClrFunc::MarshalCLRToV8(Task::Result(this->Task()), &exc);
-        if (exc) 
+        if (exc)
         {
             argc = 1;
             argv[0] = ClrFunc::MarshalCLRExceptionToV8(exc);
@@ -134,16 +134,16 @@ Handle<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread(bool completedSynchro
         TryCatch try_catch;
         (*(this->callback))->Call(v8::Context::GetCurrent()->Global(), argc, argv);
         delete this;
-        if (try_catch.HasCaught()) 
+        if (try_catch.HasCaught())
         {
             node::FatalException(try_catch);
-        }        
+        }
 
-        return handleScope.Close(Undefined());
+        return handleScope.Close(NanUndefined());
     }
     else {
         delete this;
-        if (1 == argc) 
+        if (1 == argc)
         {
             // complete the synchronous call to C# by re-throwing the resulting exception
             return handleScope.Close(ThrowException(argv[0]));
@@ -199,4 +199,4 @@ IMPLEMENT_REF_FIELD(MonoObject*, Payload)
     IMPLEMENT_REF_FIELD(MonoObject*, Task)
     IMPLEMENT_FIELD(bool, Sync)
 
-    // vim: ts=4 sw=4 et: 
+    // vim: ts=4 sw=4 et:

@@ -33,7 +33,7 @@ NAN_METHOD(v8FuncCallback)
     {
         context->CompleteWithResult(args[1]);
     }
-    return scope.Close(Undefined());
+    return scope.Close(NanUndefined());
 }
 
 NodejsFuncInvokeContext::NodejsFuncInvokeContext(

@@ -17,7 +17,7 @@ NAN_METHOD(v8FuncCallback)
         MonoObject* result = ClrFunc::MarshalV8ToCLR(args[1]);
         context->Complete(NULL, result);
     }
-    return scope.Close(Undefined());
+    return scope.Close(NanUndefined());
 }
 
 

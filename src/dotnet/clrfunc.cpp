@@ -501,5 +501,5 @@ Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> cal
         return scope.Close(throwV8Exception(ClrFunc::MarshalCLRExceptionToV8(e)));
     }
 
-    return scope.Close(Undefined());
+    return scope.Close(NanUndefined());
 }

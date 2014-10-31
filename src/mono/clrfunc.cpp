@@ -132,7 +132,7 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata, MonoException** e
 
     if (netdata == NULL)
     {
-        return scope.Close(Undefined());
+        return scope.Close(NanUndefined());
     }
 
     static MonoClass* guid_class;
@@ -307,7 +307,7 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata, MonoException** e
 
     if (*exc)
     {
-        return scope.Close(Undefined());
+        return scope.Close(NanUndefined());
     }
 
     return scope.Close(jsdata);
@@ -576,7 +576,7 @@ Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> cal
         }
     }
 
-    return scope.Close(Undefined());
+    return scope.Close(NanUndefined());
 }
 
 // vim: ts=4 sw=4 et:
