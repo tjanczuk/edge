@@ -1,4 +1,5 @@
 #include "edge.h"
+#include <nan.h>
 
 #using <System.Core.dll>
 

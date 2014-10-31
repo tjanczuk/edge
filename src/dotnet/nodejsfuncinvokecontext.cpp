@@ -15,6 +15,7 @@
  * permissions and limitations under the License.
  */
 #include "edge.h"
+#include <nan.h>
 
 NAN_METHOD(v8FuncCallback)
 {

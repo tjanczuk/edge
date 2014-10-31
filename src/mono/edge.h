@@ -2,6 +2,7 @@
 #define __EDGE_H
 
 #include "../common/edge_common.h"
+#include <nan.h>
 
 #include <pthread.h>
 #include "mono/metadata/class.h"

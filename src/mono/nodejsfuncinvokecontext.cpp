@@ -1,4 +1,5 @@
 #include "edge.h"
+#include <nan.h>
 
 NAN_METHOD(v8FuncCallback)
 {

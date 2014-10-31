@@ -1,4 +1,5 @@
 #include "edge.h"
+#include <nan.h>
 
 #include "mono/metadata/assembly.h"
 #include "mono/metadata/exception.h"
