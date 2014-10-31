@@ -14,7 +14,7 @@ ClrFunc::ClrFunc()
 NAN_METHOD(clrFuncProxy)
 {
     DBG("clrFuncProxy");
-    HandleScope scope;
+    NanScope();
     Handle<v8::External> correlator = Handle<v8::External>::Cast(args[2]);
     ClrFuncWrap* wrap = (ClrFuncWrap*)(correlator->Value());
     ClrFunc* clrFunc = wrap->clrFunc;
@@ -38,7 +38,7 @@ Handle<v8::Function> ClrFunc::Initialize(MonoObject* func)
     static Persistent<v8::Function> proxyFactory;
     static Persistent<v8::Function> proxyFunction;
 
-    HandleScope scope;
+    NanScope();
 
     ClrFunc* app = new ClrFunc();
     app->func = mono_gchandle_new(func, FALSE);
@@ -70,7 +70,7 @@ NAN_METHOD(ClrFunc::Initialize)
 {
     DBG("ClrFunc::Initialize MethodInfo wrapper");
 
-    HandleScope scope;
+    NanScope();
     Handle<v8::Object> options = args[0]->ToObject();
     Handle<v8::Function> result;
 
@@ -126,7 +126,7 @@ NAN_METHOD(ClrFunc::Initialize)
 
 Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata, MonoException** exc)
 {
-    HandleScope scope;
+    NanScope();
     Handle<v8::Value> jsdata;
     *exc = NULL;
 
@@ -316,7 +316,7 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata, MonoException** e
 Handle<v8::Object> ClrFunc::MarshalCLRExceptionToV8(MonoException* exception)
 {
     DBG("ClrFunc::MarshalCLRExceptionToV8");
-    HandleScope scope;
+    NanScope();
     Handle<v8::Object> result;
     Handle<v8::String> message;
     Handle<v8::String> name;
@@ -361,7 +361,7 @@ Handle<v8::Object> ClrFunc::MarshalCLRExceptionToV8(MonoException* exception)
 Handle<v8::Object> ClrFunc::MarshalCLRObjectToV8(MonoObject* netdata, MonoException** exc)
 {
     DBG("ClrFunc::MarshalCLRObjectToV8");
-    HandleScope scope;
+    NanScope();
     Handle<v8::Object> result = v8::Object::New();
     MonoClass* klass = mono_object_get_class(netdata);
     MonoClass* current;
@@ -436,7 +436,7 @@ Handle<v8::Object> ClrFunc::MarshalCLRObjectToV8(MonoObject* netdata, MonoExcept
 MonoObject* ClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata)
 {
     DBG("ClrFunc::MarshalV8ToCLR");
-    HandleScope scope;
+    NanScope();
 
     if (jsdata->IsFunction())
     {
@@ -522,7 +522,7 @@ MonoObject* ClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata)
 Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> callback)
 {
     DBG("ClrFunc::Call instance");
-    HandleScope scope;
+    NanScope();
     MonoException* exc = NULL;
 
     ClrFuncInvokeContext* c = new ClrFuncInvokeContext(callback);

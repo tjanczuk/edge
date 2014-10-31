@@ -65,7 +65,7 @@ void ClrFuncInvokeContext::InitializeAsyncOperation()
 
 void ClrFuncInvokeContext::CompleteOnV8ThreadAsynchronous()
 {
-    HandleScope scope;
+    NanScope();
     this->CompleteOnV8Thread();
 }
 

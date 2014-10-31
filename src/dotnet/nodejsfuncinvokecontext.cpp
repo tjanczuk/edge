@@ -20,7 +20,7 @@
 NAN_METHOD(v8FuncCallback)
 {
     DBG("v8FuncCallback");
-    HandleScope scope;
+    NanScope();
     Handle<v8::External> correlator = Handle<v8::External>::Cast(args[2]);
     NodejsFuncInvokeContextWrap* wrap = (NodejsFuncInvokeContextWrap*)(correlator->Value());
     NodejsFuncInvokeContext^ context = wrap->context;
@@ -68,7 +68,7 @@ void NodejsFuncInvokeContext::CallFuncOnV8Thread()
     static Persistent<v8::Function> callbackFactory;
     static Persistent<v8::Function> callbackFunction;
 
-    HandleScope scope;
+    NanScope();
     try
     {
         Handle<v8::Value> jspayload = ClrFunc::MarshalCLRToV8(this->payload);

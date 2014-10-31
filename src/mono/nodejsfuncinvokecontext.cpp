@@ -4,7 +4,7 @@
 NAN_METHOD(v8FuncCallback)
 {
     DBG("v8FuncCallback");
-    HandleScope scope;
+    NanScope();
     Handle<v8::External> correlator = Handle<v8::External>::Cast(args[2]);
     NodejsFuncInvokeContext* context = (NodejsFuncInvokeContext*)(correlator->Value());
     if (!args[0]->IsUndefined() && !args[0]->IsNull())
@@ -40,7 +40,7 @@ void NodejsFuncInvokeContext::CallFuncOnV8Thread(MonoObject* _this, NodejsFunc* 
     static Persistent<v8::Function> callbackFactory;
     static Persistent<v8::Function> callbackFunction;
 
-    HandleScope scope;
+    NanScope();
     NodejsFuncInvokeContext* ctx = new NodejsFuncInvokeContext(_this);
 
     MonoException* exc = NULL;

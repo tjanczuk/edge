@@ -78,7 +78,7 @@ void ClrFuncInvokeContext::CompleteOnCLRThread(ClrFuncInvokeContext *_this, Mono
 
 void ClrFuncInvokeContext::CompleteOnV8ThreadAsynchronous(ClrFuncInvokeContext *_this)
 {
-    HandleScope scope;
+    NanScope();
     _this->CompleteOnV8Thread(false);
 }
 

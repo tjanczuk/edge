@@ -11,7 +11,7 @@ ClrFunc::ClrFunc()
 NAN_METHOD(clrFuncProxy)
 {
     DBG("clrFuncProxy");
-    HandleScope scope;
+    NanScope();
     Handle<v8::External> correlator = Handle<v8::External>::Cast(args[2]);
     ClrFuncWrap* wrap = (ClrFuncWrap*)(correlator->Value());
     ClrFunc^ clrFunc = wrap->clrFunc;
@@ -35,7 +35,7 @@ Handle<v8::Function> ClrFunc::Initialize(System::Func<System::Object^,Task<Syste
     static Persistent<v8::Function> proxyFactory;
     static Persistent<v8::Function> proxyFunction;
 
-    HandleScope scope;
+    NanScope();
 
     ClrFunc^ app = gcnew ClrFunc();
     app->func = func;
@@ -67,7 +67,7 @@ NAN_METHOD(ClrFunc::Initialize)
 {
     DBG("ClrFunc::Initialize MethodInfo wrapper");
 
-    HandleScope scope;
+    NanScope();
     Handle<v8::Object> options = args[0]->ToObject();
     Assembly^ assembly;
     System::String^ typeName;
@@ -134,7 +134,7 @@ void edgeAppCompletedOnCLRThread(Task<System::Object^>^ task, System::Object^ st
 
 Handle<v8::Value> ClrFunc::MarshalCLRToV8(System::Object^ netdata)
 {
-    HandleScope scope;
+    NanScope();
     Handle<v8::Value> jsdata;
 
     if (netdata == nullptr)
@@ -278,7 +278,7 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(System::Object^ netdata)
 Handle<v8::Value> ClrFunc::MarshalCLRExceptionToV8(System::Exception^ exception)
 {
     DBG("ClrFunc::MarshalCLRExceptionToV8");
-    HandleScope scope;
+    NanScope();
     Handle<v8::Object> result;
     Handle<v8::String> message;
     Handle<v8::String> name;
@@ -323,7 +323,7 @@ Handle<v8::Value> ClrFunc::MarshalCLRExceptionToV8(System::Exception^ exception)
 Handle<v8::Object> ClrFunc::MarshalCLRObjectToV8(System::Object^ netdata)
 {
     DBG("ClrFunc::MarshalCLRObjectToV8");
-    HandleScope scope;
+    NanScope();
     Handle<v8::Object> result = v8::Object::New();
     System::Type^ type = netdata->GetType();
 
@@ -374,7 +374,7 @@ Handle<v8::Object> ClrFunc::MarshalCLRObjectToV8(System::Object^ netdata)
 
 System::Object^ ClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata)
 {
-    HandleScope scope;
+    NanScope();
 
     if (jsdata->IsFunction())
     {
@@ -465,7 +465,7 @@ System::Object^ ClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata)
 Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> callback)
 {
     DBG("ClrFunc::Call instance");
-    HandleScope scope;
+    NanScope();
 
     try
     {
