@@ -1,34 +1,34 @@
 /**
- * Portions Copyright (c) Microsoft Corporation. All rights reserved. 
- * 
+ * Portions Copyright (c) Microsoft Corporation. All rights reserved.
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *  http://www.apache.org/licenses/LICENSE-2.0  
+ *  http://www.apache.org/licenses/LICENSE-2.0
  *
  * THIS CODE IS PROVIDED *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS
- * OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION 
- * ANY IMPLIED WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR 
- * PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT. 
+ * OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION
+ * ANY IMPLIED WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR
+ * PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
  *
- * See the Apache Version 2.0 License for specific language governing 
+ * See the Apache Version 2.0 License for specific language governing
  * permissions and limitations under the License.
  */
 #include "edge.h"
 
-Handle<Value> v8FuncCallback(const v8::Arguments& args)
+NAN_METHOD(v8FuncCallback)
 {
     DBG("v8FuncCallback");
     HandleScope scope;
     Handle<v8::External> correlator = Handle<v8::External>::Cast(args[2]);
     NodejsFuncInvokeContextWrap* wrap = (NodejsFuncInvokeContextWrap*)(correlator->Value());
-    NodejsFuncInvokeContext^ context = wrap->context;    
+    NodejsFuncInvokeContext^ context = wrap->context;
     wrap->context = nullptr;
     if (!args[0]->IsUndefined() && !args[0]->IsNull())
     {
         context->CompleteWithError(gcnew System::Exception(exceptionV82stringCLR(args[0])));
     }
-    else 
+    else
     {
         context->CompleteWithResult(args[1]);
     }
@@ -68,12 +68,12 @@ void NodejsFuncInvokeContext::CallFuncOnV8Thread()
     static Persistent<v8::Function> callbackFunction;
 
     HandleScope scope;
-    try 
+    try
     {
         Handle<v8::Value> jspayload = ClrFunc::MarshalCLRToV8(this->payload);
 
         // See https://github.com/tjanczuk/edge/issues/125 for context
-        
+
         if (callbackFactory.IsEmpty())
         {
             callbackFunction = Persistent<v8::Function>::New(
@@ -88,12 +88,12 @@ void NodejsFuncInvokeContext::CallFuncOnV8Thread()
         this->wrap->context = this;
         Handle<v8::Value> factoryArgv[] = { callbackFunction, v8::External::New((void*)this->wrap) };
         Handle<v8::Function> callback = Handle<v8::Function>::Cast(
-            callbackFactory->Call(v8::Context::GetCurrent()->Global(), 2, factoryArgv));        
+            callbackFactory->Call(v8::Context::GetCurrent()->Global(), 2, factoryArgv));
 
         Handle<v8::Value> argv[] = { jspayload, callback };
         TryCatch tryCatch;
         (*(this->functionContext->Func))->Call(v8::Context::GetCurrent()->Global(), 2, argv);
-        if (tryCatch.HasCaught()) 
+        if (tryCatch.HasCaught())
         {
             this->wrap->context = nullptr;
             this->CompleteWithError(gcnew System::Exception(exceptionV82stringCLR(tryCatch.Exception())));
@@ -112,7 +112,7 @@ void NodejsFuncInvokeContext::Complete()
     {
         this->TaskCompletionSource->SetException(this->exception);
     }
-    else 
+    else
     {
         this->TaskCompletionSource->SetResult(this->result);
     }
@@ -128,7 +128,7 @@ void NodejsFuncInvokeContext::CompleteWithError(System::Exception^ exception)
 void NodejsFuncInvokeContext::CompleteWithResult(Handle<v8::Value> result)
 {
     DBG("NodejsFuncInvokeContext::CompleteWithResult");
-    try 
+    try
     {
         this->result = ClrFunc::MarshalV8ToCLR(result);
         Task::Run(gcnew System::Action(this, &NodejsFuncInvokeContext::Complete));
