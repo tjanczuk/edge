@@ -22,7 +22,8 @@ ClrFuncInvokeContext::ClrFuncInvokeContext(Handle<v8::Value> callbackOrSync)
     if (callbackOrSync->IsFunction())
     {
         this->callback = new Persistent<Function>;
-        *(this->callback) = Persistent<Function>::New(Handle<Function>::Cast(callbackOrSync));
+        //*(this->callback) = Persistent<Function>::New(Handle<Function>::Cast(callbackOrSync));
+        NanAssignPersistent(Function, *(this->callback), New(Handle<Function>::Cast(callbackOrSync));
         this->Sync = false;
     }
     else

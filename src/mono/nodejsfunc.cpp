@@ -19,7 +19,8 @@ NodejsFunc::NodejsFunc(Handle<Function> function)
         ctor = mono_class_get_method_from_name(GetNodejsFuncClass(), ".ctor", -1);
 
     this->Func = new Persistent<Function>;
-    *(this->Func) = Persistent<Function>::New(function);
+    //*(this->Func) = Persistent<Function>::New(function);
+    NanAssignPersistent(Function, *(this->Func), function);
 
     MonoObject* thisObj = mono_object_new(mono_domain_get(), GetNodejsFuncClass());
     MonoException* exc = NULL;
@@ -29,7 +30,7 @@ NodejsFunc::NodejsFunc(Handle<Function> function)
     _this = mono_gchandle_new_weakref(thisObj, FALSE);
 }
 
-NodejsFunc::~NodejsFunc() 
+NodejsFunc::~NodejsFunc()
 {
     // Must be called on V8 thread
     (*(this->Func)).Dispose();
@@ -60,7 +61,7 @@ void  NodejsFunc::ExecuteActionOnV8Thread(MonoObject* action)
     ClrActionContext* data = new ClrActionContext;
     data->action = mono_gchandle_new(action, FALSE); // released in ClrActionContext::ActionCallback
     uv_edge_async_t* uv_edge_async = V8SynchronizationContext::RegisterAction(ClrActionContext::ActionCallback, data);
-    V8SynchronizationContext::ExecuteAction(uv_edge_async);    
+    V8SynchronizationContext::ExecuteAction(uv_edge_async);
 }
 
-// vim: ts=4 sw=4 et: 
+// vim: ts=4 sw=4 et:
