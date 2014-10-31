@@ -77,12 +77,13 @@ Listen to the [Edge.js podcast on Herdingcode](http://herdingcode.com/herding-co
 &nbsp;&nbsp;&nbsp;&nbsp;[How to: script Python in a Node.js application](#how-to-script-python-in-a-nodejs-application)  
 &nbsp;&nbsp;&nbsp;&nbsp;[How to: script PowerShell in a Node.js application](#how-to-script-powershell-in-a-nodejs-application)  
 &nbsp;&nbsp;&nbsp;&nbsp;[How to: script F# in a Node.js application](#how-to-script-f-in-a-nodejs-application)  
+&nbsp;&nbsp;&nbsp;&nbsp;[How to: script Lisp in a Node.js application](#how-to-script-lisp-in-a-nodejs-application)  
 &nbsp;&nbsp;&nbsp;&nbsp;[How to: script T-SQL in a Node.js application](#how-to-script-t-sql-in-a-nodejs-application)  
 &nbsp;&nbsp;&nbsp;&nbsp;[How to: support for other CLR languages](#how-to-support-for-other-clr-languages)  
 &nbsp;&nbsp;&nbsp;&nbsp;[How to: exceptions](#how-to-exceptions)  
 &nbsp;&nbsp;&nbsp;&nbsp;[How to: app.config](#how-to-app-config)  
 &nbsp;&nbsp;&nbsp;&nbsp;[How to: debugging](#how-to-debugging)  
-&nbsp;&nbsp;&nbsp;&nbsp;[Performance](#performance)  
+&nbsp;&nbsp;&nbsp;&nbsp;[Performance](#performance)
 &nbsp;&nbsp;&nbsp;&nbsp;[Building on Windows](#building-on-windows)  
 &nbsp;&nbsp;&nbsp;&nbsp;[Building on OSX](#building-on-osx)  
 &nbsp;&nbsp;&nbsp;&nbsp;[Building on Linux](#building-on-linux)  
@@ -775,6 +776,60 @@ helloFs('Node.js', function (error, result) {
 });
 ```
 
+### How to: script Lisp in a Node.js application
+
+**NOTE** This functionality has not been tested on non-Windows platforms. 
+
+The [edge-lsharp](https://github.com/richorama/edge-lsharp) extension uses [LSharp](https://github.com/RobBlackwell/LSharp) to compile and run Lisp to .NET.
+
+Install edge and edge-lsharp modules:
+
+```
+npm install edge
+npm install edge-lsharp
+```
+
+In your server.js:
+
+```javascript
+var edge = require('edge');
+var fact = edge.func('lsharp', function(){/*
+
+;; Factorial
+(def fact(n) 
+    (if (is n 0) 1 (* n (fact (- n 1)))))
+
+*/});
+
+fact([5], function(err, answer){
+    console.log(answer);
+    // = 120
+});
+```
+
+An LSharp filename can be passed in instead of the Lisp string/comment:
+
+```js
+var edge = require('edge');
+var lisp = edge.func('lsharp', 'lisp-func.ls');
+
+lisp(['arg1', 'arg2'], function(err, result){
+    
+});
+```
+
+In Lisp you can specify either a function (as shown in the first example) or just return a value:
+
+```js
+var edge = require('edge');
+var lisp = edge.func('lsharp', '(+ 2 3)');
+
+lisp([], function(err, answer){
+    console.log(answer);
+    // = 5
+});
+```
+
 ### How to: script T-SQL in a Node.js application
 
 **NOTE** This functionality has only been tested on Windows. Although ADO.NET exist in Mono, your mileage can vary. 
@@ -1373,7 +1428,11 @@ Console.WriteLine(await new WebClient().DownloadStringTaskAsync("http://localhos
 
 ### How to: use external Node.js modules
 
-You can use external Node.js modules, for example modules installed from NPM. To install modules from NPM, you must first [install Node.js](http://nodejs.org) on your machine and use the `npm` package manager that comes with the Node.js installation. NPM modules must be installed in the directory where your build system binplaces the Edge.js NuGet package (most likely the same location as the rest of your application binaries), or any ancestor directory. Alternatively, you can install NPM modules globally on the machine using `npm install -g`:
+You can use external Node.js modules, for example modules installed from NPM. 
+
+Note: Most Node.js modules are written in JavaScript and will execute in Edge as-is. However, some Node.js external modules are native binary modules, rebuilt by NPM on module installation to suit your local execution environment. Native binary modules will not run in Edge unless they are rebuilt to link against the NodeJS dll that Edge uses.
+
+To install modules from NPM, you must first [install Node.js](http://nodejs.org) on your machine and use the `npm` package manager that comes with the Node.js installation. NPM modules must be installed in the directory where your build system places the Edge.js NuGet package (most likely the same location as the rest of your application binaries), or any ancestor directory. Alternatively, you can install NPM modules globally on the machine using `npm install -g`:
 
 ```
 C:\projects\websockets> npm install ws
