@@ -43,7 +43,7 @@ typedef struct clrActionContext {
 
 ref class ClrFuncInvokeContext {
 private:
-    Persistent<Function>* callback;
+    NanCallback *callback;
     uv_edge_async_t* uv_edge_async;
 
     void DisposeCallback();

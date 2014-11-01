@@ -22,8 +22,9 @@ ClrFuncInvokeContext::ClrFuncInvokeContext(Handle<v8::Value> callbackOrSync)
     DBG("ClrFuncInvokeContext::ClrFuncInvokeContext");
     if (callbackOrSync->IsFunction())
     {
-        Local<Function> callbackHandle = Handle<Function>::Cast(callbackOrSync);
-        NanCallback *(this->callback) = new NanCallback(callbackHandle);
+        Local<Function> callbackHandle = callbackOrSync.As<Function>();
+        this->callback = new NanCallback(callbackHandle);
+
         this->Sync = false;
     }
     else
@@ -39,7 +40,7 @@ void ClrFuncInvokeContext::DisposeCallback()
     if (this->callback)
     {
         DBG("ClrFuncInvokeContext::DisposeCallback");
-        NanDisposePersistent(*(this->callback));
+
         delete this->callback;
         this->callback = NULL;
     }
@@ -119,7 +120,7 @@ Handle<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread()
     {
         // complete the asynchronous call to C# by invoking a callback in JavaScript
         TryCatch try_catch;
-        (*(this->callback))->Call(NanGetCurrentContext()->Global(), argc, argv);
+        this->callback->Call(argc, argv);
         this->DisposeCallback();
         if (try_catch.HasCaught())
         {
