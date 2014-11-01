@@ -34,7 +34,6 @@ NodejsFunc::~NodejsFunc()
 {
     // Must be called on V8 thread
     NanDisposePersistent(*(this->Func));
-    (*(this->Func)).Clear();
     delete this->Func;
 }
 

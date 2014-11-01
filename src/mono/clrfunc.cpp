@@ -26,7 +26,6 @@ void clrFuncProxyNearDeath(v8::Persistent<v8::Value> object, void* parameters)
     DBG("clrFuncProxyNearDeath");
     ClrFuncWrap* wrap = (ClrFuncWrap*)parameters;
     NanDisposePersistent(object);
-    object.Clear();
     wrap->clrFunc = NULL;
     delete wrap;
 }

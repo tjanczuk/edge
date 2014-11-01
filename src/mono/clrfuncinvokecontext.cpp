@@ -63,7 +63,6 @@ ClrFuncInvokeContext::~ClrFuncInvokeContext()
     {
         DBG("ClrFuncInvokeContext::DisposeCallback");
         NanDisposePersistent(*(this->callback));
-        (*(this->callback)).Clear();
         delete this->callback;
         this->callback = NULL;
     }
