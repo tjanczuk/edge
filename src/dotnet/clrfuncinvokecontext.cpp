@@ -22,8 +22,8 @@ ClrFuncInvokeContext::ClrFuncInvokeContext(Handle<v8::Value> callbackOrSync)
     DBG("ClrFuncInvokeContext::ClrFuncInvokeContext");
     if (callbackOrSync->IsFunction())
     {
-        this->callback = new Persistent<Function>;
-        NanAssignPersistent(*(this->callback), Handle<Function>::Cast(callbackOrSync));
+        Local<Function> callbackHandle = Handle<Function>::Cast(callbackOrSync);
+        NanCallback *(this->callback) = new NanCallback(callbackHandle);
         this->Sync = false;
     }
     else
