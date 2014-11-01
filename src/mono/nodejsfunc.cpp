@@ -20,7 +20,7 @@ NodejsFunc::NodejsFunc(Handle<Function> function)
 
     this->Func = new Persistent<Function>;
     //*(this->Func) = Persistent<Function>::New(function);
-    NanAssignPersistent(Function, *(this->Func), function);
+    NanAssignPersistent(*(this->Func), function);
 
     MonoObject* thisObj = mono_object_new(mono_domain_get(), GetNodejsFuncClass());
     MonoException* exc = NULL;

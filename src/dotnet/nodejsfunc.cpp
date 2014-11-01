@@ -15,13 +15,13 @@
  * permissions and limitations under the License.
  */
 #include "edge.h"
+#include <nan.h>
 
 NodejsFunc::NodejsFunc(Handle<Function> function)
 {
     DBG("NodejsFunc::NodejsFunc");
     this->Func = new Persistent<Function>;
-    //*(this->Func) = Persistent<Function>::New(function);
-    NanAssignPersistent(Function, *(this->Func), function);
+    NanAssignPersistent(*(this->Func), function);
 }
 
 NodejsFunc::~NodejsFunc()

@@ -31,7 +31,7 @@ ClrFuncInvokeContext::ClrFuncInvokeContext(Handle<v8::Value> callbackOrSync) : _
     {
         this->callback = new Persistent<Function>(); // released in destructor
         //*(this->callback) = Persistent<Function>::New(Handle<Function>::Cast(callbackOrSync));
-        NanAssignPersistent(Function, *(this->callback), New(Handle<Function>::Cast(callbackOrSync));
+        NanAssignPersistent(*(this->callback), New(Handle<Function>::Cast(callbackOrSync));
         this->Sync(FALSE);
     }
     else
