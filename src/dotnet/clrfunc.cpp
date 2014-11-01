@@ -15,7 +15,7 @@ NAN_METHOD(clrFuncProxy)
     Handle<v8::External> correlator = Handle<v8::External>::Cast(args[2]);
     ClrFuncWrap* wrap = (ClrFuncWrap*)(correlator->Value());
     ClrFunc^ clrFunc = wrap->clrFunc;
-    return scope.Close(clrFunc->Call(args[0], args[1]));
+    NanReturnValue(clrFunc->Call(args[0], args[1]));
 }
 
 void clrFuncProxyNearDeath(v8::Persistent<v8::Value> object, void* parameters)

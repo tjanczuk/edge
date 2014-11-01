@@ -23,7 +23,7 @@ ClrFuncInvokeContext::ClrFuncInvokeContext(Handle<v8::Value> callbackOrSync)
     {
         this->callback = new Persistent<Function>;
         //*(this->callback) = Persistent<Function>::New(Handle<Function>::Cast(callbackOrSync));
-        NanAssignPersistent(Function, *(this->callback), New(Handle<Function>::Cast(callbackOrSync));
+        NanAssignPersistent(Function, *(this->callback), New(Handle<Function>::Cast(callbackOrSync)));
         this->Sync = false;
     }
     else
@@ -74,7 +74,7 @@ Handle<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread()
 {
     DBG("ClrFuncInvokeContext::CompleteOnV8Thread");
 
-    HandleScope handleScope;
+    NanEscapableScope();
 
     // The uv_edge_async was already cleaned up in V8SynchronizationContext::ExecuteAction
     this->uv_edge_async = NULL;
@@ -83,7 +83,7 @@ Handle<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread()
     {
         // this was an async call without callback specified
         DBG("ClrFuncInvokeContext::CompleteOnV8Thread - async without callback");
-        return handleScope.Close(NanUndefined());
+        return NanEscapeScope(NanUndefined());
     }
 
     Handle<Value> argv[] = { NanUndefined(), NanUndefined() };
@@ -128,18 +128,18 @@ Handle<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread()
         }
 
         DBG("ClrFuncInvokeContext::CompleteOnV8Thread - async with callback");
-        return handleScope.Close(NanUndefined());
+        return NanEscapeScope(NanUndefined());
     }
     else if (1 == argc)
     {
-        DBG("ClrFuncInvokeContext::CompleteOnV8Thread - handleScope.Close(ThrowException(argv[0]))");
+        DBG("ClrFuncInvokeContext::CompleteOnV8Thread - NanThrowError(argv[0])");
         // complete the synchronous call to C# by re-throwing the resulting exception
-        return handleScope.Close(ThrowException(argv[0]));
+        NanThrowError(argv[0]);
     }
     else
     {
         DBG("ClrFuncInvokeContext::CompleteOnV8Thread - handleScope.Close(argv[1])");
         // complete the synchronous call to C# by returning the result
-        return handleScope.Close(argv[1]);
+        return NanEscapeScope(argv[1]);
     }
 }

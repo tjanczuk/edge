@@ -15,13 +15,14 @@
  * permissions and limitations under the License.
  */
 #include "edge_common.h"
+#include <nan.h>
 
 void continueOnV8Thread(uv_async_t* handle, int status)
 {
     // This executes on V8 thread
 
     DBG("continueOnV8Thread");
-    HandleScope handleScope;
+    NanEscapableScope();
     uv_edge_async_t* uv_edge_async = (uv_edge_async_t*)handle;
     uv_async_edge_cb action = uv_edge_async->action;
     void* data = uv_edge_async->data;

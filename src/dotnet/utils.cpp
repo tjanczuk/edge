@@ -2,16 +2,16 @@
 
 Handle<v8::String> stringCLR2V8(System::String^ text)
 {
-    NanScope();
+    NanEscapableScope();
     if (text->Length > 0)
     {
         array<unsigned char>^ utf8 = System::Text::Encoding::UTF8->GetBytes(text);
         pin_ptr<unsigned char> ch = &utf8[0];
-        return scope.Close(v8::String::New((char*)ch));
+        return NanEscapeScope(NanNew<String>((char*)ch));
     }
     else
     {
-        return scope.Close(v8::String::Empty());
+        return NanEscapeScope(NanNew<String>());;
     }
 }
 
@@ -47,6 +47,6 @@ System::String^ exceptionV82stringCLR(Handle<v8::Value> exception)
 
 Handle<Value> throwV8Exception(Handle<Value> exception)
 {
-    NanScope();
-    return scope.Close(ThrowException(exception));
+    NanEscapableScope();
+    NanThrowError(exception);
 }
