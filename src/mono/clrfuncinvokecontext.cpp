@@ -104,7 +104,7 @@ Handle<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread(bool completedSynchro
 
     switch (Task::Status(this->Task())) {
     default:
-        argv[0] = v8::String::New("The operation reported completion in an unexpected state.");
+        argv[0] = NanNew<v8::String>("The operation reported completion in an unexpected state.");
         break;
     case Task::Faulted:
         if (Task::Exception(this->Task()) != NULL) {

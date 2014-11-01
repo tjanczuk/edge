@@ -79,7 +79,7 @@ void NodejsFuncInvokeContext::CallFuncOnV8Thread()
         {
             callbackFunction = Persistent<v8::Function>::New(
                 FunctionTemplate::New(v8FuncCallback)->GetFunction());
-            Handle<v8::String> code = v8::String::New(
+            Handle<v8::String> code = NanNew<String>(
                 "(function (cb, ctx) { return function (e, d) { return cb(e, d, ctx); }; })");
             callbackFactory = Persistent<v8::Function>::New(
                 Handle<v8::Function>::Cast(v8::Script::Compile(code)->Run()));

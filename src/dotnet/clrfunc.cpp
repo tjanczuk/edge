@@ -48,7 +48,7 @@ Handle<v8::Function> ClrFunc::Initialize(System::Func<System::Object^,Task<Syste
     {
         proxyFunction = Persistent<v8::Function>::New(
             FunctionTemplate::New(clrFuncProxy)->GetFunction());
-        Handle<v8::String> code = v8::String::New(
+        Handle<v8::String> code = NanNew<String>(
             "(function (f, ctx) { return function (d, cb) { return f(d, cb, ctx); }; })");
         proxyFactory = Persistent<v8::Function>::New(
             Handle<v8::Function>::Cast(v8::Script::Compile(code)->Run()));
