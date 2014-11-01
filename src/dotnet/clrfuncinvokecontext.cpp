@@ -15,6 +15,7 @@
  * permissions and limitations under the License.
  */
 #include "edge.h"
+#include <nan.h>
 
 ClrFuncInvokeContext::ClrFuncInvokeContext(Handle<v8::Value> callbackOrSync)
 {
@@ -23,7 +24,7 @@ ClrFuncInvokeContext::ClrFuncInvokeContext(Handle<v8::Value> callbackOrSync)
     {
         this->callback = new Persistent<Function>;
         //*(this->callback) = Persistent<Function>::New(Handle<Function>::Cast(callbackOrSync));
-        NanAssignPersistent(Function, *(this->callback), New(Handle<Function>::Cast(callbackOrSync)));
+        NanAssignPersistent(Function, *(this->callback), Handle<Function>::Cast(callbackOrSync));
         this->Sync = false;
     }
     else
