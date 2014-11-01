@@ -45,9 +45,3 @@ System::String^ exceptionV82stringCLR(Handle<v8::Value> exception)
 
     return gcnew System::String(stringV82CLR(Handle<v8::String>::Cast(exception)));
 }
-
-Handle<Value> throwV8Exception(Handle<Value> exception)
-{
-    NanEscapableScope();
-    NanThrowError(exception);
-}
