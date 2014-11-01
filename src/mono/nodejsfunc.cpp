@@ -33,7 +33,7 @@ NodejsFunc::NodejsFunc(Handle<Function> function)
 NodejsFunc::~NodejsFunc()
 {
     // Must be called on V8 thread
-    (*(this->Func)).Dispose();
+    NanDisposePersistent(*(this->Func));
     (*(this->Func)).Clear();
     delete this->Func;
 }
