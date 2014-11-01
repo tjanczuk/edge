@@ -77,12 +77,12 @@ NAN_METHOD(ClrFunc::Initialize)
     {
         Handle<v8::Function> result;
 
-        Handle<v8::Value> jsassemblyFile = options->Get(String::NewSymbol("assemblyFile"));
+        Handle<v8::Value> jsassemblyFile = options->Get(NanNew<String>("assemblyFile"));
         if (jsassemblyFile->IsString()) {
             // reference .NET code through pre-compiled CLR assembly
             String::Utf8Value assemblyFile(jsassemblyFile);
-            String::Utf8Value nativeTypeName(options->Get(String::NewSymbol("typeName")));
-            String::Utf8Value nativeMethodName(options->Get(String::NewSymbol("methodName")));
+            String::Utf8Value nativeTypeName(options->Get(NanNew<String>("typeName")));
+            String::Utf8Value nativeMethodName(options->Get(NanNew<String>("methodName")));
             typeName = gcnew System::String(*nativeTypeName);
             methodName = gcnew System::String(*nativeMethodName);
             assembly = Assembly::UnsafeLoadFrom(gcnew System::String(*assemblyFile));
@@ -93,7 +93,7 @@ NAN_METHOD(ClrFunc::Initialize)
         }
         else {
             // reference .NET code throgh embedded source code that needs to be compiled
-            String::Value compilerFile(options->Get(String::NewSymbol("compiler")));
+            String::Value compilerFile(options->Get(NanNew<String>("compiler")));
             cli::array<unsigned char>^ buffer = gcnew cli::array<unsigned char>(compilerFile.length() * 2);
             for (int k = 0; k < compilerFile.length(); k++)
             {
@@ -312,10 +312,10 @@ Handle<v8::Value> ClrFunc::MarshalCLRExceptionToV8(System::Exception^ exception)
     // Construct an error that is just used for the prototype - not verify efficient
     // but 'typeof Error' should work in JavaScript
     result->SetPrototype(v8::Exception::Error(message));
-    result->Set(String::NewSymbol("message"), message);
+    result->Set(NanNew<String>("message"), message);
 
     // Recording the actual type - 'name' seems to be the common used property
-    result->Set(String::NewSymbol("name"), name);
+    result->Set(NanNew<String>("name"), name);
 
     return scope.Close(result);
 }

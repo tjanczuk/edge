@@ -20,7 +20,7 @@ MonoString* exceptionV82stringCLR(Handle<v8::Value> exception)
     NanScope();
     if (exception->IsObject())
     {
-        Handle<Value> stack = exception->ToObject()->Get(v8::String::NewSymbol("stack"));
+        Handle<Value> stack = exception->ToObject()->Get(v8::NanNew<String>("stack"));
         if (stack->IsString())
         {
             return stringV82CLR(stack->ToString());

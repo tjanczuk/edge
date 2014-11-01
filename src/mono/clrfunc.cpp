@@ -74,13 +74,13 @@ NAN_METHOD(ClrFunc::Initialize)
     Handle<v8::Object> options = args[0]->ToObject();
     Handle<v8::Function> result;
 
-    Handle<v8::Value> jsassemblyFile = options->Get(String::NewSymbol("assemblyFile"));
+    Handle<v8::Value> jsassemblyFile = options->Get(NanNew<String>("assemblyFile"));
     if (jsassemblyFile->IsString())
     {
         // reference .NET code through pre-compiled CLR assembly
         String::Utf8Value assemblyFile(jsassemblyFile);
-        String::Utf8Value nativeTypeName(options->Get(String::NewSymbol("typeName")));
-        String::Utf8Value nativeMethodName(options->Get(String::NewSymbol("methodName")));
+        String::Utf8Value nativeTypeName(options->Get(NanNew<String>("typeName")));
+        String::Utf8Value nativeMethodName(options->Get(NanNew<String>("methodName")));
         MonoException* exc = NULL;
         MonoObject* func = MonoEmbedding::GetClrFuncReflectionWrapFunc(*assemblyFile, *nativeTypeName, *nativeMethodName, &exc);
         if (exc)
@@ -92,7 +92,7 @@ NAN_METHOD(ClrFunc::Initialize)
         //// reference .NET code throgh embedded source code that needs to be compiled
         MonoException* exc = NULL;
 
-        String::Utf8Value compilerFile(options->Get(String::NewSymbol("compiler")));
+        String::Utf8Value compilerFile(options->Get(NanNew<String>("compiler")));
         MonoAssembly *assembly = mono_domain_assembly_open (mono_domain_get(), *compilerFile);
         MonoClass* compilerClass = mono_class_from_name(mono_assembly_get_image(assembly), "", "EdgeCompiler");
         MonoObject* compilerInstance = mono_object_new(mono_domain_get(), compilerClass);
@@ -350,10 +350,10 @@ Handle<v8::Object> ClrFunc::MarshalCLRExceptionToV8(MonoException* exception)
     // Construct an error that is just used for the prototype - not verify efficient
     // but 'typeof Error' should work in JavaScript
     result->SetPrototype(v8::Exception::Error(message));
-    result->Set(String::NewSymbol("message"), message);
+    result->Set(NanNew<String>("message"), message);
 
     // Recording the actual type - 'name' seems to be the common used property
-    result->Set(String::NewSymbol("name"), name);
+    result->Set(NanNew<String>("name"), name);
 
     return scope.Close(result);
 }

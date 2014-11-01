@@ -1,4 +1,5 @@
 #include "edge.h"
+#include <nan.h>
 
 Handle<v8::String> stringCLR2V8(System::String^ text)
 {
@@ -35,7 +36,7 @@ System::String^ exceptionV82stringCLR(Handle<v8::Value> exception)
     NanScope();
     if (exception->IsObject())
     {
-        Handle<Value> stack = exception->ToObject()->Get(v8::String::NewSymbol("stack"));
+        Handle<Value> stack = exception->ToObject()->Get(NanNew<String>("stack"));
         if (stack->IsString())
         {
             return gcnew System::String(stringV82CLR(stack->ToString()));
