@@ -65,7 +65,7 @@ public:
 ref class NodejsFunc {
 public:
 
-    property Persistent<Function>* Func;
+    property NanCallback* Func;
 
     NodejsFunc(Handle<Function> function);
     ~NodejsFunc();

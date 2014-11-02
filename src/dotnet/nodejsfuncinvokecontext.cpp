@@ -65,8 +65,8 @@ void NodejsFuncInvokeContext::CallFuncOnV8Thread()
 {
     DBG("NodejsFuncInvokeContext::CallFuncOnV8Thread");
 
-    static Persistent<v8::Function> callbackFactory;
-    static Persistent<v8::Function> callbackFunction;
+    static NanCallback *callbackFactory;
+    static NanCallback *callbackFunction;
 
     NanScope();
     try
@@ -75,25 +75,24 @@ void NodejsFuncInvokeContext::CallFuncOnV8Thread()
 
         // See https://github.com/tjanczuk/edge/issues/125 for context
 
-        if (callbackFactory.IsEmpty())
+        if (callbackFactory->IsEmpty())
         {
-            callbackFunction = Persistent<v8::Function>::New(
-                FunctionTemplate::New(v8FuncCallback)->GetFunction());
+            callbackFunction = new NanCallback(NanNew<FunctionTemplate>(v8FuncCallback)->GetFunction());
             Handle<v8::String> code = NanNew<String>(
                 "(function (cb, ctx) { return function (e, d) { return cb(e, d, ctx); }; })");
-            callbackFactory = Persistent<v8::Function>::New(
+            callbackFactory = new NanCallback(
                 Handle<v8::Function>::Cast(v8::Script::Compile(code)->Run()));
         }
 
         this->wrap = new NodejsFuncInvokeContextWrap;
         this->wrap->context = this;
-        Handle<v8::Value> factoryArgv[] = { callbackFunction, v8::External::New((void*)this->wrap) };
+        Handle<v8::Value> factoryArgv[] = { callbackFunction->GetFunction(), NanNew<External>((void*)this->wrap) };
         Handle<v8::Function> callback = Handle<v8::Function>::Cast(
-            callbackFactory->Call(v8::Context::GetCurrent()->Global(), 2, factoryArgv));
+            callbackFactory->Call(2, factoryArgv));
 
         Handle<v8::Value> argv[] = { jspayload, callback };
         TryCatch tryCatch;
-        (*(this->functionContext->Func))->Call(v8::Context::GetCurrent()->Global(), 2, argv);
+        this->functionContext->Func->Call(2, argv);
         if (tryCatch.HasCaught())
         {
             this->wrap->context = nullptr;
