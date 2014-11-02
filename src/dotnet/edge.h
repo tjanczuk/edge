@@ -146,4 +146,11 @@ typedef struct clrFuncWrap {
     gcroot<ClrFunc^> clrFunc;
 } ClrFuncWrap;
 
+// courtesy: https://groups.google.com/forum/#!topic/v8-users/6kSAbnUb-rQ
+template<class T>
+inline Local<T> ToLocal(Persistent<T>* p_) {
+    return *reinterpret_cast<Local<T>*>(p_);
+}
+
+
 #endif
