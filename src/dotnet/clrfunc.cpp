@@ -1,5 +1,4 @@
 #include "edge.h"
-#include <nan.h>
 
 #using <System.Core.dll>
 
@@ -51,7 +50,7 @@ Handle<v8::Function> ClrFunc::Initialize(System::Func<System::Object^,Task<Syste
     }
 
     Handle<v8::Value> factoryArgv[] = {proxyFactory->GetFunction(), NanNew<External>((void*)wrap)};
-    Local<Function> funcProxy = Handle<v8::Function>::Cast(proxyFactory->Call(2, factoryArgv));
+    Handle<Function> funcProxy = Handle<v8::Function>::Cast(proxyFactory->Call(2, factoryArgv));
     NanMakeWeakPersistent(funcProxy,(void*)wrap, &clrFuncProxyNearDeath);
 
     return NanEscapeScope(funcProxy);

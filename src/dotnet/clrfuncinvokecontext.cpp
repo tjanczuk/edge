@@ -15,14 +15,13 @@
  * permissions and limitations under the License.
  */
 #include "edge.h"
-#include <nan.h>
 
 ClrFuncInvokeContext::ClrFuncInvokeContext(Handle<v8::Value> callbackOrSync)
 {
     DBG("ClrFuncInvokeContext::ClrFuncInvokeContext");
     if (callbackOrSync->IsFunction())
     {
-        Local<Function> callbackHandle = callbackOrSync.As<Function>();
+        Handle<Function> callbackHandle = callbackOrSync.As<Function>();
         this->callback = new NanCallback(callbackHandle);
 
         this->Sync = false;

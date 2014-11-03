@@ -15,9 +15,8 @@
  * permissions and limitations under the License.
  */
 #include "edge_common.h"
-#include <nan.h>
 
-void continueOnV8Thread(uv_async_t* handle)
+void continueOnV8Thread(uv_async_t* handle, int status)
 {
     // This executes on V8 thread
 

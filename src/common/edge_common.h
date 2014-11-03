@@ -5,6 +5,7 @@
 #include <node.h>
 #include <node_buffer.h>
 #include <uv.h>
+#include <nan.h>
 
 using namespace v8;
 
@@ -55,7 +56,7 @@ typedef int BOOL;
 #define ABORT_TODO() do { printf("%s (%d): %s\n", __FILE__, __LINE__, __func__); exit(1); } while (0)
 #endif
 
-// Good explanation of native Buffers at 
+// Good explanation of native Buffers at
 // http://sambro.is-super-awesome.com/2011/03/03/creating-a-proper-buffer-in-a-node-c-addon/
 extern BOOL debugMode;
 extern BOOL enableScriptIgnoreAttribute;
@@ -84,14 +85,14 @@ private:
 
 public:
 
-    // The node process will not exit until ExecuteAction or CancelAction had been called for all actions 
-    // registered by calling RegisterAction on V8 thread. Actions registered by calling RegisterAction 
+    // The node process will not exit until ExecuteAction or CancelAction had been called for all actions
+    // registered by calling RegisterAction on V8 thread. Actions registered by calling RegisterAction
     // on CLR thread do not prevent the process from exiting.
     // Calls from JavaScript to .NET always call RegisterAction on V8 thread before invoking .NET code.
     // Calls from .NET to JavaScript call RegisterAction either on CLR or V8 thread, depending on
     // whether .NET code executes synchronously on V8 thread it strarted running on.
     // This means that if any call of a .NET function from JavaScript is in progress, the process won't exit.
-    // It also means that existence of .NET proxies to JavaScript functions in the CLR does not prevent the 
+    // It also means that existence of .NET proxies to JavaScript functions in the CLR does not prevent the
     // process from exiting.
     // In this model, JavaScript owns the lifetime of the process.
 

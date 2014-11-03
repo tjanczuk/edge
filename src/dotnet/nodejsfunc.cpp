@@ -15,7 +15,6 @@
  * permissions and limitations under the License.
  */
 #include "edge.h"
-#include <nan.h>
 
 NodejsFunc::NodejsFunc(Handle<Function> function)
 {

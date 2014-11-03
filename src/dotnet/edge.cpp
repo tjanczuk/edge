@@ -1,5 +1,4 @@
 #include "edge.h"
-#include <nan.h>
 
 BOOL debugMode;
 BOOL enableScriptIgnoreAttribute;

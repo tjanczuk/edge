@@ -20,7 +20,6 @@
 #include "../common/edge_common.h"
 
 #include <vcclr.h>
-#include <nan.h>
 
 #using <system.dll>
 #using <system.web.extensions.dll>

@@ -1,5 +1,4 @@
 #include "edge.h"
-#include <nan.h>
 
 Handle<v8::String> stringCLR2V8(System::String^ text)
 {
