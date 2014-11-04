@@ -1,33 +1,34 @@
 #include "edge.h"
+#include <nan.h>
 
-Handle<Value> v8FuncCallback(const v8::Arguments& args)
+NAN_METHOD(v8FuncCallback)
 {
     DBG("v8FuncCallback");
-    HandleScope scope;
+    NanScope();
     Handle<v8::External> correlator = Handle<v8::External>::Cast(args[2]);
     NodejsFuncInvokeContext* context = (NodejsFuncInvokeContext*)(correlator->Value());
     if (!args[0]->IsUndefined() && !args[0]->IsNull())
     {
        context->Complete((MonoObject*)exceptionV82stringCLR(args[0]), NULL);
     }
-    else 
+    else
     {
         // TODO add support for exceptions during marshaling:
         MonoObject* result = ClrFunc::MarshalV8ToCLR(args[1]);
         context->Complete(NULL, result);
     }
-    return scope.Close(Undefined());
+    return scope.Close(NanUndefined());
 }
 
 
-NodejsFuncInvokeContext::NodejsFuncInvokeContext(MonoObject* _this) 
+NodejsFuncInvokeContext::NodejsFuncInvokeContext(MonoObject* _this)
 {
     DBG("NodejsFuncInvokeContext::NodejsFuncInvokeContext");
 
     this->_this = mono_gchandle_new(_this, FALSE); // released in Complete
 }
 
-NodejsFuncInvokeContext::~NodejsFuncInvokeContext() 
+NodejsFuncInvokeContext::~NodejsFuncInvokeContext()
 {
     mono_gchandle_free(this->_this);
 }
@@ -39,20 +40,20 @@ void NodejsFuncInvokeContext::CallFuncOnV8Thread(MonoObject* _this, NodejsFunc* 
     static Persistent<v8::Function> callbackFactory;
     static Persistent<v8::Function> callbackFunction;
 
-    HandleScope scope;
+    NanScope();
     NodejsFuncInvokeContext* ctx = new NodejsFuncInvokeContext(_this);
-    
+
     MonoException* exc = NULL;
     Handle<v8::Value> jspayload = ClrFunc::MarshalCLRToV8(payload, &exc);
-    if (exc) 
+    if (exc)
     {
         ctx->Complete((MonoObject*)exc, NULL);
         // ctx deleted in Complete
     }
-    else 
+    else
     {
         // See https://github.com/tjanczuk/edge/issues/125 for context
-        
+
         if (callbackFactory.IsEmpty())
         {
             callbackFunction = Persistent<v8::Function>::New(
@@ -70,7 +71,7 @@ void NodejsFuncInvokeContext::CallFuncOnV8Thread(MonoObject* _this, NodejsFunc* 
         Handle<v8::Value> argv[] = { jspayload, callback };
         TryCatch tryCatch;
         (*(nativeNodejsFunc->Func))->Call(v8::Context::GetCurrent()->Global(), 2, argv);
-        if (tryCatch.HasCaught()) 
+        if (tryCatch.HasCaught())
         {
             ctx->Complete((MonoObject*)exceptionV82stringCLR(tryCatch.Exception()), NULL);
             // ctx deleted in Complete
@@ -97,4 +98,4 @@ void NodejsFuncInvokeContext::Complete(MonoObject* exception, MonoObject* result
     delete this;
 }
 
-// vim: ts=4 sw=4 et: 
+// vim: ts=4 sw=4 et:

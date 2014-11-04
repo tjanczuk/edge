@@ -1,4 +1,5 @@
 #include "edge.h"
+#include <nan.h>
 
 #include "mono/metadata/assembly.h"
 #include "mono/metadata/exception.h"
@@ -10,10 +11,10 @@ ClrFunc::ClrFunc()
     // empty
 }
 
-Handle<v8::Value> clrFuncProxy(const v8::Arguments& args)
+NAN_METHOD(clrFuncProxy)
 {
     DBG("clrFuncProxy");
-    HandleScope scope;
+    NanScope();
     Handle<v8::External> correlator = Handle<v8::External>::Cast(args[2]);
     ClrFuncWrap* wrap = (ClrFuncWrap*)(correlator->Value());
     ClrFunc* clrFunc = wrap->clrFunc;
@@ -24,8 +25,7 @@ void clrFuncProxyNearDeath(v8::Persistent<v8::Value> object, void* parameters)
 {
     DBG("clrFuncProxyNearDeath");
     ClrFuncWrap* wrap = (ClrFuncWrap*)parameters;
-    object.Dispose();
-    object.Clear();
+    NanDisposePersistent(object);
     wrap->clrFunc = NULL;
     delete wrap;
 }
@@ -35,9 +35,9 @@ Handle<v8::Function> ClrFunc::Initialize(MonoObject* func)
     DBG("ClrFunc::Initialize Func<object,Task<object>> wrapper");
 
     static Persistent<v8::Function> proxyFactory;
-    static Persistent<v8::Function> proxyFunction;    
+    static Persistent<v8::Function> proxyFunction;
 
-    HandleScope scope;
+    NanScope();
 
     ClrFunc* app = new ClrFunc();
     app->func = mono_gchandle_new(func, FALSE);
@@ -45,7 +45,7 @@ Handle<v8::Function> ClrFunc::Initialize(MonoObject* func)
     wrap->clrFunc = app;
 
     // See https://github.com/tjanczuk/edge/issues/128 for context
-    
+
     if (proxyFactory.IsEmpty())
     {
         proxyFunction = Persistent<v8::Function>::New(
@@ -65,24 +65,24 @@ Handle<v8::Function> ClrFunc::Initialize(MonoObject* func)
     return scope.Close(funcProxy);
 }
 
-Handle<v8::Value> ClrFunc::Initialize(const v8::Arguments& args)
+NAN_METHOD(ClrFunc::Initialize)
 {
     DBG("ClrFunc::Initialize MethodInfo wrapper");
 
-    HandleScope scope;
+    NanScope();
     Handle<v8::Object> options = args[0]->ToObject();
     Handle<v8::Function> result;
 
-    Handle<v8::Value> jsassemblyFile = options->Get(String::NewSymbol("assemblyFile"));
+    Handle<v8::Value> jsassemblyFile = options->Get(NanNew<String>("assemblyFile"));
     if (jsassemblyFile->IsString())
     {
-        // reference .NET code through pre-compiled CLR assembly 
+        // reference .NET code through pre-compiled CLR assembly
         String::Utf8Value assemblyFile(jsassemblyFile);
-        String::Utf8Value nativeTypeName(options->Get(String::NewSymbol("typeName")));
-        String::Utf8Value nativeMethodName(options->Get(String::NewSymbol("methodName")));
+        String::Utf8Value nativeTypeName(options->Get(NanNew<String>("typeName")));
+        String::Utf8Value nativeMethodName(options->Get(NanNew<String>("methodName")));
         MonoException* exc = NULL;
         MonoObject* func = MonoEmbedding::GetClrFuncReflectionWrapFunc(*assemblyFile, *nativeTypeName, *nativeMethodName, &exc);
-        if (exc) 
+        if (exc)
             return scope.Close(throwV8Exception(ClrFunc::MarshalCLRExceptionToV8(exc)));
         result = ClrFunc::Initialize(func);
     }
@@ -91,7 +91,7 @@ Handle<v8::Value> ClrFunc::Initialize(const v8::Arguments& args)
         //// reference .NET code throgh embedded source code that needs to be compiled
         MonoException* exc = NULL;
 
-        String::Utf8Value compilerFile(options->Get(String::NewSymbol("compiler")));
+        String::Utf8Value compilerFile(options->Get(NanNew<String>("compiler")));
         MonoAssembly *assembly = mono_domain_assembly_open (mono_domain_get(), *compilerFile);
         MonoClass* compilerClass = mono_class_from_name(mono_assembly_get_image(assembly), "", "EdgeCompiler");
         MonoObject* compilerInstance = mono_object_new(mono_domain_get(), compilerClass);
@@ -125,13 +125,13 @@ Handle<v8::Value> ClrFunc::Initialize(const v8::Arguments& args)
 
 Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata, MonoException** exc)
 {
-    HandleScope scope;
+    NanScope();
     Handle<v8::Value> jsdata;
     *exc = NULL;
 
     if (netdata == NULL)
     {
-        return scope.Close(Undefined());
+        return scope.Close(NanUndefined());
     }
 
     static MonoClass* guid_class;
@@ -244,10 +244,10 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata, MonoException** e
         uint8_t* pinnedBuffer = mono_array_addr(buffer, uint8_t, 0);
         node::Buffer* slowBuffer = node::Buffer::New(length);
         memcpy(node::Buffer::Data(slowBuffer), pinnedBuffer, length);
-        Handle<v8::Value> args[] = { 
-            slowBuffer->handle_, 
-            v8::Integer::New(length), 
-            v8::Integer::New(0) 
+        Handle<v8::Value> args[] = {
+            slowBuffer->handle_,
+            v8::Integer::New(length),
+            v8::Integer::New(0)
         };
         jsdata = bufferConstructor->NewInstance(3, args);
     }
@@ -306,7 +306,7 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata, MonoException** e
 
     if (*exc)
     {
-        return scope.Close(Undefined());
+        return scope.Close(NanUndefined());
     }
 
     return scope.Close(jsdata);
@@ -315,12 +315,12 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata, MonoException** e
 Handle<v8::Object> ClrFunc::MarshalCLRExceptionToV8(MonoException* exception)
 {
     DBG("ClrFunc::MarshalCLRExceptionToV8");
-    HandleScope scope;
+    NanScope();
     Handle<v8::Object> result;
     Handle<v8::String> message;
     Handle<v8::String> name;
     MonoException* exc = NULL;
-        
+
     if (exception == NULL)
     {
         result = v8::Object::New();
@@ -339,20 +339,20 @@ Handle<v8::Object> ClrFunc::MarshalCLRExceptionToV8(MonoException* exception)
 
         const char* namespaceName = mono_class_get_namespace(klass);
         const char* className = mono_class_get_name(klass);
-        char full_name[strlen(namespaceName) + 1 + strlen(className) + 1]; 
+        char full_name[strlen(namespaceName) + 1 + strlen(className) + 1];
         strcpy(full_name, namespaceName);
         strcat(full_name, ".");
         strcat(full_name, className);
         name = stringCLR2V8(mono_string_new_wrapper(full_name));
-    }   
-    
+    }
+
     // Construct an error that is just used for the prototype - not verify efficient
     // but 'typeof Error' should work in JavaScript
     result->SetPrototype(v8::Exception::Error(message));
-    result->Set(String::NewSymbol("message"), message);
-    
+    result->Set(NanNew<String>("message"), message);
+
     // Recording the actual type - 'name' seems to be the common used property
-    result->Set(String::NewSymbol("name"), name);
+    result->Set(NanNew<String>("name"), name);
 
     return scope.Close(result);
 }
@@ -360,7 +360,7 @@ Handle<v8::Object> ClrFunc::MarshalCLRExceptionToV8(MonoException* exception)
 Handle<v8::Object> ClrFunc::MarshalCLRObjectToV8(MonoObject* netdata, MonoException** exc)
 {
     DBG("ClrFunc::MarshalCLRObjectToV8");
-    HandleScope scope;
+    NanScope();
     Handle<v8::Object> result = v8::Object::New();
     MonoClass* klass = mono_object_get_class(netdata);
     MonoClass* current;
@@ -374,7 +374,7 @@ Handle<v8::Object> ClrFunc::MarshalCLRObjectToV8(MonoObject* netdata, MonoExcept
         || 0 == strcmp(mono_class_get_namespace(klass), "System.Reflection"))
     {
         // Avoid stack overflow due to self-referencing reflection elements
-        return scope.Close(result);        
+        return scope.Close(result);
     }
 
     for (current = klass; !*exc && current; current = mono_class_get_parent(current))
@@ -392,7 +392,7 @@ Handle<v8::Object> ClrFunc::MarshalCLRObjectToV8(MonoObject* netdata, MonoExcept
             const char* name = mono_field_get_name(field);
             MonoObject* value = mono_field_get_value_object(mono_domain_get(), field, netdata);
             result->Set(
-                v8::String::New(name), 
+                v8::String::New(name),
                 ClrFunc::MarshalCLRToV8(value, exc));
         }
     }
@@ -413,7 +413,7 @@ Handle<v8::Object> ClrFunc::MarshalCLRObjectToV8(MonoObject* netdata, MonoExcept
             if (!(mono_method_get_flags(getMethod, NULL) & method_attr_public))
                 continue;
 
-            const char* name = mono_property_get_name(prop);       
+            const char* name = mono_property_get_name(prop);
             MonoObject* value = mono_runtime_invoke(getMethod, netdata, NULL, (MonoObject**)exc);
             if (!*exc)
             {
@@ -424,7 +424,7 @@ Handle<v8::Object> ClrFunc::MarshalCLRObjectToV8(MonoObject* netdata, MonoExcept
         }
     }
 
-    if (*exc) 
+    if (*exc)
     {
         return scope.Close(ClrFunc::MarshalCLRExceptionToV8(*exc));
     }
@@ -435,7 +435,7 @@ Handle<v8::Object> ClrFunc::MarshalCLRObjectToV8(MonoObject* netdata, MonoExcept
 MonoObject* ClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata)
 {
     DBG("ClrFunc::MarshalV8ToCLR");
-    HandleScope scope;
+    NanScope();
 
     if (jsdata->IsFunction())
     {
@@ -468,8 +468,8 @@ MonoObject* ClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata)
         Handle<v8::Date> jsdate = Handle<v8::Date>::Cast(jsdata);
         double ticks = jsdate->NumberValue();
         return MonoEmbedding::CreateDateTime(ticks);
-    }    
-    else if (jsdata->IsObject()) 
+    }
+    else if (jsdata->IsObject())
     {
         MonoObject* netobject = MonoEmbedding::CreateExpandoObject();
         Handle<v8::Object> jsobject = Handle<v8::Object>::Cast(jsdata);
@@ -483,7 +483,7 @@ MonoObject* ClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata)
 
         return netobject;
     }
-    else if (jsdata->IsString()) 
+    else if (jsdata->IsString())
     {
         return (MonoObject*)stringV82CLR(Handle<v8::String>::Cast(jsdata));
     }
@@ -497,12 +497,12 @@ MonoObject* ClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata)
         int32_t value = jsdata->Int32Value();
         return mono_value_box(mono_domain_get(), mono_get_int32_class(), &value);
     }
-    else if (jsdata->IsUint32()) 
+    else if (jsdata->IsUint32())
     {
         uint32_t value = jsdata->Uint32Value();
         return mono_value_box(mono_domain_get(), mono_get_uint32_class(), &value);
     }
-    else if (jsdata->IsNumber()) 
+    else if (jsdata->IsNumber())
     {
         double value = jsdata->NumberValue();
         return mono_value_box(mono_domain_get(), mono_get_double_class(), &value);
@@ -521,7 +521,7 @@ MonoObject* ClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata)
 Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> callback)
 {
     DBG("ClrFunc::Call instance");
-    HandleScope scope;
+    NanScope();
     MonoException* exc = NULL;
 
     ClrFuncInvokeContext* c = new ClrFuncInvokeContext(callback);
@@ -531,7 +531,7 @@ Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> cal
     void* params[1];
     params[0] = c->Payload();
     MonoMethod* invoke = mono_class_get_method_from_name(mono_object_get_class(func), "Invoke", -1);
-    // This is different from dotnet. From the documentation http://www.mono-project.com/Embedding_Mono: 
+    // This is different from dotnet. From the documentation http://www.mono-project.com/Embedding_Mono:
     MonoObject* task = mono_runtime_invoke(invoke, func, params, (MonoObject**)&exc);
     if (exc)
     {
@@ -575,7 +575,7 @@ Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> cal
         }
     }
 
-    return scope.Close(Undefined());    
+    return scope.Close(NanUndefined());
 }
 
-// vim: ts=4 sw=4 et: 
+// vim: ts=4 sw=4 et:
