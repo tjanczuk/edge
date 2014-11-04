@@ -74,7 +74,7 @@
               'RuntimeTypeInfo': -1,
               'BasicRuntimeChecks': -1,
               'ExceptionHandling': '0',
-              'AdditionalOptions': [ '/clr', '/wd4506' ]
+              'AdditionalOptions': [ '/clr', '/wd4506', '/wd4267' ]
             },
             'VCLinkerTool': {
               'AdditionalOptions': [ '/ignore:4248' ]
@@ -90,7 +90,7 @@
               'RuntimeTypeInfo': -1,
               'BasicRuntimeChecks': -1,
               'ExceptionHandling': '0',
-              'AdditionalOptions': [ '/clr', '/wd4506' ]
+              'AdditionalOptions': [ '/clr', '/wd4506', '/wd4267' ]
             },
             'VCLinkerTool': {
               'AdditionalOptions': [ '/ignore:4248' ]

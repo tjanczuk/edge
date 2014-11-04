@@ -63,7 +63,7 @@ extern BOOL enableScriptIgnoreAttribute;
 extern Persistent<Function> bufferConstructor;
 
 #ifdef EDGE_PLATFORM_WINDOWS
-#define DBG(msg) if (debugMode) System::Console::WriteLine(msg);
+#define DBG(msg) if (debugMode) ::OutputDebugString(msg);
 #else
 #define DBG(msg) if (debugMode) printf(msg "\n");
 #endif

@@ -16,7 +16,7 @@
  */
 #include "edge_common.h"
 
-void continueOnV8Thread(uv_async_t* handle, int status)
+void continueOnV8Thread(uv_async_t* handle)
 {
     // This executes on V8 thread
 
