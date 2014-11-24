@@ -157,7 +157,7 @@ Edge.js runs on Windows, Linux, and MacOS and requires Node.js 0.8 or later, as 
 
 #### Docker
 
-Edge.js is available as a Docker image on the [tjanczuk/edgejs repository on Docker Hub](https://registry.hub.docker.com/u/tjanczuk/edgejs/). The image is based on Ubuntu 14.04, and contains Node.js 0.10.30 x64, Mono 3.4.0 x64, and globally instaled Edge.js:
+Edge.js is available as a Docker image on the [tjanczuk/edgejs repository on Docker Hub](https://registry.hub.docker.com/u/tjanczuk/edgejs/). The image is based on Ubuntu 14.04, and contains Node.js 0.10.30 x64, Mono 3.4.0 x64, and globally installed Edge.js:
 
 ```
 > docker run -it tjanczuk/edgejs:0.9.3
