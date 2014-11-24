@@ -67,7 +67,7 @@ Listen to the [Edge.js podcast on Herdingcode](http://herdingcode.com/herding-co
 
 [Introduction](#introduction)  
 [Scripting CLR from Node.js](#scripting-clr-from-nodejs)  
-&nbsp;&nbsp;&nbsp;&nbsp;[What you need](#what-you-need)  
+&nbsp;&nbsp;&nbsp;&nbsp;[What you need (Windows, Linux, MacOS, Docker)](#what-you-need)  
 &nbsp;&nbsp;&nbsp;&nbsp;[How to: C# hello, world](#how-to-c-hello-world)  
 &nbsp;&nbsp;&nbsp;&nbsp;[How to: integrate C# code into Node.js code](#how-to-integrate-c-code-into-nodejs-code)  
 &nbsp;&nbsp;&nbsp;&nbsp;[How to: specify additional CLR assembly references in C# code](#how-to-specify-additional-clr-assembly-references-in-c-code)  
