@@ -207,14 +207,14 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(System::Object^ netdata)
     }
     else if (type->IsEnum)
     {
-		if (enableMarshalEnumAsInt)
-		{
-			jsdata = v8::Integer::New((int)netdata);
-		}
-		else
-		{
-			jsdata = stringCLR2V8(netdata->ToString());
-		}
+        if (enableMarshalEnumAsInt)
+        {
+            jsdata = v8::Integer::New((int)netdata);
+        }
+        else
+        {
+            jsdata = stringCLR2V8(netdata->ToString());
+        }
     }
     else if (type == cli::array<byte>::typeid)
     {
