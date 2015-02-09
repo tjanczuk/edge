@@ -208,6 +208,10 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata, MonoException** e
         if (!*exc)
             jsdata = stringCLR2V8(str);
     }
+    else if (klass == mono_get_int16_class())
+    {
+        jsdata = v8::Integer::New(*(int16_t*)mono_object_unbox(netdata));
+    }
     else if (klass == mono_get_int32_class())
     {
         jsdata = v8::Integer::New(*(int32_t*)mono_object_unbox(netdata));
