@@ -21,7 +21,7 @@ void continueOnV8Thread(uv_async_t* handle, int status)
     // This executes on V8 thread
 
     DBG("continueOnV8Thread");
-    HandleScope handleScope;
+    NanScope();
     uv_edge_async_t* uv_edge_async = (uv_edge_async_t*)handle;
     uv_async_edge_cb action = uv_edge_async->action;
     void* data = uv_edge_async->data;
@@ -40,7 +40,7 @@ void V8SynchronizationContext::Initialize()
     DBG("V8SynchronizationContext::Initialize");
     V8SynchronizationContext::uv_edge_async = new uv_edge_async_t;
     uv_edge_async->singleton = TRUE;
-    uv_async_init(uv_default_loop(), &V8SynchronizationContext::uv_edge_async->uv_async, continueOnV8Thread);
+    uv_async_init(uv_default_loop(), &V8SynchronizationContext::uv_edge_async->uv_async, (uv_async_cb)continueOnV8Thread);
     V8SynchronizationContext::Unref(V8SynchronizationContext::uv_edge_async);
     V8SynchronizationContext::funcWaitHandle = new uv_sem_t;
     uv_sem_init(V8SynchronizationContext::funcWaitHandle, 1);
@@ -66,7 +66,7 @@ uv_edge_async_t* V8SynchronizationContext::RegisterAction(uv_async_edge_cb actio
         uv_edge_async->action = action;
         uv_edge_async->data = data;
         uv_edge_async->singleton = FALSE;
-        uv_async_init(uv_default_loop(), &uv_edge_async->uv_async, continueOnV8Thread);
+        uv_async_init(uv_default_loop(), &uv_edge_async->uv_async, (uv_async_cb)continueOnV8Thread);
         return uv_edge_async;
     }
     else 

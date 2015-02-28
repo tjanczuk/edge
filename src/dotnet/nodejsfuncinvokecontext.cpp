@@ -16,23 +16,25 @@
  */
 #include "edge.h"
 
-Handle<Value> v8FuncCallback(const v8::Arguments& args)
+NAN_METHOD(v8FuncCallback)
 {
     DBG("v8FuncCallback");
-    HandleScope scope;
+    NanScope();
     Handle<v8::External> correlator = Handle<v8::External>::Cast(args[2]);
     NodejsFuncInvokeContextWrap* wrap = (NodejsFuncInvokeContextWrap*)(correlator->Value());
     NodejsFuncInvokeContext^ context = wrap->context;    
     wrap->context = nullptr;
     if (!args[0]->IsUndefined() && !args[0]->IsNull())
     {
+        DBG("v8FuncCallback error");
         context->CompleteWithError(gcnew System::Exception(exceptionV82stringCLR(args[0])));
     }
     else 
     {
+        DBG("v8FuncCallback success");
         context->CompleteWithResult(args[1]);
     }
-    return scope.Close(Undefined());
+    NanReturnValue(NanUndefined());
 }
 
 NodejsFuncInvokeContext::NodejsFuncInvokeContext(
@@ -67,7 +69,7 @@ void NodejsFuncInvokeContext::CallFuncOnV8Thread()
     static Persistent<v8::Function> callbackFactory;
     static Persistent<v8::Function> callbackFunction;
 
-    HandleScope scope;
+    NanScope();
     try 
     {
         Handle<v8::Value> jspayload = ClrFunc::MarshalCLRToV8(this->payload);
@@ -76,25 +78,30 @@ void NodejsFuncInvokeContext::CallFuncOnV8Thread()
         
         if (callbackFactory.IsEmpty())
         {
-            callbackFunction = Persistent<v8::Function>::New(
-                FunctionTemplate::New(v8FuncCallback)->GetFunction());
-            Handle<v8::String> code = v8::String::New(
+            NanAssignPersistent(
+                callbackFunction,
+                NanNew<FunctionTemplate>(v8FuncCallback)->GetFunction());
+            Handle<v8::String> code = NanNew<v8::String>(
                 "(function (cb, ctx) { return function (e, d) { return cb(e, d, ctx); }; })");
-            callbackFactory = Persistent<v8::Function>::New(
+            NanAssignPersistent(
+                callbackFactory,
                 Handle<v8::Function>::Cast(v8::Script::Compile(code)->Run()));
         }
 
         this->wrap = new NodejsFuncInvokeContextWrap;
         this->wrap->context = this;
-        Handle<v8::Value> factoryArgv[] = { callbackFunction, v8::External::New((void*)this->wrap) };
+        Handle<v8::Value> factoryArgv[] = { NanNew(callbackFunction), NanNew<v8::External>((void*)this->wrap) };
         Handle<v8::Function> callback = Handle<v8::Function>::Cast(
-            callbackFactory->Call(v8::Context::GetCurrent()->Global(), 2, factoryArgv));        
+            NanNew(callbackFactory)->Call(NanGetCurrentContext()->Global(), 2, factoryArgv));        
 
         Handle<v8::Value> argv[] = { jspayload, callback };
         TryCatch tryCatch;
-        (*(this->functionContext->Func))->Call(v8::Context::GetCurrent()->Global(), 2, argv);
+        DBG("NodejsFuncInvokeContext::CallFuncOnV8Thread calling JavaScript function");
+        NanNew(*(this->functionContext->Func))->Call(NanGetCurrentContext()->Global(), 2, argv);
+        DBG("NodejsFuncInvokeContext::CallFuncOnV8Thread called JavaScript function");
         if (tryCatch.HasCaught()) 
         {
+            DBG("NodejsFuncInvokeContext::CallFuncOnV8Thread caught JavaScript exception");
             this->wrap->context = nullptr;
             this->CompleteWithError(gcnew System::Exception(exceptionV82stringCLR(tryCatch.Exception())));
         }

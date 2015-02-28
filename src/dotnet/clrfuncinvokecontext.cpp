@@ -22,7 +22,9 @@ ClrFuncInvokeContext::ClrFuncInvokeContext(Handle<v8::Value> callbackOrSync)
     if (callbackOrSync->IsFunction())
     {
         this->callback = new Persistent<Function>;
-        *(this->callback) = Persistent<Function>::New(Handle<Function>::Cast(callbackOrSync));
+        NanAssignPersistent(
+            *(this->callback),
+            Handle<Function>::Cast(callbackOrSync));
         this->Sync = false;
     }
     else 
@@ -38,8 +40,7 @@ void ClrFuncInvokeContext::DisposeCallback()
     if (this->callback)
     {
         DBG("ClrFuncInvokeContext::DisposeCallback");
-        (*(this->callback)).Dispose();
-        (*(this->callback)).Clear();
+        NanDisposePersistent(*(this->callback));
         delete this->callback;
         this->callback = NULL;        
     }
@@ -65,7 +66,7 @@ void ClrFuncInvokeContext::InitializeAsyncOperation()
 
 void ClrFuncInvokeContext::CompleteOnV8ThreadAsynchronous()
 {
-    HandleScope scope;
+    NanScope();
     this->CompleteOnV8Thread();
 }
 
@@ -73,7 +74,7 @@ Handle<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread()
 {
     DBG("ClrFuncInvokeContext::CompleteOnV8Thread");
 
-    HandleScope handleScope;
+    NanEscapableScope();
 
     // The uv_edge_async was already cleaned up in V8SynchronizationContext::ExecuteAction
     this->uv_edge_async = NULL;
@@ -82,26 +83,26 @@ Handle<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread()
     {
         // this was an async call without callback specified
         DBG("ClrFuncInvokeContext::CompleteOnV8Thread - async without callback");
-        return handleScope.Close(Undefined());
+        return NanEscapeScope(NanUndefined());
     }
 
-    Handle<Value> argv[] = { Undefined(), Undefined() };
+    Handle<Value> argv[] = { NanUndefined(), NanUndefined() };
     int argc = 1;
 
     switch (this->Task->Status) {
         default:
-            argv[0] = v8::String::New("The operation reported completion in an unexpected state.");
+            argv[0] = NanNew<v8::String>("The operation reported completion in an unexpected state.");
         break;
         case TaskStatus::Faulted:
             if (this->Task->Exception != nullptr) {
                 argv[0] = ClrFunc::MarshalCLRExceptionToV8(this->Task->Exception);
             }
             else {
-                argv[0] = v8::String::New("The operation has failed with an undetermined error.");
+                argv[0] = NanNew<v8::String>("The operation has failed with an undetermined error.");
             }
         break;
         case TaskStatus::Canceled:
-            argv[0] = v8::String::New("The operation was cancelled.");
+            argv[0] = NanNew<v8::String>("The operation was cancelled.");
         break;
         case TaskStatus::RanToCompletion:
             argc = 2;
@@ -119,7 +120,7 @@ Handle<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread()
     {
         // complete the asynchronous call to C# by invoking a callback in JavaScript
         TryCatch try_catch;
-        (*(this->callback))->Call(v8::Context::GetCurrent()->Global(), argc, argv);
+        NanNew<v8::Function>(*(this->callback))->Call(NanGetCurrentContext()->Global(), argc, argv);
         this->DisposeCallback();
         if (try_catch.HasCaught()) 
         {
@@ -127,18 +128,19 @@ Handle<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread()
         }        
 
         DBG("ClrFuncInvokeContext::CompleteOnV8Thread - async with callback");
-        return handleScope.Close(Undefined());
+        return NanEscapeScope(NanUndefined());
     }
     else if (1 == argc) 
     {
         DBG("ClrFuncInvokeContext::CompleteOnV8Thread - handleScope.Close(ThrowException(argv[0]))");
         // complete the synchronous call to C# by re-throwing the resulting exception
-        return handleScope.Close(ThrowException(argv[0]));
+        NanThrowError(argv[0]);
+        return NanEscapeScope(argv[0]);
     }
     else
     {
         DBG("ClrFuncInvokeContext::CompleteOnV8Thread - handleScope.Close(argv[1])");
         // complete the synchronous call to C# by returning the result
-        return handleScope.Close(argv[1]);
+        return NanEscapeScope(argv[1]);
     }
 }
