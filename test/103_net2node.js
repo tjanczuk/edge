@@ -143,7 +143,8 @@ describe('async call from .net to node.js', function () {
 		});
 		var payload = {
 			hello: function (result, callback) {
-				process.nextTick(function () {
+				var next = global.setImmediate || process.nextTick;
+				next(function () {
 					callback(new Error('Sample Node.js exception'));
 				});
 			}
