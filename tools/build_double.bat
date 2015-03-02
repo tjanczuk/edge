@@ -2,7 +2,7 @@
 set SELF=%~dp0
 if "%1" equ "" (
     echo Usage: build_double.bat {node_version}
-    echo e.g. build_double.bat 0.10.28
+    echo e.g. build_double.bat 0.12.0
     exit /b -1
 )
 
@@ -99,7 +99,7 @@ exit /b 0
 
 rem takes 2 parameters: 1 - node version, 2 - x86 or x64
 
-if exist "%SELF%\build\node-%1-%2" exit /b 0
+if exist "%SELF%\build\node-%1-%2\node.lib" exit /b 0
 
 pushd "%SELF%\build\node-%1"
 

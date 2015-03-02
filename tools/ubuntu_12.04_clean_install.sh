@@ -11,9 +11,9 @@ apt-get -y install curl g++ pkg-config libgdiplus
 
 # download and build Node.js
 
-sudo -u ${THE_USER} curl https://codeload.github.com/joyent/node/tar.gz/v0.10.26 > node.v0.10.26.tar.gz
-sudo -u ${THE_USER} tar -xvf node.v0.10.26.tar.gz
-cd node-0.10.26/
+sudo -u ${THE_USER} curl https://codeload.github.com/joyent/node/tar.gz/v0.12.0 > node.v0.12.0.tar.gz
+sudo -u ${THE_USER} tar -xvf node.v0.12.0.tar.gz
+cd node-0.12.0/
 sudo -u ${THE_USER} bash -c './configure'
 sudo -u ${THE_USER} make
 make install
