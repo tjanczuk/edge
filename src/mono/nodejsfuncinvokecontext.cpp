@@ -1,9 +1,9 @@
 #include "edge.h"
 
-Handle<Value> v8FuncCallback(const v8::Arguments& args)
+NAN_METHOD(v8FuncCallback)
 {
     DBG("v8FuncCallback");
-    HandleScope scope;
+    NanScope();
     Handle<v8::External> correlator = Handle<v8::External>::Cast(args[2]);
     NodejsFuncInvokeContext* context = (NodejsFuncInvokeContext*)(correlator->Value());
     if (!args[0]->IsUndefined() && !args[0]->IsNull())
@@ -16,7 +16,7 @@ Handle<Value> v8FuncCallback(const v8::Arguments& args)
         MonoObject* result = ClrFunc::MarshalV8ToCLR(args[1]);
         context->Complete(NULL, result);
     }
-    return scope.Close(Undefined());
+    NanReturnValue(NanUndefined());
 }
 
 
@@ -39,7 +39,7 @@ void NodejsFuncInvokeContext::CallFuncOnV8Thread(MonoObject* _this, NodejsFunc* 
     static Persistent<v8::Function> callbackFactory;
     static Persistent<v8::Function> callbackFunction;
 
-    HandleScope scope;
+    NanScope();
     NodejsFuncInvokeContext* ctx = new NodejsFuncInvokeContext(_this);
     
     MonoException* exc = NULL;
@@ -55,23 +55,28 @@ void NodejsFuncInvokeContext::CallFuncOnV8Thread(MonoObject* _this, NodejsFunc* 
         
         if (callbackFactory.IsEmpty())
         {
-            callbackFunction = Persistent<v8::Function>::New(
-                FunctionTemplate::New(v8FuncCallback)->GetFunction());
-            Handle<v8::String> code = v8::String::New(
+            NanAssignPersistent(
+                callbackFunction,
+                NanNew<FunctionTemplate>(v8FuncCallback)->GetFunction());
+            Handle<v8::String> code = NanNew<v8::String>(
                 "(function (cb, ctx) { return function (e, d) { return cb(e, d, ctx); }; })");
-            callbackFactory = Persistent<v8::Function>::New(
+            NanAssignPersistent(
+                callbackFactory,
                 Handle<v8::Function>::Cast(v8::Script::Compile(code)->Run()));
         }
 
-        Handle<v8::Value> factoryArgv[] = { callbackFunction, v8::External::New((void*)ctx) };
+        Handle<v8::Value> factoryArgv[] = { NanNew(callbackFunction), NanNew<v8::External>((void*)ctx) };
         Handle<v8::Function> callback = Handle<v8::Function>::Cast(
-            callbackFactory->Call(v8::Context::GetCurrent()->Global(), 2, factoryArgv));
+            NanNew(callbackFactory)->Call(NanGetCurrentContext()->Global(), 2, factoryArgv));
 
         Handle<v8::Value> argv[] = { jspayload, callback };
         TryCatch tryCatch;
-        (*(nativeNodejsFunc->Func))->Call(v8::Context::GetCurrent()->Global(), 2, argv);
+        DBG("NodejsFuncInvokeContext::CallFuncOnV8Thread calling JavaScript function");
+        NanNew(*(nativeNodejsFunc->Func))->Call(NanGetCurrentContext()->Global(), 2, argv);
+        DBG("NodejsFuncInvokeContext::CallFuncOnV8Thread called JavaScript function");
         if (tryCatch.HasCaught()) 
         {
+            DBG("NodejsFuncInvokeContext::CallFuncOnV8Thread caught JavaScript exception");
             ctx->Complete((MonoObject*)exceptionV82stringCLR(tryCatch.Exception()), NULL);
             // ctx deleted in Complete
         }

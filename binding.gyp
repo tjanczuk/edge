@@ -18,6 +18,9 @@
   'targets': [
     {
       'target_name': 'edge',
+      'include_dirs' : [
+          "<!(node -e \"require('nan')\")"
+      ],
       'sources': [ 
         'src/common/v8synchronizationcontext.cpp'
       ],
@@ -25,7 +28,7 @@
         ['OS=="win"'
         , {
             'sources+': [ 
-              'src/dotnet/edge.cpp', 
+              'src/dotnet/edge.cpp',
               'src/dotnet/utils.cpp', 
               'src/dotnet/clrfunc.cpp',
               'src/dotnet/clrfuncinvokecontext.cpp',

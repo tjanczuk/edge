@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -46,7 +47,7 @@ namespace EdgeJs
             return Task<object>.FromResult((object)null);
         }
 
-        [DllImport("node.dll", EntryPoint = "#585", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("node.dll", EntryPoint = "#718", CallingConvention = CallingConvention.Cdecl)]
         static extern int NodeStart(int argc, string[] argv);
 
         [DllImport("kernel32.dll", EntryPoint = "LoadLibrary")]
@@ -76,7 +77,18 @@ namespace EdgeJs
 
                         Thread v8Thread = new Thread(() => 
                         {
-                            NodeStart(2, new string[] { "node", AssemblyDirectory + "\\edge\\double_edge.js" });
+                            List<string> argv = new List<string>();
+                            argv.Add("node");
+                            string node_params = Environment.GetEnvironmentVariable("EDGE_NODE_PARAMS");
+                            if (!string.IsNullOrEmpty(node_params))
+                            {
+                                foreach (string p in node_params.Split(' '))
+                                {
+                                    argv.Add(p);
+                                }
+                            }
+                            argv.Add(AssemblyDirectory + "\\edge\\double_edge.js");
+                            NodeStart(argv.Count, argv.ToArray());
                             waitHandle.Set();
                         });
 

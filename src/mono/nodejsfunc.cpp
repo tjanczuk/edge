@@ -19,7 +19,7 @@ NodejsFunc::NodejsFunc(Handle<Function> function)
         ctor = mono_class_get_method_from_name(GetNodejsFuncClass(), ".ctor", -1);
 
     this->Func = new Persistent<Function>;
-    *(this->Func) = Persistent<Function>::New(function);
+    NanAssignPersistent(*(this->Func), function);
 
     MonoObject* thisObj = mono_object_new(mono_domain_get(), GetNodejsFuncClass());
     MonoException* exc = NULL;
@@ -31,9 +31,8 @@ NodejsFunc::NodejsFunc(Handle<Function> function)
 
 NodejsFunc::~NodejsFunc() 
 {
-    // Must be called on V8 thread
-    (*(this->Func)).Dispose();
-    (*(this->Func)).Clear();
+    DBG("NodejsFunc::~NodejsFunc");
+    NanDisposePersistent(*(this->Func));
     delete this->Func;
 }
 
