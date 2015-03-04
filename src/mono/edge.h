@@ -135,8 +135,8 @@ private:
     static Handle<v8::Object> MarshalCLRObjectToV8(MonoObject* netdata, MonoException** exc);
 
 public:
-    static Handle<v8::Value> Initialize(const v8::Arguments& args);
-    static Handle<v8::Function> Initialize(/*System::Func<System::Object^,Task<System::Object^>^>^*/ MonoObject* func);
+    static NAN_METHOD(Initialize);
+    static Handle<v8::Function> Initialize(MonoObject* func);
     Handle<v8::Value> Call(Handle<v8::Value> payload, Handle<v8::Value> callback);
     static Handle<v8::Value> MarshalCLRToV8(MonoObject* netdata, MonoException** exc);
     static Handle<v8::Object> MarshalCLRExceptionToV8(MonoException* exception);

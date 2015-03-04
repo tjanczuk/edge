@@ -5,6 +5,7 @@
 #include <node.h>
 #include <node_buffer.h>
 #include <uv.h>
+#include <nan.h>
 
 using namespace v8;
 
@@ -55,18 +56,11 @@ typedef int BOOL;
 #define ABORT_TODO() do { printf("%s (%d): %s\n", __FILE__, __LINE__, __func__); exit(1); } while (0)
 #endif
 
-// Good explanation of native Buffers at 
-// http://sambro.is-super-awesome.com/2011/03/03/creating-a-proper-buffer-in-a-node-c-addon/
 extern BOOL debugMode;
 extern BOOL enableScriptIgnoreAttribute;
 extern BOOL enableMarshalEnumAsInt;
-extern Persistent<Function> bufferConstructor;
 
-#ifdef EDGE_PLATFORM_WINDOWS
-#define DBG(msg) if (debugMode) System::Console::WriteLine(msg);
-#else
 #define DBG(msg) if (debugMode) printf(msg "\n");
-#endif
 
 typedef void (*uv_async_edge_cb)(void* data);
 

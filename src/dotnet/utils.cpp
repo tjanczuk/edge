@@ -2,22 +2,22 @@
 
 Handle<v8::String> stringCLR2V8(System::String^ text)
 {
-    HandleScope scope;
+    NanEscapableScope();
     if (text->Length > 0)
     {
         array<unsigned char>^ utf8 = System::Text::Encoding::UTF8->GetBytes(text);
         pin_ptr<unsigned char> ch = &utf8[0];
-        return scope.Close(v8::String::New((char*)ch));
+        return NanEscapeScope(NanNew<v8::String>((char*)ch));
     }
     else
     {
-        return scope.Close(v8::String::Empty());
+        return NanEscapeScope(NanNew<v8::String>(""));
     }
 }
 
 System::String^ stringV82CLR(Handle<v8::String> text)
 {
-    HandleScope scope;
+    NanScope();
     String::Utf8Value utf8text(text);
     if (*utf8text)
     {
@@ -32,10 +32,10 @@ System::String^ stringV82CLR(Handle<v8::String> text)
 
 System::String^ exceptionV82stringCLR(Handle<v8::Value> exception)
 {
-    HandleScope scope;
+    NanScope();
     if (exception->IsObject())
     {
-        Handle<Value> stack = exception->ToObject()->Get(v8::String::NewSymbol("stack"));
+        Handle<Value> stack = exception->ToObject()->Get(NanNew<v8::String>("stack"));
         if (stack->IsString())
         {
             return gcnew System::String(stringV82CLR(stack->ToString()));
@@ -47,6 +47,7 @@ System::String^ exceptionV82stringCLR(Handle<v8::Value> exception)
 
 Handle<Value> throwV8Exception(Handle<Value> exception)
 {
-    HandleScope scope;
-    return scope.Close(ThrowException(exception));
+    NanEscapableScope();
+    NanThrowError(exception);
+    return NanEscapeScope(exception);
 }
