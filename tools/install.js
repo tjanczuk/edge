@@ -6,7 +6,7 @@ if(process.platform === 'win32') {
 		, lib32bit = path.resolve(libroot, 'ia32')
 		, lib64bit = path.resolve(libroot, 'x64');
 
-	function copyDll(dllPath) {
+	function copyDll(dllPath, dllname) {
 		return function(copyToDir) {
 			fs.writeFileSync(path.resolve(copyToDir, dllname), fs.readFileSync(dllPath));
 		}
@@ -37,7 +37,7 @@ if(process.platform === 'win32') {
 
 	['msvcr120.dll', 'msvcp120.dll'].forEach(function (dllname) {
 		var dll32bit = path.resolve(lib32bit, dllname);
-		dest32dirs.forEach(copyDll(dll32bit));
+		dest32dirs.forEach(copyDll(dll32bit, dllname));
 	});
 		
 	var dest64dirs = fs.readdirSync(lib64bit)
@@ -47,7 +47,7 @@ if(process.platform === 'win32') {
 
 	['msvcr120.dll', 'msvcp120.dll'].forEach(function (dllname) {
 		var dll64bit = path.resolve(lib64bit, dllname);
-		dest64dirs.forEach(copyDll(dll64bit));
+		dest64dirs.forEach(copyDll(dll64bit, dllname));
 	});
 
 	require('./checkplatform');
