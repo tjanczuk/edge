@@ -15,7 +15,7 @@ if not exist "%NODEEXE%" (
     popd
     exit /b -1
 )
-for %%i in ("%NODEEXE%") do set NODEDIR=%%~dpi
+for %%i in ("%NODEEXE%") do set NODEDIR="%%~dpi"
 SET DESTDIRROOT=%SELF%\..\lib\native\win32
 set VERSIONS=
 :harvestVersions
@@ -25,7 +25,7 @@ if "%1" neq "" (
     goto :harvestVersions
 )
 if "%VERSIONS%" equ "" set VERSIONS=0.10.0
-pushd %SELF%\..
+pushd "%SELF%\.."
 for %%V in (%VERSIONS%) do call :build ia32 x86 %%V 
 for %%V in (%VERSIONS%) do call :build x64 x64 %%V 
 popd
@@ -38,7 +38,7 @@ set DESTDIR=%DESTDIRROOT%\%1\%3
 if exist "%DESTDIR%\node.exe" goto gyp
 if not exist "%DESTDIR%\NUL" mkdir "%DESTDIR%"
 echo Downloading node.exe %2 %3...
-node %SELF%\download.js %2 %3 "%DESTDIR%"
+node "%SELF%\download.js" %2 %3 "%DESTDIR%"
 if %ERRORLEVEL% neq 0 (
     echo Cannot download node.exe %2 v%3
     exit /b -1
