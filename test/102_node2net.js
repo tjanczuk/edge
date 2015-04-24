@@ -164,4 +164,60 @@ describe('async call from node.js to .net', function () {
             done();
         })
     });
+    
+    it('successfuly return a short (Int16)', function (done) {
+        var func = edge.func(function () {/*
+            async (input) => {
+                return (short)1;
+            }
+        */});
+
+        func(null, function (error, result) {
+            assert.ifError(error);
+            assert.ok(result === 1);
+            done();
+        })
+    });
+
+    it('successfuly return a int (Int32)', function (done) {
+        var func = edge.func(function () {/*
+            async (input) => {
+                return (int)1;
+            }
+        */});
+
+        func(null, function (error, result) {
+            assert.ifError(error);
+            assert.ok(result === 1);
+            done();
+        })
+    });
+    
+    it('successfuly return a long (Int64)', function (done) {
+        var func = edge.func(function () {/*
+            async (input) => {
+                return (long) 9223372036854775807;
+            }
+        */});
+
+        func(null, function (error, result) {
+            assert.ifError(error);
+            assert.ok(result === 9223372036854775807);
+            done();
+        })
+    });
+    
+    it('successfuly return a double', function (done) {
+        var func = edge.func(function () {/*
+            async (input) => {
+                return 1.0001;
+            }
+        */});
+
+        func(null, function (error, result) {
+            assert.ifError(error);
+            assert.ok(result === 1.0001);
+            done();
+        })
+    });
 });
