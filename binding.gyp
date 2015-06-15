@@ -40,27 +40,32 @@
             ]
           }
         , {
+        	'cflags+': [
+        	  '-std=c++11'
+      		],
             'sources+': [
-              'src/mono/clractioncontext.cpp',
-              'src/mono/clrfunc.cpp',
-              'src/mono/clrfuncinvokecontext.cpp',
-              'src/mono/edge.cpp',
-              'src/mono/edge.h',
-              'src/mono/monoembedding.cpp',
-              'src/mono/task.cpp',
-              'src/mono/dictionary.cpp',
-              'src/mono/nodejsfunc.cpp',
-              'src/mono/nodejsfuncinvokecontext.cpp',
-              'src/mono/utils.cpp',
+              'src/coreclr/edge.cpp',
+              'src/coreclr/coreclrembedding.cpp'
+              #'src/mono/clractioncontext.cpp',
+              #'src/mono/clrfunc.cpp',
+              #'src/mono/clrfuncinvokecontext.cpp',
+              #'src/mono/edge.cpp',
+              #'src/mono/edge.h',
+              #'src/mono/monoembedding.cpp',
+              #'src/mono/task.cpp',
+              #'src/mono/dictionary.cpp',
+              #'src/mono/nodejsfunc.cpp',
+              #'src/mono/nodejsfuncinvokecontext.cpp',
+              #'src/mono/utils.cpp',
             ]
-          , 'include_dirs': [
-              '<!@(pkg-config mono-2 --cflags-only-I | sed s/-I//g)'
-            ]
-          , 'link_settings': {
-              'libraries': [
-                '<!@(pkg-config mono-2 --libs)'
-              ],
-            }
+          #, 'include_dirs': [
+          #    '<!@(pkg-config mono-2 --cflags-only-I | sed s/-I//g)'
+          #  ]
+          #, 'link_settings': {
+          #    'libraries': [
+          #      '<!@(pkg-config mono-2 --libs)'
+          #    ],
+          #  }
           }
         ]
       ],
@@ -106,18 +111,23 @@
         'dependencies': [ 'edge' ],
         'actions': [
           {
-            'action_name': 'compile_mono_embed',
+            'action_name': 'compile_coreclr_embed',
+            #'action_name': 'compile_mono_embed',
             'inputs': [
-              'src/mono/*.cs'
+              'src/coreclr/*.cs'
+              #'src/mono/*.cs'
             ],
             'outputs': [
-              'src/mono/monoembedding.exe'
+              'build/$(BUILDTYPE)/CoreCLREmbedding.dll'
+              #'src/mono/monoembedding.exe'
             ],
             'conditions': [
               ['OS=="win"', {
-                'action': ['csc', '-target:exe', '-out:build/$(BUILDTYPE)/MonoEmbedding.exe', 'src/mono/*cs']
+                'action': ['csc', '-target:library', '-out:build/$(BUILDTYPE)/CoreCLREmbedding.dll', 'src/coreclr/*cs']
+                #'action': ['csc', '-target:exe', '-out:build/$(BUILDTYPE)/MonoEmbedding.exe', 'src/mono/*cs']
                 }, {
-                'action': ['dmcs', '-sdk:4.5', '-target:exe', '-out:build/$(BUILDTYPE)/MonoEmbedding.exe', 'src/mono/*.cs']
+                'action': ['dmcs', '-sdk:4.5', '-target:library', '-out:build/$(BUILDTYPE)/CoreCLREmbedding.dll', 'src/coreclr/*.cs']
+                #'action': ['dmcs', '-sdk:4.5', '-target:exe', '-out:build/$(BUILDTYPE)/MonoEmbedding.exe', 'src/mono/*.cs']
                 }
               ]
             ]

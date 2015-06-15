@@ -59,7 +59,14 @@ typedef int BOOL;
 extern BOOL debugMode;
 extern BOOL enableScriptIgnoreAttribute;
 
-#define DBG(msg) if (debugMode) printf(msg "\n");
+#define DBG(...) if (debugMode) { printf(__VA_ARGS__); printf("\n"); }
+#define NanThrowErrorF(format, ...)\
+{\
+	size_t size = snprintf(NULL, 0, format "\n", ##__VA_ARGS__);\
+	char* buffer = new char[size];\
+	snprintf(buffer, size, format "\n", ##__VA_ARGS__);\
+	NanThrowError(buffer);\
+}
 
 typedef void (*uv_async_edge_cb)(void* data);
 
