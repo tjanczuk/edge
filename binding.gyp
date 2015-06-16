@@ -18,18 +18,19 @@
   'targets': [
     {
       'target_name': 'edge',
-      'include_dirs' : [
-          "<!(node -e \"require('nan')\")"
+      'include_dirs': [
+        "<!(node -e \"require('nan')\")"
       ],
-      'sources': [ 
+      'sources': [
         'src/common/v8synchronizationcontext.cpp'
       ],
       'conditions': [
-        ['OS=="win"'
-        , {
-            'sources+': [ 
+        [
+          'OS=="win"',
+          {
+            'sources+': [
               'src/dotnet/edge.cpp',
-              'src/dotnet/utils.cpp', 
+              'src/dotnet/utils.cpp',
               'src/dotnet/clrfunc.cpp',
               'src/dotnet/clrfuncinvokecontext.cpp',
               'src/dotnet/nodejsfunc.cpp',
@@ -38,34 +39,53 @@
               'src/dotnet/clrfuncreflectionwrap.cpp',
               'src/dotnet/clractioncontext.cpp'
             ]
-          }
-        , {
-        	'cflags+': [
-        	  '-std=c++11'
-      		],
+          },
+          {
             'sources+': [
-              'src/coreclr/edge.cpp',
-              'src/coreclr/coreclrembedding.cpp'
-              #'src/mono/clractioncontext.cpp',
-              #'src/mono/clrfunc.cpp',
-              #'src/mono/clrfuncinvokecontext.cpp',
-              #'src/mono/edge.cpp',
-              #'src/mono/edge.h',
-              #'src/mono/monoembedding.cpp',
-              #'src/mono/task.cpp',
-              #'src/mono/dictionary.cpp',
-              #'src/mono/nodejsfunc.cpp',
-              #'src/mono/nodejsfuncinvokecontext.cpp',
-              #'src/mono/utils.cpp',
+              'src/common/edge.cpp'
+            ],
+            'conditions': [
+              [
+                '"<!(echo -n `which dnx`)"!=""',
+                {
+                  'cflags+': [
+                    '-std=c++11',
+                    '-DHAVE_CORECLR'
+                  ],
+                  'sources+': [
+                    'src/coreclr/coreclrembedding.cpp'
+                  ]
+                }
+              ],
+              [
+                '"<!(echo -n `which mono`)"!=""',
+                {
+                  'sources+': [
+                    'src/mono/clractioncontext.cpp',
+                    'src/mono/clrfunc.cpp',
+                    'src/mono/clrfuncinvokecontext.cpp',
+                    'src/mono/monoembedding.cpp',
+                    'src/mono/task.cpp',
+                    'src/mono/dictionary.cpp',
+                    'src/mono/nodejsfunc.cpp',
+                    'src/mono/nodejsfuncinvokecontext.cpp',
+                    'src/mono/utils.cpp'
+                  ],
+                  'include_dirs': [
+                    '<!@(pkg-config mono-2 --cflags-only-I | sed s/-I//g)'
+                  ],
+                  'link_settings': {
+                    'libraries': [
+                      '<!@(pkg-config mono-2 --libs)'
+                    ],
+
+                  },
+                  'cflags+': [
+                    '-DHAVE_MONO'
+                  ]
+                }
+              ]
             ]
-          #, 'include_dirs': [
-          #    '<!@(pkg-config mono-2 --cflags-only-I | sed s/-I//g)'
-          #  ]
-          #, 'link_settings': {
-          #    'libraries': [
-          #      '<!@(pkg-config mono-2 --libs)'
-          #    ],
-          #  }
           }
         ]
       ],
@@ -74,15 +94,20 @@
           'msvs_settings': {
             'VCCLCompilerTool': {
               # this is out of range and will generate a warning and skip adding RuntimeLibrary property:
-              'RuntimeLibrary': -1, 
+              'RuntimeLibrary': -1,
               # this is out of range and will generate a warning and skip adding RuntimeTypeInfo property:
-              'RuntimeTypeInfo': -1, 
+              'RuntimeTypeInfo': -1,
               'BasicRuntimeChecks': -1,
               'ExceptionHandling': '0',
-              'AdditionalOptions': [ '/clr', '/wd4506' ] 
+              'AdditionalOptions': [
+                '/clr',
+                '/wd4506'
+              ]
             },
             'VCLinkerTool': {
-              'AdditionalOptions': [ '/ignore:4248' ]
+              'AdditionalOptions': [
+                '/ignore:4248'
+              ]
             }
           }
         },
@@ -90,50 +115,121 @@
           'msvs_settings': {
             'VCCLCompilerTool': {
               # this is out of range and will generate a warning and skip adding RuntimeLibrary property:
-              'RuntimeLibrary': -1, 
+              'RuntimeLibrary': -1,
               # this is out of range and will generate a warning and skip adding RuntimeTypeInfo property:
-              'RuntimeTypeInfo': -1, 
+              'RuntimeTypeInfo': -1,
               'BasicRuntimeChecks': -1,
               'ExceptionHandling': '0',
-              'AdditionalOptions': [ '/clr', '/wd4506' ] 
+              'AdditionalOptions': [
+                '/clr',
+                '/wd4506'
+              ]
             },
             'VCLinkerTool': {
-              'AdditionalOptions': [ '/ignore:4248' ]
+              'AdditionalOptions': [
+                '/ignore:4248'
+              ]
             }
           }
         }
       }
-    }
-  , {
+    },
+    {
       'target_name': 'build_managed',
-      'conditions': [[ 'OS!="win"', {
-        'type': 'none',
-        'dependencies': [ 'edge' ],
-        'actions': [
+      'conditions': [
+        [
+          'OS!="win"',
           {
-            'action_name': 'compile_coreclr_embed',
-            #'action_name': 'compile_mono_embed',
-            'inputs': [
-              'src/coreclr/*.cs'
-              #'src/mono/*.cs'
-            ],
-            'outputs': [
-              'build/$(BUILDTYPE)/CoreCLREmbedding.dll'
-              #'src/mono/monoembedding.exe'
+            'type': 'none',
+            'dependencies': [
+              'edge'
             ],
             'conditions': [
-              ['OS=="win"', {
-                'action': ['csc', '-target:library', '-out:build/$(BUILDTYPE)/CoreCLREmbedding.dll', 'src/coreclr/*cs']
-                #'action': ['csc', '-target:exe', '-out:build/$(BUILDTYPE)/MonoEmbedding.exe', 'src/mono/*cs']
-                }, {
-                'action': ['dmcs', '-sdk:4.5', '-target:library', '-out:build/$(BUILDTYPE)/CoreCLREmbedding.dll', 'src/coreclr/*.cs']
-                #'action': ['dmcs', '-sdk:4.5', '-target:exe', '-out:build/$(BUILDTYPE)/MonoEmbedding.exe', 'src/mono/*.cs']
+              [
+                '"<!(echo -n `which mono`)"!=""',
+                {
+                  'actions+': [
+                    {
+                      'action_name': 'compile_mono_embed',
+                      'inputs': [
+                        'src/mono/*.cs'
+                      ],
+                      'outputs': [
+                        'src/mono/monoembedding.exe'
+                      ],
+                      'conditions': [
+                        [
+                          'OS=="win"',
+                          {
+                            'action': [
+                              'csc',
+                              '-target:exe',
+                              '-out:build/$(BUILDTYPE)/MonoEmbedding.exe',
+                              'src/mono/*cs'
+                            ]
+                          },
+                          {
+                            'action': [
+                              'dmcs',
+                              '-sdk:4.5',
+                              '-target:exe',
+                              '-out:build/$(BUILDTYPE)/MonoEmbedding.exe',
+                              'src/mono/*.cs'
+                            ]
+                          }
+                        ]
+                      ]
+                    }
+                  ]
+                }
+              ],
+              [
+                '"<!(echo -n `which dnx`)"!=""',
+                {
+                  'actions+': [
+                    {
+                      'action_name': 'compile_coreclr_embed',
+                      'inputs': [
+                        'src/coreclr/*.cs'
+                      ],
+                      'outputs': [
+                        'build/$(BUILDTYPE)/CoreCLREmbedding.dll'
+                      ],
+                      'conditions': [
+                        [
+                          'OS=="win"',
+                          {
+                            'action': [
+                              'csc',
+                              '-target:library',
+                              '-out:build/$(BUILDTYPE)/CoreCLREmbedding.dll',
+                              'src/coreclr/*cs'
+                            ]
+                          },
+                          {
+                            'action': [
+                              'mcs',
+                              '/nostdlib',
+                              '/noconfig',
+                              '/r:<!(dirname `which dnx`)/System.Console.dll',
+                              '/r:<!(dirname `which dnx`)/System.Runtime.dll',
+                              '/r:<!(dirname `which dnx`)/mscorlib.dll',
+                              '-sdk:4.5',
+                              '-target:library',
+                              '-out:build/$(BUILDTYPE)/CoreCLREmbedding.dll',
+                              'src/coreclr/*.cs'
+                            ]
+                          }
+                        ]
+                      ]
+                    }
+                  ]
                 }
               ]
             ]
           }
         ]
-      }]]
-    }    
+      ]
+    }
   ]
 }

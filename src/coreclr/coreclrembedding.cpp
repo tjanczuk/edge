@@ -25,6 +25,9 @@ const char* LIBCORECLR_NAME = "libcoreclr.so";
 typedef HRESULT (*GetCLRRuntimeHostFunction)(REFIID id, IUnknown** host);
 typedef HRESULT (*PAL_InitializeCoreCLRFunction)(const char *szExePath, const char *szCoreCLRPath, bool fStayInPAL);
 
+DWORD appDomainId;
+LoadFunctionFunction loadFunction;
+
 HRESULT CoreClrEmbedding::Initialize()
 {
     // Much of the CoreCLR bootstrapping process is cribbed from 
@@ -182,8 +185,6 @@ HRESULT CoreClrEmbedding::Initialize()
 
     std::string appPaths(&currentDirectory[0]);
     appPaths.append(":");
-    appPaths.append(coreClrDirectory);
-    appPaths.append(":");
     appPaths.append(edgeNodePath);
 
     std::u16string utf16AppPaths;
@@ -236,6 +237,34 @@ HRESULT CoreClrEmbedding::Initialize()
     DBG("CoreCLREmbedding.LoadFunction() loaded successfully");
 
     return S_OK;
+}
+
+NAN_METHOD(CoreClrEmbedding::LoadFunction)
+{
+	NanEscapableScope();
+	Handle<v8::Object> options = args[0]->ToObject();
+	Handle<v8::Function> result;
+
+	Handle<v8::Value> assemblyFileArgument = options->Get(NanNew<v8::String>("assemblyFile"));
+
+	if (assemblyFileArgument->IsString())
+	{
+		v8::String::Value assemblyFile(assemblyFileArgument);
+		v8::String::Value typeName(options->Get(NanNew<v8::String>("typeName")));
+		v8::String::Value methodName(options->Get(NanNew<v8::String>("methodName")));
+
+		loadFunction(reinterpret_cast<char16_t*>(*assemblyFile), reinterpret_cast<char16_t*>(*typeName), reinterpret_cast<char16_t*>(*methodName));
+
+		NanReturnValue(NanUndefined());
+	}
+
+	else
+	{
+		// TODO: support compilation from source once the Roslyn C# compiler is made available on CoreCLR
+		NanThrowError("Compiling .NET methods from source is not yet supported with CoreCLR, you must provide an assembly path, type name, and method name as arguments to edge.initializeClrFunction().");
+	}
+
+	NanReturnValue(result);
 }
 
 void CoreClrEmbedding::AddToTpaList(std::string directoryPath, std::string* tpaList)

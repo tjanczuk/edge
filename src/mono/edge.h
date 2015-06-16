@@ -1,5 +1,5 @@
-#ifndef __EDGE_H
-#define __EDGE_H
+#ifndef __MONO_EDGE_H
+#define __MONO_EDGE_H
 
 #include "../common/edge_common.h"
 

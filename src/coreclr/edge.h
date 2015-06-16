@@ -1,5 +1,5 @@
-#ifndef __EDGE_H
-#define __EDGE_H
+#ifndef __CORECLR_EDGE_H
+#define __CORECLR_EDGE_H
 
 #include "../common/edge_common.h"
 #include <stdlib.h>
@@ -27,7 +27,7 @@ typedef uint32_t DWORD;
 typedef void IUnknown;
 typedef HRESULT (FExecuteInAppDomainCallback)(void *cookie);
 
-typedef void (*LoadFunctionFunction)(const char16_t* arg);
+typedef void (*LoadFunctionFunction)(const char16_t* assemblyPath, const char16_t* typeName, const char16_t* methodName);
 
 #define StringToUTF16(input, output)\
 {\
@@ -170,16 +170,14 @@ const HRESULT E_FAIL = -1;
 class CoreClrEmbedding
 {
     private:
-		static DWORD appDomainId;
-		static LoadFunctionFunction loadFunction;
-
-        CoreClrEmbedding();
+		CoreClrEmbedding();
         static void FreeCoreClr(void** pLibCoreClr);
         static bool LoadCoreClrAtPath(const char* loadPath, void** ppLibCoreClr);
         static void GetPathToBootstrapper(char* bootstrapper, size_t bufferSize);
         static void AddToTpaList(std::string directoryPath, std::string* tpaList);
 
     public:
+        static NAN_METHOD(LoadFunction);
         static HRESULT Initialize();
 };
 
