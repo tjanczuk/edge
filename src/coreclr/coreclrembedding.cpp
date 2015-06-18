@@ -26,9 +26,9 @@ typedef HRESULT (*GetCLRRuntimeHostFunction)(REFIID id, IUnknown** host);
 typedef HRESULT (*PAL_InitializeCoreCLRFunction)(const char *szExePath, const char *szCoreCLRPath, bool fStayInPAL);
 
 DWORD appDomainId;
-LoadFunctionFunction loadFunction;
+GetFuncFunction getFunc;
 
-HRESULT CoreClrEmbedding::Initialize()
+HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 {
     // Much of the CoreCLR bootstrapping process is cribbed from 
     // https://github.com/aspnet/dnx/blob/dev/src/dnx.coreclr.unix/dnx.coreclr.cpp
@@ -205,7 +205,8 @@ HRESULT CoreClrEmbedding::Initialize()
     	u"Edge",
         APPDOMAIN_ENABLE_PLATFORM_SPECIFIC_APPS |
             APPDOMAIN_ENABLE_PINVOKE_AND_CLASSIC_COMINTEROP |
-            APPDOMAIN_DISABLE_TRANSPARENCY_ENFORCEMENT,
+            APPDOMAIN_DISABLE_TRANSPARENCY_ENFORCEMENT |
+            APPDOMAIN_ENABLE_ASSEMBLY_LOADFILE,
         NULL,
         NULL,
         sizeof(propertyKeys) / sizeof(propertyKeys[0]),
@@ -225,8 +226,8 @@ HRESULT CoreClrEmbedding::Initialize()
     		appDomainId,
     		u"CoreCLREmbedding",
     		u"CoreCLREmbedding",
-    		u"LoadFunction",
-    		(INT_PTR*) &loadFunction);
+    		u"GetFunc",
+    		(INT_PTR*) &getFunc);
 
     if (FAILED(result))
     {
@@ -235,6 +236,25 @@ HRESULT CoreClrEmbedding::Initialize()
     }
 
     DBG("CoreCLREmbedding.LoadFunction() loaded successfully");
+
+    SetDebugModeFunction setDebugMode;
+    result = runtimeHost->CreateDelegate(
+        		appDomainId,
+        		u"CoreCLREmbedding",
+        		u"CoreCLREmbedding",
+        		u"SetDebugMode",
+        		(INT_PTR*) &setDebugMode);
+
+	if (FAILED(result))
+	{
+		NanThrowErrorF("Call to ICLRRuntimeHost2::CreateDelegate() failed with a return code of 0x%x.", result);
+		return result;
+	}
+
+	DBG("CoreCLREmbedding.SetDebugMode() loaded successfully");
+
+	setDebugMode(debugMode);
+	DBG("Debug mode set successfully")
 
     return S_OK;
 }
@@ -249,11 +269,14 @@ NAN_METHOD(CoreClrEmbedding::LoadFunction)
 
 	if (assemblyFileArgument->IsString())
 	{
-		v8::String::Value assemblyFile(assemblyFileArgument);
-		v8::String::Value typeName(options->Get(NanNew<v8::String>("typeName")));
-		v8::String::Value methodName(options->Get(NanNew<v8::String>("methodName")));
+		v8::String::Utf8Value assemblyFile(assemblyFileArgument);
+		v8::String::Utf8Value typeName(options->Get(NanNew<v8::String>("typeName")));
+		v8::String::Utf8Value methodName(options->Get(NanNew<v8::String>("methodName")));
 
-		loadFunction(reinterpret_cast<char16_t*>(*assemblyFile), reinterpret_cast<char16_t*>(*typeName), reinterpret_cast<char16_t*>(*methodName));
+		InvokeFuncFunction callback = (InvokeFuncFunction) getFunc(*assemblyFile, *typeName, *methodName);
+
+		DBG("Testing the callback");
+		callback("hi from Node.js!");
 
 		NanReturnValue(NanUndefined());
 	}

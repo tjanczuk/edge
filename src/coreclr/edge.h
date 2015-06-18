@@ -27,7 +27,9 @@ typedef uint32_t DWORD;
 typedef void IUnknown;
 typedef HRESULT (FExecuteInAppDomainCallback)(void *cookie);
 
-typedef void (*LoadFunctionFunction)(const char16_t* assemblyPath, const char16_t* typeName, const char16_t* methodName);
+typedef void* (*InvokeFuncFunction)(const char* payload);
+typedef InvokeFuncFunction (*GetFuncFunction)(const char* assemblyFile, const char* typeName, const char* methodName);
+typedef void* (*SetDebugModeFunction)(const BOOL debugMode);
 
 #define StringToUTF16(input, output)\
 {\
@@ -178,7 +180,7 @@ class CoreClrEmbedding
 
     public:
         static NAN_METHOD(LoadFunction);
-        static HRESULT Initialize();
+        static HRESULT Initialize(BOOL debugMode);
 };
 
 #endif

@@ -41,14 +41,14 @@ void init(Handle<Object> target)
     	MonoEmbedding::Initialize();
     }
 
-    else if (FAILED(CoreClrEmbedding::Initialize()))
+    else if (FAILED(CoreClrEmbedding::Initialize(debugMode)))
     {
     	DBG("Error occurred during CoreCLR initialization");
     	return;
     }
 #endif
 #else
-    if (FAILED(CoreClrEmbedding::Initialize()))
+    if (FAILED(CoreClrEmbedding::Initialize(debugMode)))
 	{
 		DBG("Error occurred during CoreCLR initialization");
 		return;

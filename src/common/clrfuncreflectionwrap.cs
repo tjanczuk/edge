@@ -2,7 +2,7 @@ using System;
 using System.Threading.Tasks;
 using System.Reflection;
 
-class ClrFuncReflectionWrap
+public class ClrFuncReflectionWrap
 {
     Object instance;
     MethodInfo invokeMethod;
@@ -11,7 +11,7 @@ class ClrFuncReflectionWrap
     {
         Type startupType = assembly.GetType(typeName, true, true);
         ClrFuncReflectionWrap wrap = new ClrFuncReflectionWrap();
-        wrap.instance = System.Activator.CreateInstance(startupType, false);
+        wrap.instance = System.Activator.CreateInstance(startupType);
         wrap.invokeMethod = startupType.GetMethod(methodName, BindingFlags.Instance | BindingFlags.Public);
         if (wrap.invokeMethod == null)
         {
@@ -26,4 +26,9 @@ class ClrFuncReflectionWrap
     {
         return (Task<Object>)this.invokeMethod.Invoke(this.instance, new object[] { payload });
     }
+
+	public string SimpleCall(string payload)
+	{
+		return (string)this.invokeMethod.Invoke (this.instance, new object[] { payload });
+	}
 };

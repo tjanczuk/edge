@@ -165,7 +165,8 @@
                               'csc',
                               '-target:exe',
                               '-out:build/$(BUILDTYPE)/MonoEmbedding.exe',
-                              'src/mono/*cs'
+                              'src/mono/*cs',
+                              'src/common/*.cs'
                             ]
                           },
                           {
@@ -174,7 +175,8 @@
                               '-sdk:4.5',
                               '-target:exe',
                               '-out:build/$(BUILDTYPE)/MonoEmbedding.exe',
-                              'src/mono/*.cs'
+                              'src/mono/*.cs',
+                              'src/common/*.cs'
                             ]
                           }
                         ]
@@ -203,7 +205,8 @@
                               'csc',
                               '-target:library',
                               '-out:build/$(BUILDTYPE)/CoreCLREmbedding.dll',
-                              'src/coreclr/*cs'
+                              'src/coreclr/*.cs',
+                              'src/common/*.cs'
                             ]
                           },
                           {
@@ -217,7 +220,8 @@
                               '-sdk:4.5',
                               '-target:library',
                               '-out:build/$(BUILDTYPE)/CoreCLREmbedding.dll',
-                              'src/coreclr/*.cs'
+                              'src/coreclr/*.cs',
+                              'src/common/*.cs'
                             ]
                           }
                         ]
