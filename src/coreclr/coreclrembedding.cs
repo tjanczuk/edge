@@ -91,6 +91,15 @@ public class CoreCLREmbedding
 
 				return new DateTime(Convert.ToInt64(ticks[0]) * 10000 + MinDateTimeTicks, DateTimeKind.Utc);
 
+			case JsPropertyType.Null:
+				return null;
+
+			case JsPropertyType.Int32:
+				return Marshal.ReadInt32(payload);
+
+			case JsPropertyType.UInt32:
+				return (uint) Marshal.ReadInt32(payload);
+
 			default:
 				throw new Exception("Unsupported payload type: " + payloadType + ".");
 		}

@@ -123,6 +123,17 @@ void CoreClrFunc::FreeMarshalData(void* marshalData, int payloadType)
 		case JsPropertyType::PropertyTypeDate:
 			delete ((double*)marshalData);
 			break;
+
+		case JsPropertyType::PropertyTypeInt32:
+			delete ((int32_t*)marshalData);
+			break;
+
+		case JsPropertyType::PropertyTypeUInt32:
+			delete ((uint32_t*)marshalData);
+			break;
+
+		case JsPropertyType::PropertyTypeNull:
+			break;
 	}
 }
 
@@ -183,12 +194,20 @@ void CoreClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata, void** marshalData, i
 
 	else if (jsdata->IsInt32())
 	{
-		// TODO: implement
+		int32_t* value = new int32_t();
+		*value = jsdata->Int32Value();
+
+		*marshalData = value;
+		*payloadType = JsPropertyType::PropertyTypeInt32;
 	}
 
 	else if (jsdata->IsUint32())
 	{
-		// TODO: implement
+		uint32_t* value = new uint32_t();
+		*value = jsdata->Uint32Value();
+
+		*marshalData = value;
+		*payloadType = JsPropertyType::PropertyTypeUInt32;
 	}
 
 	else if (jsdata->IsNumber())
@@ -200,9 +219,9 @@ void CoreClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata, void** marshalData, i
 		*payloadType = JsPropertyType::PropertyTypeNumber;
 	}
 
-	else if (jsdata->IsUndefined())
+	else if (jsdata->IsUndefined() || jsdata->IsNull())
 	{
-		// TODO: implement
+		*payloadType = JsPropertyType::PropertyTypeNull;
 	}
 
 	else if (jsdata->IsObject())
