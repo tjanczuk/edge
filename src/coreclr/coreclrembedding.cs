@@ -78,6 +78,12 @@ public class CoreCLREmbedding
 			case JsPropertyType.Boolean:
 				return Marshal.ReadByte(payload) != 0;
 
+			case JsPropertyType.Number:
+				double[] value = new double[1];
+				Marshal.Copy(payload, value, 0, 1);
+
+				return value[0];
+
 			default:
 				throw new Exception("Unsupported payload type: " + payloadType + ".");
 		}

@@ -118,6 +118,10 @@ void CoreClrFunc::FreeMarshalData(void* marshalData, int payloadType)
 		case JsPropertyType::PropertyTypeBoolean:
 			delete ((bool*)marshalData);
 			break;
+
+		case JsPropertyType::PropertyTypeNumber:
+			delete ((double*)marshalData);
+			break;
 	}
 }
 
@@ -183,7 +187,11 @@ void CoreClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata, void** marshalData, i
 
 	else if (jsdata->IsNumber())
 	{
-		// TODO: implement
+		double* value = new double();
+		*value = jsdata->NumberValue();
+
+		*marshalData = value;
+		*payloadType = JsPropertyType::PropertyTypeNumber;
 	}
 
 	else if (jsdata->IsUndefined())
