@@ -41,6 +41,7 @@ public enum JsPropertyType
 public class CoreCLREmbedding
 {
 	private static bool DebugMode = false;
+	private static long MinDateTimeTicks = 621355968000000000;
 
 	public delegate void CallFunctionDelegate(object payload);
 
@@ -83,6 +84,12 @@ public class CoreCLREmbedding
 				Marshal.Copy(payload, value, 0, 1);
 
 				return value[0];
+
+			case JsPropertyType.Date:
+				double[] ticks = new double[1];
+				Marshal.Copy(payload, ticks, 0, 1);
+
+				return new DateTime(Convert.ToInt64(ticks[0]) * 10000 + MinDateTimeTicks, DateTimeKind.Utc);
 
 			default:
 				throw new Exception("Unsupported payload type: " + payloadType + ".");

@@ -120,6 +120,7 @@ void CoreClrFunc::FreeMarshalData(void* marshalData, int payloadType)
 			break;
 
 		case JsPropertyType::PropertyTypeNumber:
+		case JsPropertyType::PropertyTypeDate:
 			delete ((double*)marshalData);
 			break;
 	}
@@ -163,7 +164,12 @@ void CoreClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata, void** marshalData, i
 
 	else if (jsdata->IsDate())
 	{
-		// TODO: implement
+		Handle<v8::Date> jsdate = Handle<v8::Date>::Cast(jsdata);
+		double* ticks = new double();
+
+		*ticks = jsdate->NumberValue();
+		*marshalData = ticks;
+		*payloadType = JsPropertyType::PropertyTypeDate;
 	}
 
 	else if (jsdata->IsBoolean())
