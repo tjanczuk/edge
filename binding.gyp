@@ -53,7 +53,8 @@
                     '-DHAVE_CORECLR'
                   ],
                   'sources+': [
-                    'src/coreclr/coreclrembedding.cpp'
+                    'src/coreclr/coreclrembedding.cpp',
+                    'src/coreclr/coreclrfunc.cpp'
                   ]
                 }
               ],
@@ -216,6 +217,8 @@
                               '/noconfig',
                               '/r:<!(dirname `which dnx`)/System.Console.dll',
                               '/r:<!(dirname `which dnx`)/System.Runtime.dll',
+                              '/r:<!(dirname `which dnx`)/System.Dynamic.Runtime.dll',
+                              '/r:<!(dirname `which dnx`)/System.ObjectModel.dll',
                               '/r:<!(dirname `which dnx`)/mscorlib.dll',
                               '-sdk:4.5',
                               '-target:library',

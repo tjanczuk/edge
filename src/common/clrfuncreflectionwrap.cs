@@ -27,8 +27,8 @@ public class ClrFuncReflectionWrap
         return (Task<Object>)this.invokeMethod.Invoke(this.instance, new object[] { payload });
     }
 
-	public string SimpleCall(string payload)
+	public void SimpleCall(object payload)
 	{
-		return (string)this.invokeMethod.Invoke (this.instance, new object[] { payload });
+		this.invokeMethod.Invoke (this.instance, new object[] { payload });
 	}
 };

@@ -27,6 +27,7 @@ typedef HRESULT (*PAL_InitializeCoreCLRFunction)(const char *szExePath, const ch
 
 DWORD appDomainId;
 GetFuncFunction getFunc;
+CallFuncFunction callFunc;
 
 HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 {
@@ -231,11 +232,26 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 
     if (FAILED(result))
     {
-    	NanThrowErrorF("Call to ICLRRuntimeHost2::CreateDelegate() failed with a return code of 0x%x.", result);
+    	NanThrowErrorF("Call to ICLRRuntimeHost2::CreateDelegate() for GetFunc failed with a return code of 0x%x.", result);
         return result;
     }
 
-    DBG("CoreCLREmbedding.LoadFunction() loaded successfully");
+    DBG("CoreCLREmbedding.GetFunc() loaded successfully");
+
+	result = runtimeHost->CreateDelegate(
+				appDomainId,
+				u"CoreCLREmbedding",
+				u"CoreCLREmbedding",
+				u"CallFunc",
+				(INT_PTR*) &callFunc);
+
+	if (FAILED(result))
+	{
+		NanThrowErrorF("Call to ICLRRuntimeHost2::CreateDelegate() for CallFunc failed with a return code of 0x%x.", result);
+		return result;
+	}
+
+	DBG("CoreCLREmbedding.CallFunc() loaded successfully");
 
     SetDebugModeFunction setDebugMode;
     result = runtimeHost->CreateDelegate(
@@ -247,7 +263,7 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 
 	if (FAILED(result))
 	{
-		NanThrowErrorF("Call to ICLRRuntimeHost2::CreateDelegate() failed with a return code of 0x%x.", result);
+		NanThrowErrorF("Call to ICLRRuntimeHost2::CreateDelegate() for SetDebugMode failed with a return code of 0x%x.", result);
 		return result;
 	}
 
@@ -259,35 +275,9 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
     return S_OK;
 }
 
-NAN_METHOD(CoreClrEmbedding::LoadFunction)
+InvokeFuncFunction CoreClrEmbedding::GetClrFuncReflectionWrapFunc(const char* assemblyFile, const char* typeName, const char* methodName)
 {
-	NanEscapableScope();
-	Handle<v8::Object> options = args[0]->ToObject();
-	Handle<v8::Function> result;
-
-	Handle<v8::Value> assemblyFileArgument = options->Get(NanNew<v8::String>("assemblyFile"));
-
-	if (assemblyFileArgument->IsString())
-	{
-		v8::String::Utf8Value assemblyFile(assemblyFileArgument);
-		v8::String::Utf8Value typeName(options->Get(NanNew<v8::String>("typeName")));
-		v8::String::Utf8Value methodName(options->Get(NanNew<v8::String>("methodName")));
-
-		InvokeFuncFunction callback = (InvokeFuncFunction) getFunc(*assemblyFile, *typeName, *methodName);
-
-		DBG("Testing the callback");
-		callback("hi from Node.js!");
-
-		NanReturnValue(NanUndefined());
-	}
-
-	else
-	{
-		// TODO: support compilation from source once the Roslyn C# compiler is made available on CoreCLR
-		NanThrowError("Compiling .NET methods from source is not yet supported with CoreCLR, you must provide an assembly path, type name, and method name as arguments to edge.initializeClrFunction().");
-	}
-
-	NanReturnValue(result);
+	return (InvokeFuncFunction) getFunc(assemblyFile, typeName, methodName);
 }
 
 void CoreClrEmbedding::AddToTpaList(std::string directoryPath, std::string* tpaList)
@@ -426,4 +416,9 @@ void CoreClrEmbedding::GetPathToBootstrapper(char* pathToBootstrapper, size_t bu
     // ensure pathToBootstrapper is null terminated, readlink for example
     // will not null terminate it.
     pathToBootstrapper[pathLength] = '\0';
+}
+
+void CoreClrEmbedding::CallClrFunc(InvokeFuncFunction func, void* payload, int payloadType)
+{
+	callFunc(func, payload, payloadType);
 }

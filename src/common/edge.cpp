@@ -20,12 +20,13 @@ NAN_METHOD(initializeClrFunc)
 #ifdef HAVE_CORECLR
 	if (getenv("EDGE_USE_CORECLR") != NULL)
 	{
-		return CoreClrEmbedding::LoadFunction(args);
+		return CoreClrFunc::Initialize(args);
 	}
+
 #endif
 	return ClrFunc::Initialize(args);
 #else
-	return CoreClrEmbedding::LoadFunction(args);
+	return CoreClrFunc::Initialize(args);
 #endif
 }
 

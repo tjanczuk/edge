@@ -27,8 +27,9 @@ typedef uint32_t DWORD;
 typedef void IUnknown;
 typedef HRESULT (FExecuteInAppDomainCallback)(void *cookie);
 
-typedef void* (*InvokeFuncFunction)(const char* payload);
-typedef InvokeFuncFunction (*GetFuncFunction)(const char* assemblyFile, const char* typeName, const char* methodName);
+typedef void* (*InvokeFuncFunction)(void* payload);
+typedef void* (*CallFuncFunction)(InvokeFuncFunction function, void* payload, int payloadType);
+typedef CallFuncFunction (*GetFuncFunction)(const char* assemblyFile, const char* typeName, const char* methodName);
 typedef void* (*SetDebugModeFunction)(const BOOL debugMode);
 
 #define StringToUTF16(input, output)\
@@ -169,6 +170,21 @@ class ICLRRuntimeHost2
 const HRESULT S_OK = 0;
 const HRESULT E_FAIL = -1;
 
+typedef enum jsPropertyType
+{
+    PropertyTypeFunction = 1,
+    PropertyTypeBuffer = 2,
+    PropertyTypeArray = 3,
+    PropertyTypeDate = 4,
+    PropertyTypeObject = 5,
+    PropertyTypeString = 6,
+    PropertyTypeBoolean = 7,
+    PropertyTypeInt32 = 8,
+    PropertyTypeUInt32 = 9,
+    PropertyTypeNumber = 10,
+    PropertyTypeNull = 11
+} JsPropertyType;
+
 class CoreClrEmbedding
 {
     private:
@@ -179,8 +195,52 @@ class CoreClrEmbedding
         static void AddToTpaList(std::string directoryPath, std::string* tpaList);
 
     public:
-        static NAN_METHOD(LoadFunction);
+        static InvokeFuncFunction GetClrFuncReflectionWrapFunc(const char* assemblyFile, const char* typeName, const char* methodName);
+        static void CallClrFunc(InvokeFuncFunction func, void* payload, int payloadType);
         static HRESULT Initialize(BOOL debugMode);
 };
+
+class CoreClrFunc {
+	private:
+		InvokeFuncFunction func;
+
+		CoreClrFunc();
+
+		static void MarshalV8ToCLR(Handle<v8::Value> jsdata, void** marshalData, int* payloadType);
+		static char* CopyV8StringBytes(Handle<v8::String> v8String);
+		//static Handle<v8::Object> MarshalCLRObjectToV8(MonoObject* netdata, MonoException** exc);
+
+	public:
+		static NAN_METHOD(Initialize);
+		static Handle<v8::Function> InitializeInstance(InvokeFuncFunction func);
+		Handle<v8::Value> Call(Handle<v8::Value> payload, Handle<v8::Value> callback);
+		static void FreeMarshalData(void* marshalData, int payloadType);
+		//static Handle<v8::Value> MarshalCLRToV8(MonoObject* netdata, MonoException** exc);
+		//static Handle<v8::Object> MarshalCLRExceptionToV8(MonoException* exception);
+};
+
+typedef struct jsObjectData {
+	int propertiesCount = 0;
+	int* propertyTypes;
+	char** propertyNames;
+	void** propertyData;
+
+	~jsObjectData()
+	{
+		for (int i = 0; i < propertiesCount; i++)
+		{
+			CoreClrFunc::FreeMarshalData(propertyData[i], propertyTypes[i]);
+			delete propertyNames[i];
+		}
+
+		delete propertyNames;
+		delete propertyData;
+		delete propertyTypes;
+	}
+} JsObjectData;
+
+typedef struct coreClrFuncWrap {
+    CoreClrFunc* clrFunc;
+} CoreClrFuncWrap;
 
 #endif
