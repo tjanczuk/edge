@@ -114,6 +114,10 @@ void CoreClrFunc::FreeMarshalData(void* marshalData, int payloadType)
 		case JsPropertyType::PropertyTypeObject:
 			delete ((JsObjectData*)marshalData);
 			break;
+
+		case JsPropertyType::PropertyTypeBoolean:
+			delete ((bool*)marshalData);
+			break;
 	}
 }
 
@@ -160,7 +164,11 @@ void CoreClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata, void** marshalData, i
 
 	else if (jsdata->IsBoolean())
 	{
-		// TODO: implement
+		bool* value = new bool();
+		*value = jsdata->BooleanValue();
+
+		*marshalData = value;
+		*payloadType = JsPropertyType::PropertyTypeBoolean;
 	}
 
 	else if (jsdata->IsInt32())

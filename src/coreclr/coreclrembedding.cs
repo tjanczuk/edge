@@ -50,7 +50,7 @@ public class CoreCLREmbedding
 		Assembly assembly = Assembly.LoadFile(assemblyFile);
 		DebugMessage("Assembly {0} loaded successfully", assemblyFile);
 
-		ClrFuncReflectionWrap wrapper = ClrFuncReflectionWrap.Create (assembly, typeName, methodName);
+		ClrFuncReflectionWrap wrapper = ClrFuncReflectionWrap.Create(assembly, typeName, methodName);
 		DebugMessage("Method {0}.{1}() loaded successfully", typeName, methodName);
 
 		CallFunctionDelegate functionDelegate = new CallFunctionDelegate(wrapper.SimpleCall);
@@ -61,37 +61,39 @@ public class CoreCLREmbedding
 	[SecurityCritical]
 	public static void CallFunc(IntPtr function, IntPtr payload, int payloadType)
 	{
-		CallFunctionDelegate functionDelegate = Marshal.GetDelegateForFunctionPointer<CallFunctionDelegate> (function);
-		functionDelegate (PayloadToObject(payload, payloadType));
+		CallFunctionDelegate functionDelegate = Marshal.GetDelegateForFunctionPointer<CallFunctionDelegate>(function);
+		functionDelegate(PayloadToObject(payload, payloadType));
 	}
 
 	private static object PayloadToObject(IntPtr payload, int payloadType)
 	{
-		switch ((JsPropertyType)payloadType) 
+		switch ((JsPropertyType) payloadType) 
 		{
 			case JsPropertyType.String:
 				return Marshal.PtrToStringAnsi(payload);
 
 			case JsPropertyType.Object:
-				object expando = JsObjectToExpando (Marshal.PtrToStructure<JsObjectData> (payload));
-				return expando;
+				return JsObjectToExpando(Marshal.PtrToStructure<JsObjectData>(payload));
+
+			case JsPropertyType.Boolean:
+				return Marshal.ReadByte(payload) != 0;
 
 			default:
-				throw new Exception ("Unsupported payload type: " + payloadType + ".");
+				throw new Exception("Unsupported payload type: " + payloadType + ".");
 		}
 	}
 
 	private static ExpandoObject JsObjectToExpando(JsObjectData payload)
 	{
 		ExpandoObject expando = new ExpandoObject();
-		IDictionary<string, object> expandoDictionary = (IDictionary<string, object>)expando;
+		IDictionary<string, object> expandoDictionary = (IDictionary<string, object>) expando;
 		int[] propertyTypes = new int[payload.propertiesCount];
 		IntPtr[] propertyNamePointers = new IntPtr[payload.propertiesCount];
 		IntPtr[] propertyValuePointers = new IntPtr[payload.propertiesCount];
 
-		Marshal.Copy (payload.propertyTypes, propertyTypes, 0, payload.propertiesCount);
-		Marshal.Copy (payload.propertyNames, propertyNamePointers, 0, payload.propertiesCount);
-		Marshal.Copy (payload.propertyValues, propertyValuePointers, 0, payload.propertiesCount);
+		Marshal.Copy(payload.propertyTypes, propertyTypes, 0, payload.propertiesCount);
+		Marshal.Copy(payload.propertyNames, propertyNamePointers, 0, payload.propertiesCount);
+		Marshal.Copy(payload.propertyValues, propertyValuePointers, 0, payload.propertiesCount);
 
 		for (int i = 0; i < payload.propertiesCount; i++) 
 		{
