@@ -208,11 +208,10 @@ class CoreClrFunc {
 
 		static void MarshalV8ToCLR(Handle<v8::Value> jsdata, void** marshalData, int* payloadType);
 		static char* CopyV8StringBytes(Handle<v8::String> v8String);
-		//static Handle<v8::Object> MarshalCLRObjectToV8(MonoObject* netdata, MonoException** exc);
+		static Handle<v8::Function> InitializeInstance(InvokeFuncFunction func);
 
 	public:
 		static NAN_METHOD(Initialize);
-		static Handle<v8::Function> InitializeInstance(InvokeFuncFunction func);
 		Handle<v8::Value> Call(Handle<v8::Value> payload, Handle<v8::Value> callback);
 		static void FreeMarshalData(void* marshalData, int payloadType);
 		//static Handle<v8::Value> MarshalCLRToV8(MonoObject* netdata, MonoException** exc);
@@ -238,6 +237,23 @@ typedef struct jsObjectData {
 		delete propertyTypes;
 	}
 } JsObjectData;
+
+typedef struct jsArrayData {
+	int arrayLength = 0;
+	int* itemTypes;
+	void** itemValues;
+
+	~jsArrayData()
+	{
+		for (int i = 0; i < arrayLength; i++)
+		{
+			CoreClrFunc::FreeMarshalData(itemValues[i], itemTypes[i]);
+		}
+
+		delete itemValues;
+		delete itemTypes;
+	}
+} JsArrayData;
 
 typedef struct coreClrFuncWrap {
     CoreClrFunc* clrFunc;

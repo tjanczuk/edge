@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Dynamic;
 using System.Collections.Generic;
+using System.Collections;
 
 [StructLayout(LayoutKind.Sequential)]
 public struct JsObjectData
@@ -99,6 +100,22 @@ public class CoreCLREmbedding
 
 			case JsPropertyType.UInt32:
 				return (uint) Marshal.ReadInt32(payload);
+
+			case JsPropertyType.Array:
+				JsArrayData arrayData = Marshal.PtrToStructure<JsArrayData>(payload);
+				int[] itemTypes = new int[arrayData.arrayLength];
+				IntPtr[] itemValues = new IntPtr[arrayData.arrayLength];
+				List<object> array = new List<object>();
+
+				Marshal.Copy(arrayData.itemTypes, itemTypes, 0, arrayData.arrayLength);
+				Marshal.Copy(arrayData.itemValues, itemValues, 0, arrayData.arrayLength);
+
+				for (int i = 0; i < arrayData.arrayLength; i++)
+				{
+					array.Add(PayloadToObject(itemValues[i], itemTypes[i]));
+				}
+
+				return array.ToArray();
 
 			default:
 				throw new Exception("Unsupported payload type: " + payloadType + ".");

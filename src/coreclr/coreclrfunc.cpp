@@ -134,6 +134,10 @@ void CoreClrFunc::FreeMarshalData(void* marshalData, int payloadType)
 
 		case JsPropertyType::PropertyTypeNull:
 			break;
+
+		case JsPropertyType::PropertyTypeArray:
+			delete ((JsArrayData*)marshalData);
+			break;
 	}
 }
 
@@ -170,7 +174,20 @@ void CoreClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata, void** marshalData, i
 
 	else if (jsdata->IsArray())
 	{
-		// TODO: implement
+		Handle<v8::Array> jsarray = Handle<v8::Array>::Cast(jsdata);
+		JsArrayData* arrayData = new JsArrayData();
+
+		arrayData->arrayLength = jsarray->Length();
+		arrayData->itemTypes = new int[arrayData->arrayLength];
+		arrayData->itemValues = new void*[arrayData->arrayLength];
+
+		for (int i = 0; i < arrayData->arrayLength; i++)
+		{
+			MarshalV8ToCLR(jsarray->Get(i), &arrayData->itemValues[i], &arrayData->itemTypes[i]);
+		}
+
+		*marshalData = arrayData;
+		*payloadType = JsPropertyType::PropertyTypeArray;
 	}
 
 	else if (jsdata->IsDate())
