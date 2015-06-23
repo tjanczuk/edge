@@ -275,9 +275,9 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
     return S_OK;
 }
 
-InvokeFuncFunction CoreClrEmbedding::GetClrFuncReflectionWrapFunc(const char* assemblyFile, const char* typeName, const char* methodName)
+void* CoreClrEmbedding::GetClrFuncReflectionWrapFunc(const char* assemblyFile, const char* typeName, const char* methodName)
 {
-	return (InvokeFuncFunction) getFunc(assemblyFile, typeName, methodName);
+	return (void*)getFunc(assemblyFile, typeName, methodName);
 }
 
 void CoreClrEmbedding::AddToTpaList(std::string directoryPath, std::string* tpaList)
@@ -418,7 +418,7 @@ void CoreClrEmbedding::GetPathToBootstrapper(char* pathToBootstrapper, size_t bu
     pathToBootstrapper[pathLength] = '\0';
 }
 
-void CoreClrEmbedding::CallClrFunc(InvokeFuncFunction func, void* payload, int payloadType)
+void CoreClrEmbedding::CallClrFunc(void* func, void* payload, int payloadType, int* taskState, void** result, int* resultType)
 {
-	callFunc(func, payload, payloadType);
+	callFunc(func, payload, payloadType, taskState, result, resultType);
 }

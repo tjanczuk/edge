@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using System.Dynamic;
 using System.Collections.Generic;
 using System.Collections;
+using System.Threading.Tasks;
 
 [StructLayout(LayoutKind.Sequential)]
 public struct JsObjectData
@@ -35,7 +36,8 @@ public enum JsPropertyType
 	Int32 = 8,
 	UInt32 = 9,
 	Number = 10,
-	Null = 11
+	Null = 11,
+	Task = 12
 }
 
 [SecurityCritical]
@@ -44,7 +46,7 @@ public class CoreCLREmbedding
 	private static bool DebugMode = false;
 	private static long MinDateTimeTicks = 621355968000000000;
 
-	public delegate void CallFunctionDelegate(object payload);
+	public delegate Task<Object> CallFunctionDelegate(object payload);
 
     [SecurityCritical]
 	public static IntPtr GetFunc(string assemblyFile, string typeName, string methodName)
@@ -55,19 +57,58 @@ public class CoreCLREmbedding
 		ClrFuncReflectionWrap wrapper = ClrFuncReflectionWrap.Create(assembly, typeName, methodName);
 		DebugMessage("Method {0}.{1}() loaded successfully", typeName, methodName);
 
-		CallFunctionDelegate functionDelegate = new CallFunctionDelegate(wrapper.SimpleCall);
+		GCHandle wrapperHandle = GCHandle.Alloc(wrapper);
 
-		return Marshal.GetFunctionPointerForDelegate(functionDelegate);
+		return GCHandle.ToIntPtr(wrapperHandle);
     }
 
 	[SecurityCritical]
-	public static void CallFunc(IntPtr function, IntPtr payload, int payloadType)
+	public static void ReleaseFunc(IntPtr gcHandle)
 	{
-		CallFunctionDelegate functionDelegate = Marshal.GetDelegateForFunctionPointer<CallFunctionDelegate>(function);
-		functionDelegate(PayloadToObject(payload, payloadType));
+		GCHandle actualHandle = GCHandle.FromIntPtr(gcHandle);
+		actualHandle.Free();
 	}
 
-	private static object PayloadToObject(IntPtr payload, int payloadType)
+	[SecurityCritical]
+	public static void CallFunc(IntPtr function, IntPtr payload, int payloadType, IntPtr taskState, IntPtr result, IntPtr resultType)
+	{
+		// TODO: add exception handling
+		GCHandle wrapperHandle = GCHandle.FromIntPtr(function);
+		ClrFuncReflectionWrap wrapper = (ClrFuncReflectionWrap)wrapperHandle.Target;
+
+		Task<Object> functionTask = wrapper.Call(JsToObject(payload, payloadType));
+
+		if (functionTask.IsCompleted)
+		{
+			int objectType;
+			IntPtr resultObject = ObjectToJs(functionTask.Result, out objectType);
+
+			Marshal.WriteInt32(taskState, (int)TaskStatus.RanToCompletion);
+			Marshal.WriteIntPtr(result, resultObject);
+			Marshal.WriteInt32(resultType, objectType);
+		}
+
+		else
+		{
+			GCHandle taskHandle = GCHandle.Alloc(functionTask);
+
+			Marshal.WriteInt32(taskState, (int)functionTask.Status);
+			Marshal.WriteIntPtr(result, GCHandle.ToIntPtr(taskHandle));
+			Marshal.WriteInt32(resultType, (int)JsPropertyType.Task);
+		}
+	}
+
+
+
+	private static IntPtr ObjectToJs(object clrObject, out int objectType)
+	{
+		objectType = 0;
+		
+		// TODO: implement
+		return IntPtr.Zero;
+	}
+
+	private static object JsToObject(IntPtr payload, int payloadType)
 	{
 		switch ((JsPropertyType) payloadType) 
 		{
@@ -112,7 +153,7 @@ public class CoreCLREmbedding
 
 				for (int i = 0; i < arrayData.arrayLength; i++)
 				{
-					array.Add(PayloadToObject(itemValues[i], itemTypes[i]));
+					array.Add(JsToObject(itemValues[i], itemTypes[i]));
 				}
 
 				return array.ToArray();
@@ -140,7 +181,7 @@ public class CoreCLREmbedding
 			IntPtr propertyValuePointer = propertyValuePointers [i];
 			string propertyName = Marshal.PtrToStringAnsi(propertyNamePointer);
 
-			expandoDictionary[propertyName] = PayloadToObject(propertyValuePointer, propertyTypes[i]);
+			expandoDictionary[propertyName] = JsToObject(propertyValuePointer, propertyTypes[i]);
 		}
 
 		return expando;

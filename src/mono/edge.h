@@ -51,17 +51,6 @@ typedef struct clrActionContext {
 class Task
 {
 public: 
-    enum TaskStatus
-    {
-        Created = 0,
-        WaitingForActivation = 1,
-        WaitingToRun = 2,
-        Running = 3,
-        WaitingForChildrenToComplete = 4,
-        RanToCompletion = 5,
-        Canceled = 6,
-        Faulted = 7
-    };
     static TaskStatus Status(MonoObject* _this);
     static MonoException* Exception(MonoObject* _this);
     static MonoObject* Result(MonoObject* _this);

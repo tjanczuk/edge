@@ -27,9 +27,8 @@ typedef uint32_t DWORD;
 typedef void IUnknown;
 typedef HRESULT (FExecuteInAppDomainCallback)(void *cookie);
 
-typedef void* (*InvokeFuncFunction)(void* payload);
-typedef void* (*CallFuncFunction)(InvokeFuncFunction function, void* payload, int payloadType);
-typedef CallFuncFunction (*GetFuncFunction)(const char* assemblyFile, const char* typeName, const char* methodName);
+typedef void (*CallFuncFunction)(void* function, void* payload, int payloadType, int* taskState, void** result, int* resultType);
+typedef void* (*GetFuncFunction)(const char* assemblyFile, const char* typeName, const char* methodName);
 typedef void* (*SetDebugModeFunction)(const BOOL debugMode);
 
 #define StringToUTF16(input, output)\
@@ -182,7 +181,8 @@ typedef enum jsPropertyType
     PropertyTypeInt32 = 8,
     PropertyTypeUInt32 = 9,
     PropertyTypeNumber = 10,
-    PropertyTypeNull = 11
+    PropertyTypeNull = 11,
+    PropertyTypeTask = 12
 } JsPropertyType;
 
 class CoreClrEmbedding
@@ -195,20 +195,20 @@ class CoreClrEmbedding
         static void AddToTpaList(std::string directoryPath, std::string* tpaList);
 
     public:
-        static InvokeFuncFunction GetClrFuncReflectionWrapFunc(const char* assemblyFile, const char* typeName, const char* methodName);
-        static void CallClrFunc(InvokeFuncFunction func, void* payload, int payloadType);
+        static void* GetClrFuncReflectionWrapFunc(const char* assemblyFile, const char* typeName, const char* methodName);
+        static void CallClrFunc(void* func, void* payload, int payloadType, int* taskState, void** result, int* resultType);
         static HRESULT Initialize(BOOL debugMode);
 };
 
 class CoreClrFunc {
 	private:
-		InvokeFuncFunction func;
+		void* func;
 
 		CoreClrFunc();
 
 		static void MarshalV8ToCLR(Handle<v8::Value> jsdata, void** marshalData, int* payloadType);
 		static char* CopyV8StringBytes(Handle<v8::String> v8String);
-		static Handle<v8::Function> InitializeInstance(InvokeFuncFunction func);
+		static Handle<v8::Function> InitializeInstance(void* func);
 
 	public:
 		static NAN_METHOD(Initialize);

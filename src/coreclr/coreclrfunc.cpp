@@ -23,7 +23,7 @@ NAN_WEAK_CALLBACK(coreClrFuncProxyNearDeath)
     delete wrap;
 }
 
-Handle<v8::Function> CoreClrFunc::InitializeInstance(InvokeFuncFunction func)
+Handle<v8::Function> CoreClrFunc::InitializeInstance(void* func)
 {
     DBG("CoreClrFunc::InitializeInstance");
 
@@ -34,7 +34,7 @@ Handle<v8::Function> CoreClrFunc::InitializeInstance(InvokeFuncFunction func)
 
     CoreClrFunc* app = new CoreClrFunc();
     app->func = func;
-    CoreClrFuncWrap* wrap = new CoreClrFuncWrap;
+    CoreClrFuncWrap* wrap = new CoreClrFuncWrap();
     wrap->clrFunc = app;
 
     // See https://github.com/tjanczuk/edge/issues/128 for context
@@ -64,10 +64,33 @@ Handle<v8::Value> CoreClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value>
 
 	void* marshalData;
 	int payloadType;
+	int taskState;
+	void* result;
+	int resultType;
 
 	MarshalV8ToCLR(payload, &marshalData, &payloadType);
-	CoreClrEmbedding::CallClrFunc(func, marshalData, payloadType);
+	CoreClrEmbedding::CallClrFunc(func, marshalData, payloadType, &taskState, &result, &resultType);
 	FreeMarshalData(marshalData, payloadType);
+
+	DBG("Task state is %d", taskState);
+
+	if (taskState == TaskStatus::RanToCompletion)
+	{
+		// TODO: marshal data to V8 and invoke the callback
+		DBG("Task ran synchronously, returning")
+	}
+
+	else if (taskState == TaskStatus::Faulted)
+	{
+		// TODO: marshal exception info and throw
+		DBG("Task threw an exception")
+	}
+
+	else
+	{
+		// TODO: continue the task and invoke the callback on its completion
+		DBG("Task running asynchronously, registering callback")
+	}
 
 	return NanEscapeScope(NanUndefined());
 }
@@ -87,7 +110,7 @@ NAN_METHOD(CoreClrFunc::Initialize)
 		v8::String::Utf8Value methodName(options->Get(NanNew<v8::String>("methodName")));
 
 		DBG("Loading %s.%s() from %s", *typeName, *methodName, *assemblyFile);
-		InvokeFuncFunction func = CoreClrEmbedding::GetClrFuncReflectionWrapFunc(*assemblyFile, *typeName, *methodName);
+		void* func = CoreClrEmbedding::GetClrFuncReflectionWrapFunc(*assemblyFile, *typeName, *methodName);
 		DBG("Function loaded successfully")
 
 		result = CoreClrFunc::InitializeInstance(func);
