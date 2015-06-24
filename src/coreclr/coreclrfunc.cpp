@@ -301,19 +301,58 @@ void CoreClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata, void** marshalData, i
 
 Handle<v8::Value> CoreClrFunc::MarshalCLRToV8(void* marshalData, int payloadType)
 {
-	Isolate* isolate = Isolate::GetCurrent();
-
-	if (!isolate)
-	{
-		isolate = v8::Isolate::New();
-		isolate->Enter();
-	}
-
 	NanEscapableScope();
 
 	if (payloadType == JsPropertyType::PropertyTypeString)
 	{
 		return NanEscapeScope(NanNew<v8::String>((char*) marshalData));
+	}
+
+	else if (payloadType == JsPropertyType::PropertyTypeInt32)
+	{
+		return NanEscapeScope(NanNew<v8::Integer>(*(int*) marshalData));
+	}
+
+	else if (payloadType == JsPropertyType::PropertyTypeNumber)
+	{
+		return NanEscapeScope(NanNew<v8::Number>(*(double*) marshalData));
+	}
+
+	else if (payloadType == JsPropertyType::PropertyTypeDate)
+	{
+		return NanEscapeScope(NanNew<v8::Date>(*(double*) marshalData));
+	}
+
+	else if (payloadType == JsPropertyType::PropertyTypeBoolean)
+	{
+		bool value = (*(int*) marshalData) != 0;
+		return NanEscapeScope(NanNew<v8::Boolean>(value));
+	}
+
+	else if (payloadType == JsPropertyType::PropertyTypeArray)
+	{
+		JsArrayData* arrayData = (JsArrayData*) marshalData;
+		Handle<v8::Array> result = NanNew<v8::Array>();
+
+		for (int i = 0; i < arrayData->arrayLength; i++)
+		{
+			result->Set(i, MarshalCLRToV8(arrayData->itemValues[i], arrayData->itemTypes[i]));
+		}
+
+		return NanEscapeScope(result);
+	}
+
+	else if (payloadType == JsPropertyType::PropertyTypeObject)
+	{
+		JsObjectData* objectData = (JsObjectData*) marshalData;
+		Handle<v8::Object> result = NanNew<v8::Object>();
+
+		for (int i = 0; i < objectData->propertiesCount; i++)
+		{
+			result->Set(NanNew<v8::String>(objectData->propertyNames[i]), MarshalCLRToV8(objectData->propertyData[i], objectData->propertyTypes[i]));
+		}
+
+		return NanEscapeScope(result);
 	}
 
 	else if (payloadType == JsPropertyType::PropertyTypeNull)
@@ -323,7 +362,7 @@ Handle<v8::Value> CoreClrFunc::MarshalCLRToV8(void* marshalData, int payloadType
 
 	else
 	{
-		NanThrowErrorF("Unsupported object type received from CLR: %d", payloadType);
+		NanThrowErrorF("Unsupported object type received from the CLR: %d", payloadType);
 		return NanEscapeScope(NanUndefined());
 	}
 }

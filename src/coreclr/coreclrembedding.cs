@@ -8,7 +8,7 @@ using System.Collections;
 using System.Threading.Tasks;
 
 [StructLayout(LayoutKind.Sequential)]
-public struct JsObjectData
+public struct V8ObjectData
 {
 	public int propertiesCount;
 	public IntPtr propertyTypes;
@@ -17,14 +17,14 @@ public struct JsObjectData
 }
 
 [StructLayout(LayoutKind.Sequential)]
-public struct JsArrayData
+public struct V8ArrayData
 {
 	public int arrayLength;
 	public IntPtr itemTypes;
 	public IntPtr itemValues;
 }
 
-public enum JsPropertyType
+public enum V8Type
 {
 	Function = 1,
 	Buffer = 2,
@@ -37,7 +37,8 @@ public enum JsPropertyType
 	UInt32 = 9,
 	Number = 10,
 	Null = 11,
-	Task = 12
+	Task = 12,
+	Exception = 13
 }
 
 [SecurityCritical]
@@ -88,16 +89,16 @@ public class CoreCLREmbedding
 		GCHandle wrapperHandle = GCHandle.FromIntPtr(function);
 		ClrFuncReflectionWrap wrapper = (ClrFuncReflectionWrap)wrapperHandle.Target;
 
-		Task<Object> functionTask = wrapper.Call(JsToObject(payload, payloadType));
+		Task<Object> functionTask = wrapper.Call(MarshalV8ToCLR(payload, (V8Type)payloadType));
 
 		if (functionTask.IsCompleted)
 		{
-			int objectType;
-			IntPtr resultObject = ObjectToJs(functionTask.Result, out objectType);
+			V8Type taskResultType;
+			IntPtr marshalData = MarshalCLRToV8(functionTask.Result, out taskResultType);
 
 			Marshal.WriteInt32(taskState, (int)TaskStatus.RanToCompletion);
-			Marshal.WriteIntPtr(result, resultObject);
-			Marshal.WriteInt32(resultType, objectType);
+			Marshal.WriteIntPtr(result, marshalData);
+			Marshal.WriteInt32(resultType, (int)taskResultType);
 		}
 
 		else
@@ -106,17 +107,21 @@ public class CoreCLREmbedding
 
 			Marshal.WriteInt32(taskState, (int)functionTask.Status);
 			Marshal.WriteIntPtr(result, GCHandle.ToIntPtr(taskHandle));
-			Marshal.WriteInt32(resultType, (int)JsPropertyType.Task);
+			Marshal.WriteInt32(resultType, (int)V8Type.Task);
 		}
 	}
 
 	private static void TaskCompleted(Task<object> task, object state)
 	{
-		int objectType;
-		IntPtr resultObject = ObjectToJs(task.Result, out objectType);
+		// TODO: handle faulted case
+		DebugMessage("Task completed with a state of {0}", task.Status.ToString("G"));
+
+		V8Type v8Type;
+		IntPtr resultObject = MarshalCLRToV8(task.Result, out v8Type);
 		TaskState actualState = (TaskState) state;
 
-		actualState.Callback(resultObject, objectType, actualState.Context);
+		DebugMessage("Invoking callback");
+		actualState.Callback(resultObject, (int)v8Type, actualState.Context);
 	}
 
 	[SecurityCritical]
@@ -126,68 +131,285 @@ public class CoreCLREmbedding
 		Task<Object> actualTask = (Task<Object>) taskHandle.Target;
 		TaskCompleteDelegate taskCompleteDelegate = Marshal.GetDelegateForFunctionPointer<TaskCompleteDelegate>(callback);
 
-		// Will complete asynchronously. Schedule continuation to finish processing.
 		actualTask.ContinueWith(new Action<Task<object>, object>(TaskCompleted), new TaskState(taskCompleteDelegate, context));
 	}
 
-	private static IntPtr ObjectToJs(object clrObject, out int objectType)
+	[SecurityCritical]
+	public static void FreeMarshalData(IntPtr marshalData, int v8Type)
+	{
+		switch ((V8Type)v8Type)
+		{
+			case V8Type.String:
+			case V8Type.Int32:
+			case V8Type.Boolean:
+			case V8Type.Number:
+			case V8Type.Date:
+				Marshal.FreeHGlobal(marshalData);
+				break;
+
+			case V8Type.Object:
+				// TODO: implement
+				break;
+
+			case V8Type.Array:
+				// TODO: implement
+				break;
+
+			default:
+				throw new Exception("Unsupported marshalled data type: " + v8Type);
+		}
+	}
+
+	private static IntPtr MarshalCLRToV8(object clrObject, out V8Type v8Type)
 	{	
+		DebugMessage("Marshalling an object of type {0}", clrObject.GetType().FullName);
+
 		if (clrObject == null)
 		{
-			objectType = (int)JsPropertyType.Null;
+			v8Type = V8Type.Null;
 			return IntPtr.Zero;
 		}
 
-		if (clrObject is string)
+		// TODO: return strings as unicode
+		else if (clrObject is string)
 		{
-			objectType = (int)JsPropertyType.String;
+			v8Type = V8Type.String;
 			return Marshal.StringToHGlobalAnsi((string)clrObject);
+		}
+		else if (clrObject is char)
+		{
+			v8Type = V8Type.String;
+			return Marshal.StringToHGlobalAnsi(clrObject.ToString());
+		}
+		else if (clrObject is bool)
+		{
+			v8Type = V8Type.Boolean;
+			IntPtr memoryLocation = Marshal.AllocHGlobal(sizeof(int));
+
+			Marshal.WriteInt32(memoryLocation, ((bool)clrObject) ? 1 : 0);
+			return memoryLocation;
+		}
+		else if (clrObject is Guid)
+		{
+			v8Type = V8Type.String;
+			return Marshal.StringToHGlobalAnsi(clrObject.ToString());
+		}
+		else if (clrObject is DateTime)
+		{
+			v8Type = V8Type.Date;
+			DateTime dateTime = (DateTime)clrObject;
+
+			if (dateTime.Kind == DateTimeKind.Local)
+			{
+				dateTime = dateTime.ToUniversalTime();
+			}
+			else if (dateTime.Kind == DateTimeKind.Unspecified)
+			{
+				dateTime = new DateTime(dateTime.Ticks, DateTimeKind.Utc);
+			}
+
+			long ticks = (dateTime.Ticks - MinDateTimeTicks) / 10000;
+			IntPtr memoryLocation = Marshal.AllocHGlobal(sizeof(double));
+
+			WriteDouble(memoryLocation, (double)ticks);
+			return memoryLocation;
+		}
+		else if (clrObject is DateTimeOffset)
+		{
+			v8Type = V8Type.String;
+			return Marshal.StringToHGlobalAnsi(clrObject.ToString());
+		}
+		else if (clrObject is Uri)
+		{
+			v8Type = V8Type.String;
+			return Marshal.StringToHGlobalAnsi(clrObject.ToString());
+		}
+		else if (clrObject is Int16)
+		{
+			v8Type = V8Type.Int32;
+			IntPtr memoryLocation = Marshal.AllocHGlobal(sizeof(int));
+
+			Marshal.WriteInt32(memoryLocation, (int)clrObject);
+			return memoryLocation;
+		}
+		else if (clrObject is Int32)
+		{
+			v8Type = V8Type.Int32;
+			IntPtr memoryLocation = Marshal.AllocHGlobal(sizeof(int));
+
+			Marshal.WriteInt32(memoryLocation, (int)clrObject);
+			return memoryLocation;
+		}
+		else if (clrObject is Int64)
+		{
+			v8Type = V8Type.Number;
+			IntPtr memoryLocation = Marshal.AllocHGlobal(sizeof(double));
+
+			WriteDouble(memoryLocation, Convert.ToDouble((long)clrObject));
+			return memoryLocation;
+		}
+		else if (clrObject is Double)
+		{
+			v8Type = V8Type.Number;
+			IntPtr memoryLocation = Marshal.AllocHGlobal(sizeof(double));
+
+			WriteDouble(memoryLocation, (double)clrObject);
+			return memoryLocation;
+		}
+		else if (clrObject is Single)
+		{
+			v8Type = V8Type.Number;
+			IntPtr memoryLocation = Marshal.AllocHGlobal(sizeof(double));
+
+			WriteDouble(memoryLocation, Convert.ToDouble((Single)clrObject));
+			return memoryLocation;
+		}
+		else if (clrObject is Decimal)
+		{
+			v8Type = V8Type.String;
+			return Marshal.StringToHGlobalAnsi(clrObject.ToString());
+		}
+		else if (clrObject is Enum)
+		{
+			v8Type = V8Type.String;
+			return Marshal.StringToHGlobalAnsi(clrObject.ToString());
+		}
+		else if (clrObject is byte[] || clrObject is IEnumerable<byte>)
+		{
+			v8Type = V8Type.Buffer;
+			// TODO: implement
+		}
+		else if (clrObject is IDictionary<string, object>)
+		{
+			DebugMessage("Marshalling an expando or a dictionary");
+			v8Type = V8Type.Object;
+
+			V8ObjectData objectData = new V8ObjectData();
+			IDictionary<string, object> expandoDictionary = (IDictionary<string, object>)clrObject;
+			IntPtr[] propertyNames = new IntPtr[expandoDictionary.Keys.Count];
+			int[] propertyTypes = new int[expandoDictionary.Keys.Count];
+			IntPtr[] propertyValues = new IntPtr[expandoDictionary.Keys.Count];
+			int pointerSize = Marshal.SizeOf(typeof(IntPtr));
+			int counter = 0;
+			V8Type propertyType;
+
+			objectData.propertiesCount = expandoDictionary.Keys.Count;
+			objectData.propertyNames = Marshal.AllocHGlobal(pointerSize * expandoDictionary.Keys.Count);
+			objectData.propertyTypes = Marshal.AllocHGlobal(sizeof(int) * expandoDictionary.Keys.Count);
+			objectData.propertyValues = Marshal.AllocHGlobal(pointerSize * expandoDictionary.Keys.Count);
+
+			DebugMessage("Allocated unmanaged memory for {0} properties", expandoDictionary.Keys.Count);
+
+			foreach (string propertyName in expandoDictionary.Keys)
+			{
+				propertyNames[counter] = Marshal.StringToHGlobalAnsi(propertyName);
+				propertyValues[counter] = MarshalCLRToV8(expandoDictionary[propertyName], out propertyType);
+				propertyTypes[counter] = (int)propertyType;
+				DebugMessage("Marshalled property {0}", propertyName);
+
+				counter++;
+			}
+
+			Marshal.Copy(propertyNames, 0, objectData.propertyNames, propertyNames.Length);
+			Marshal.Copy(propertyTypes, 0, objectData.propertyTypes, propertyTypes.Length);
+			Marshal.Copy(propertyValues, 0, objectData.propertyValues, propertyValues.Length);
+
+			DebugMessage("Copied marshalled data into unmanaged memory");
+
+			IntPtr destinationPointer = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(V8ObjectData)));
+			Marshal.StructureToPtr<V8ObjectData>(objectData, destinationPointer, false);
+
+			DebugMessage("Copied object data struct into unmanaged memory");
+
+			return destinationPointer;
+		}
+		else if (clrObject is IDictionary)
+		{
+			v8Type = V8Type.Object;
+			// TODO: implement
+		}
+		else if (clrObject is IEnumerable)
+		{
+			v8Type = V8Type.Array;
+
+			V8ArrayData arrayData = new V8ArrayData();
+			List<IntPtr> itemValues = new List<IntPtr>();
+			List<int> itemTypes = new List<int>();
+			V8Type itemType;
+
+			foreach (object item in (IEnumerable)clrObject)
+			{
+				itemValues.Add(MarshalCLRToV8(item, out itemType));
+				itemTypes.Add((int)itemType);
+			}
+
+			arrayData.arrayLength = itemValues.Count;
+			arrayData.itemTypes = Marshal.AllocHGlobal(sizeof(int) * arrayData.arrayLength);
+			arrayData.itemValues = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(IntPtr)) * arrayData.arrayLength);
+
+			Marshal.Copy(itemTypes.ToArray(), 0, arrayData.itemTypes, arrayData.arrayLength);
+			Marshal.Copy(itemValues.ToArray(), 0, arrayData.itemValues, arrayData.arrayLength);
+
+			IntPtr destinationPointer = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(V8ArrayData)));
+			Marshal.StructureToPtr<V8ArrayData>(arrayData, destinationPointer, false);
+
+			return destinationPointer;
+		}
+		else if (clrObject.GetType().GetGenericTypeDefinition() == typeof(Func<>))
+		{
+			v8Type = V8Type.Function;
+			// TODO: implement
+		}
+		else if (clrObject is Exception)
+		{
+			v8Type = V8Type.Exception;
+			// TODO: implement
 		}
 
 		else
 		{
-			throw new Exception("Unsupported CLR object type: " + clrObject.GetType().FullName + ".");
+			v8Type = V8Type.Object;
+			// TODO: implement
 		}
+
+		DebugMessage("Fell all the way through");
+		throw new Exception("Unsupported CLR object type: " + clrObject.GetType().FullName);
 	}
 
-	private static object JsToObject(IntPtr payload, int payloadType)
+	private static object MarshalV8ToCLR(IntPtr v8Object, V8Type objectType)
 	{
-		switch ((JsPropertyType) payloadType) 
+		switch (objectType) 
 		{
-			case JsPropertyType.String:
-				return Marshal.PtrToStringAnsi(payload);
+			case V8Type.String:
+				return Marshal.PtrToStringAnsi(v8Object);
 
-			case JsPropertyType.Object:
-				return JsObjectToExpando(Marshal.PtrToStructure<JsObjectData>(payload));
+			case V8Type.Object:
+				return V8ObjectToExpando(Marshal.PtrToStructure<V8ObjectData>(v8Object));
 
-			case JsPropertyType.Boolean:
-				return Marshal.ReadByte(payload) != 0;
+			case V8Type.Boolean:
+				return Marshal.ReadByte(v8Object) != 0;
 
-			case JsPropertyType.Number:
-				double[] value = new double[1];
-				Marshal.Copy(payload, value, 0, 1);
+			case V8Type.Number:
+				return ReadDouble(v8Object);
 
-				return value[0];
+			case V8Type.Date:
+				double ticks = ReadDouble(v8Object);
+				return new DateTime(Convert.ToInt64(ticks) * 10000 + MinDateTimeTicks, DateTimeKind.Utc);
 
-			case JsPropertyType.Date:
-				double[] ticks = new double[1];
-				Marshal.Copy(payload, ticks, 0, 1);
-
-				return new DateTime(Convert.ToInt64(ticks[0]) * 10000 + MinDateTimeTicks, DateTimeKind.Utc);
-
-			case JsPropertyType.Null:
+			case V8Type.Null:
 				return null;
 
-			case JsPropertyType.Int32:
-				return Marshal.ReadInt32(payload);
+			case V8Type.Int32:
+				return Marshal.ReadInt32(v8Object);
 
-			case JsPropertyType.UInt32:
-				return (uint) Marshal.ReadInt32(payload);
+			case V8Type.UInt32:
+				return (uint) Marshal.ReadInt32(v8Object);
 
-			case JsPropertyType.Array:
-				JsArrayData arrayData = Marshal.PtrToStructure<JsArrayData>(payload);
+			case V8Type.Array:
+				V8ArrayData arrayData = Marshal.PtrToStructure<V8ArrayData>(v8Object);
 				int[] itemTypes = new int[arrayData.arrayLength];
 				IntPtr[] itemValues = new IntPtr[arrayData.arrayLength];
+				// TODO: use an array instead of a list
 				List<object> array = new List<object>();
 
 				Marshal.Copy(arrayData.itemTypes, itemTypes, 0, arrayData.arrayLength);
@@ -195,35 +417,102 @@ public class CoreCLREmbedding
 
 				for (int i = 0; i < arrayData.arrayLength; i++)
 				{
-					array.Add(JsToObject(itemValues[i], itemTypes[i]));
+					array.Add(MarshalV8ToCLR(itemValues[i], (V8Type)itemTypes[i]));
 				}
 
 				return array.ToArray();
 
 			default:
-				throw new Exception("Unsupported payload type: " + payloadType + ".");
+				throw new Exception("Unsupported V8 object type: " + objectType + ".");
 		}
 	}
 
-	private static ExpandoObject JsObjectToExpando(JsObjectData payload)
+	private static unsafe void WriteDouble(IntPtr pointer, double value)
+	{
+		try
+		{
+			byte* address = (byte*)pointer;
+
+			if ((unchecked((int)address) & 0x7) == 0)
+			{
+				*((double*)address) = value;
+			}
+
+			else
+			{
+				byte* valuePointer = (byte*) &value;
+
+				address[0] = valuePointer[0];
+				address[1] = valuePointer[1];
+				address[2] = valuePointer[2];
+				address[3] = valuePointer[3];
+				address[4] = valuePointer[4];
+				address[5] = valuePointer[5];
+				address[6] = valuePointer[6];
+				address[7] = valuePointer[7];
+			}
+		}
+
+		catch (NullReferenceException)
+		{
+			throw new AccessViolationException();
+		}
+	}
+
+	private static unsafe double ReadDouble(IntPtr pointer)
+	{
+		try
+		{
+			byte* address = (byte*)pointer;
+
+			if ((unchecked((int)address) & 0x7) == 0)
+			{
+				return *((double*)address);
+			}
+
+			else
+			{
+				double value;
+				byte* valuePointer = (byte*) &value;
+
+				valuePointer[0] = address[0];
+				valuePointer[1] = address[1];
+				valuePointer[2] = address[2];
+				valuePointer[3] = address[3];
+				valuePointer[4] = address[4];
+				valuePointer[5] = address[5];
+				valuePointer[6] = address[6];
+				valuePointer[7] = address[7];
+
+				return value;
+			}
+		}
+
+		catch (NullReferenceException)
+		{
+			throw new AccessViolationException();
+		}
+	}
+
+	private static ExpandoObject V8ObjectToExpando(V8ObjectData v8Object)
 	{
 		ExpandoObject expando = new ExpandoObject();
 		IDictionary<string, object> expandoDictionary = (IDictionary<string, object>) expando;
-		int[] propertyTypes = new int[payload.propertiesCount];
-		IntPtr[] propertyNamePointers = new IntPtr[payload.propertiesCount];
-		IntPtr[] propertyValuePointers = new IntPtr[payload.propertiesCount];
+		int[] propertyTypes = new int[v8Object.propertiesCount];
+		IntPtr[] propertyNamePointers = new IntPtr[v8Object.propertiesCount];
+		IntPtr[] propertyValuePointers = new IntPtr[v8Object.propertiesCount];
 
-		Marshal.Copy(payload.propertyTypes, propertyTypes, 0, payload.propertiesCount);
-		Marshal.Copy(payload.propertyNames, propertyNamePointers, 0, payload.propertiesCount);
-		Marshal.Copy(payload.propertyValues, propertyValuePointers, 0, payload.propertiesCount);
+		Marshal.Copy(v8Object.propertyTypes, propertyTypes, 0, v8Object.propertiesCount);
+		Marshal.Copy(v8Object.propertyNames, propertyNamePointers, 0, v8Object.propertiesCount);
+		Marshal.Copy(v8Object.propertyValues, propertyValuePointers, 0, v8Object.propertiesCount);
 
-		for (int i = 0; i < payload.propertiesCount; i++) 
+		for (int i = 0; i < v8Object.propertiesCount; i++) 
 		{
 			IntPtr propertyNamePointer = propertyNamePointers [i];
 			IntPtr propertyValuePointer = propertyValuePointers [i];
 			string propertyName = Marshal.PtrToStringAnsi(propertyNamePointer);
 
-			expandoDictionary[propertyName] = JsToObject(propertyValuePointer, propertyTypes[i]);
+			expandoDictionary[propertyName] = MarshalV8ToCLR(propertyValuePointer, (V8Type) propertyTypes[i]);
 		}
 
 		return expando;

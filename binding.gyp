@@ -205,6 +205,7 @@
                           {
                             'action': [
                               'csc',
+                              '-unsafe'
                               '-target:library',
                               '-out:build/$(BUILDTYPE)/CoreCLREmbedding.dll',
                               'src/coreclr/*.cs',
@@ -216,10 +217,12 @@
                               'mcs',
                               '/nostdlib',
                               '/noconfig',
+                              '/unsafe',
                               '/r:<!(dirname `which dnx`)/System.Console.dll',
                               '/r:<!(dirname `which dnx`)/System.Runtime.dll',
                               '/r:<!(dirname `which dnx`)/System.Dynamic.Runtime.dll',
                               '/r:<!(dirname `which dnx`)/System.ObjectModel.dll',
+                              '/r:<!(dirname `which dnx`)/System.Private.Uri.dll',
                               '/r:<!(dirname `which dnx`)/mscorlib.dll',
                               '-sdk:4.5',
                               '-target:library',
