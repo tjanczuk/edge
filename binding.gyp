@@ -55,7 +55,8 @@
                   'sources+': [
                     'src/coreclr/coreclrembedding.cpp',
                     'src/coreclr/coreclrfunc.cpp',
-                    'src/coreclr/coreclrfuncinvokecontext.cpp'
+                    'src/coreclr/coreclrfuncinvokecontext.cpp',
+                    'src/common/utils.cpp'
                   ]
                 }
               ],
@@ -71,7 +72,8 @@
                     'src/mono/dictionary.cpp',
                     'src/mono/nodejsfunc.cpp',
                     'src/mono/nodejsfuncinvokecontext.cpp',
-                    'src/mono/utils.cpp'
+                    'src/mono/utils.cpp',
+                    'src/common/utils.cpp'
                   ],
                   'include_dirs': [
                     '<!@(pkg-config mono-2 --cflags-only-I | sed s/-I//g)'

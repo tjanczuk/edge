@@ -6,6 +6,8 @@
 #include <node_buffer.h>
 #include <uv.h>
 #include <nan.h>
+#include <stdarg.h>
+#include <stdio.h>
 
 using namespace v8;
 
@@ -60,13 +62,6 @@ extern BOOL debugMode;
 extern BOOL enableScriptIgnoreAttribute;
 
 #define DBG(...) if (debugMode) { printf(__VA_ARGS__); printf("\n"); }
-#define NanThrowErrorF(format, ...)\
-{\
-	size_t size = snprintf(NULL, 0, format "\n", ##__VA_ARGS__);\
-	char* buffer = new char[size];\
-	snprintf(buffer, size, format "\n", ##__VA_ARGS__);\
-	NanThrowError(buffer);\
-}
 
 typedef void (*uv_async_edge_cb)(void* data);
 
@@ -117,5 +112,8 @@ typedef enum taskStatus
     Canceled = 6,
     Faulted = 7
 } TaskStatus;
+
+Handle<Value> throwV8Exception(Handle<Value> exception);
+Handle<Value> throwV8Exception(const char* format, ...);
 
 #endif

@@ -30,11 +30,4 @@ MonoString* exceptionV82stringCLR(Handle<v8::Value> exception)
     return stringV82CLR(Handle<v8::String>::Cast(exception));
 }
 
-Handle<Value> throwV8Exception(Handle<Value> exception)
-{
-    NanEscapableScope();
-    NanThrowError(exception);
-    return NanEscapeScope(exception);
-}
-
 // vim: ts=4 sw=4 et: 

@@ -65,10 +65,10 @@ public class CoreCLREmbedding
 	public static IntPtr GetFunc(string assemblyFile, string typeName, string methodName)
     {
 		Assembly assembly = Assembly.LoadFile(assemblyFile);
-		DebugMessage("Assembly {0} loaded successfully", assemblyFile);
+		DebugMessage("CoreCLREmbedding::GetFunc (CLR) - Assembly {0} loaded successfully", assemblyFile);
 
 		ClrFuncReflectionWrap wrapper = ClrFuncReflectionWrap.Create(assembly, typeName, methodName);
-		DebugMessage("Method {0}.{1}() loaded successfully", typeName, methodName);
+		DebugMessage("CoreCLREmbedding::GetFunc (CLR) - Method {0}.{1}() loaded successfully", typeName, methodName);
 
 		GCHandle wrapperHandle = GCHandle.Alloc(wrapper);
 
@@ -85,16 +85,23 @@ public class CoreCLREmbedding
 	[SecurityCritical]
 	public static void CallFunc(IntPtr function, IntPtr payload, int payloadType, IntPtr taskState, IntPtr result, IntPtr resultType)
 	{
+		DebugMessage("CoreCLREmbedding::CallFunc (CLR) - Starting");
+
 		// TODO: add exception handling
 		GCHandle wrapperHandle = GCHandle.FromIntPtr(function);
 		ClrFuncReflectionWrap wrapper = (ClrFuncReflectionWrap)wrapperHandle.Target;
 
+		DebugMessage("CoreCLREmbedding::CallFunc (CLR) - Marshalling data of type {0} and calling the .NET method", ((V8Type)payloadType).ToString("G"));
 		Task<Object> functionTask = wrapper.Call(MarshalV8ToCLR(payload, (V8Type)payloadType));
 
 		if (functionTask.IsCompleted)
 		{
+			DebugMessage("CoreCLREmbedding::CallFunc (CLR) - .NET method ran synchronously, marshalling data for V8");
+
 			V8Type taskResultType;
 			IntPtr marshalData = MarshalCLRToV8(functionTask.Result, out taskResultType);
+
+			DebugMessage("CoreCLREmbedding::CallFunc (CLR) - Method return data is of type {0}", taskResultType.ToString("G"));
 
 			Marshal.WriteInt32(taskState, (int)TaskStatus.RanToCompletion);
 			Marshal.WriteIntPtr(result, marshalData);
@@ -103,35 +110,46 @@ public class CoreCLREmbedding
 
 		else
 		{
+			DebugMessage("CoreCLREmbedding::CallFunc (CLR) - .NET method ran asynchronously, returning task handle and status");
+
 			GCHandle taskHandle = GCHandle.Alloc(functionTask);
 
 			Marshal.WriteInt32(taskState, (int)functionTask.Status);
 			Marshal.WriteIntPtr(result, GCHandle.ToIntPtr(taskHandle));
 			Marshal.WriteInt32(resultType, (int)V8Type.Task);
 		}
+
+		DebugMessage("CoreCLREmbedding::CallFunc (CLR) - Finished");
 	}
 
 	private static void TaskCompleted(Task<object> task, object state)
 	{
 		// TODO: handle faulted case
-		DebugMessage("Task completed with a state of {0}", task.Status.ToString("G"));
+		DebugMessage("CoreCLREmbedding::TaskCompleted (CLR) - Task completed with a state of {0}", task.Status.ToString("G"));
+		DebugMessage("CoreCLREmbedding::TaskCompleted (CLR) - Marshalling data to return to V8", task.Status.ToString("G"));
 
 		V8Type v8Type;
 		IntPtr resultObject = MarshalCLRToV8(task.Result, out v8Type);
 		TaskState actualState = (TaskState) state;
 
-		DebugMessage("Invoking callback");
+		DebugMessage("CoreCLREmbedding::TaskCompleted (CLR) - Invoking unmanaged callback");
 		actualState.Callback(resultObject, (int)v8Type, actualState.Context);
 	}
 
 	[SecurityCritical]
 	public static void ContinueTask(IntPtr task, IntPtr context, IntPtr callback)
 	{
+		DebugMessage("CoreCLREmbedding::ContinueTask (CLR) - Starting");
+
 		GCHandle taskHandle = GCHandle.FromIntPtr(task);
 		Task<Object> actualTask = (Task<Object>) taskHandle.Target;
+
 		TaskCompleteDelegate taskCompleteDelegate = Marshal.GetDelegateForFunctionPointer<TaskCompleteDelegate>(callback);
+		DebugMessage("CoreCLREmbedding::ContinueTask (CLR) - Marshalled unmanaged callback successfully");
 
 		actualTask.ContinueWith(new Action<Task<object>, object>(TaskCompleted), new TaskState(taskCompleteDelegate, context));
+
+		DebugMessage("CoreCLREmbedding::ContinueTask (CLR) - Finished");
 	}
 
 	[SecurityCritical]
@@ -162,8 +180,6 @@ public class CoreCLREmbedding
 
 	private static IntPtr MarshalCLRToV8(object clrObject, out V8Type v8Type)
 	{	
-		DebugMessage("Marshalling an object of type {0}", clrObject.GetType().FullName);
-
 		if (clrObject == null)
 		{
 			v8Type = V8Type.Null;
@@ -176,11 +192,13 @@ public class CoreCLREmbedding
 			v8Type = V8Type.String;
 			return Marshal.StringToHGlobalAnsi((string)clrObject);
 		}
+
 		else if (clrObject is char)
 		{
 			v8Type = V8Type.String;
 			return Marshal.StringToHGlobalAnsi(clrObject.ToString());
 		}
+
 		else if (clrObject is bool)
 		{
 			v8Type = V8Type.Boolean;
@@ -189,11 +207,13 @@ public class CoreCLREmbedding
 			Marshal.WriteInt32(memoryLocation, ((bool)clrObject) ? 1 : 0);
 			return memoryLocation;
 		}
+
 		else if (clrObject is Guid)
 		{
 			v8Type = V8Type.String;
 			return Marshal.StringToHGlobalAnsi(clrObject.ToString());
 		}
+
 		else if (clrObject is DateTime)
 		{
 			v8Type = V8Type.Date;
@@ -203,6 +223,7 @@ public class CoreCLREmbedding
 			{
 				dateTime = dateTime.ToUniversalTime();
 			}
+
 			else if (dateTime.Kind == DateTimeKind.Unspecified)
 			{
 				dateTime = new DateTime(dateTime.Ticks, DateTimeKind.Utc);
@@ -214,16 +235,19 @@ public class CoreCLREmbedding
 			WriteDouble(memoryLocation, (double)ticks);
 			return memoryLocation;
 		}
+
 		else if (clrObject is DateTimeOffset)
 		{
 			v8Type = V8Type.String;
 			return Marshal.StringToHGlobalAnsi(clrObject.ToString());
 		}
+
 		else if (clrObject is Uri)
 		{
 			v8Type = V8Type.String;
 			return Marshal.StringToHGlobalAnsi(clrObject.ToString());
 		}
+
 		else if (clrObject is Int16)
 		{
 			v8Type = V8Type.Int32;
@@ -232,6 +256,7 @@ public class CoreCLREmbedding
 			Marshal.WriteInt32(memoryLocation, (int)clrObject);
 			return memoryLocation;
 		}
+
 		else if (clrObject is Int32)
 		{
 			v8Type = V8Type.Int32;
@@ -240,6 +265,7 @@ public class CoreCLREmbedding
 			Marshal.WriteInt32(memoryLocation, (int)clrObject);
 			return memoryLocation;
 		}
+
 		else if (clrObject is Int64)
 		{
 			v8Type = V8Type.Number;
@@ -248,6 +274,7 @@ public class CoreCLREmbedding
 			WriteDouble(memoryLocation, Convert.ToDouble((long)clrObject));
 			return memoryLocation;
 		}
+
 		else if (clrObject is Double)
 		{
 			v8Type = V8Type.Number;
@@ -256,6 +283,7 @@ public class CoreCLREmbedding
 			WriteDouble(memoryLocation, (double)clrObject);
 			return memoryLocation;
 		}
+
 		else if (clrObject is Single)
 		{
 			v8Type = V8Type.Number;
@@ -264,24 +292,27 @@ public class CoreCLREmbedding
 			WriteDouble(memoryLocation, Convert.ToDouble((Single)clrObject));
 			return memoryLocation;
 		}
+
 		else if (clrObject is Decimal)
 		{
 			v8Type = V8Type.String;
 			return Marshal.StringToHGlobalAnsi(clrObject.ToString());
 		}
+
 		else if (clrObject is Enum)
 		{
 			v8Type = V8Type.String;
 			return Marshal.StringToHGlobalAnsi(clrObject.ToString());
 		}
+
 		else if (clrObject is byte[] || clrObject is IEnumerable<byte>)
 		{
 			v8Type = V8Type.Buffer;
 			// TODO: implement
 		}
+
 		else if (clrObject is IDictionary<string, object>)
 		{
-			DebugMessage("Marshalling an expando or a dictionary");
 			v8Type = V8Type.Object;
 
 			V8ObjectData objectData = new V8ObjectData();
@@ -298,14 +329,11 @@ public class CoreCLREmbedding
 			objectData.propertyTypes = Marshal.AllocHGlobal(sizeof(int) * expandoDictionary.Keys.Count);
 			objectData.propertyValues = Marshal.AllocHGlobal(pointerSize * expandoDictionary.Keys.Count);
 
-			DebugMessage("Allocated unmanaged memory for {0} properties", expandoDictionary.Keys.Count);
-
 			foreach (string propertyName in expandoDictionary.Keys)
 			{
 				propertyNames[counter] = Marshal.StringToHGlobalAnsi(propertyName);
 				propertyValues[counter] = MarshalCLRToV8(expandoDictionary[propertyName], out propertyType);
 				propertyTypes[counter] = (int)propertyType;
-				DebugMessage("Marshalled property {0}", propertyName);
 
 				counter++;
 			}
@@ -314,20 +342,18 @@ public class CoreCLREmbedding
 			Marshal.Copy(propertyTypes, 0, objectData.propertyTypes, propertyTypes.Length);
 			Marshal.Copy(propertyValues, 0, objectData.propertyValues, propertyValues.Length);
 
-			DebugMessage("Copied marshalled data into unmanaged memory");
-
 			IntPtr destinationPointer = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(V8ObjectData)));
 			Marshal.StructureToPtr<V8ObjectData>(objectData, destinationPointer, false);
 
-			DebugMessage("Copied object data struct into unmanaged memory");
-
 			return destinationPointer;
 		}
+
 		else if (clrObject is IDictionary)
 		{
 			v8Type = V8Type.Object;
 			// TODO: implement
 		}
+
 		else if (clrObject is IEnumerable)
 		{
 			v8Type = V8Type.Array;
@@ -355,11 +381,13 @@ public class CoreCLREmbedding
 
 			return destinationPointer;
 		}
+
 		else if (clrObject.GetType().GetGenericTypeDefinition() == typeof(Func<>))
 		{
 			v8Type = V8Type.Function;
 			// TODO: implement
 		}
+
 		else if (clrObject is Exception)
 		{
 			v8Type = V8Type.Exception;
@@ -372,7 +400,6 @@ public class CoreCLREmbedding
 			// TODO: implement
 		}
 
-		DebugMessage("Fell all the way through");
 		throw new Exception("Unsupported CLR object type: " + clrObject.GetType().FullName);
 	}
 

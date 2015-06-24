@@ -10,9 +10,10 @@ CoreClrFuncInvokeContext::CoreClrFuncInvokeContext(Handle<v8::Value> callback, v
 
 CoreClrFuncInvokeContext::~CoreClrFuncInvokeContext()
 {
+	DBG("CoreClrFuncInvokeContext::~CoreClrFuncInvokeContext");
+
     if (this->callback)
     {
-        DBG("CoreClrFuncInvokeContext::DisposeCallback");
         NanDisposePersistent(*(this->callback));
         delete this->callback;
         this->callback = NULL;
@@ -32,11 +33,14 @@ CoreClrFuncInvokeContext::~CoreClrFuncInvokeContext()
 
 void CoreClrFuncInvokeContext::InitializeAsyncOperation()
 {
+	DBG("CoreClrFuncInvokeContext::InitializeAsyncOperation");
     this->uv_edge_async = V8SynchronizationContext::RegisterAction(CoreClrFuncInvokeContext::InvokeCallback, this);
 }
 
 void CoreClrFuncInvokeContext::TaskComplete(void* result, int resultType, CoreClrFuncInvokeContext* context)
 {
+	DBG("CoreClrFuncInvokeContext::TaskComplete");
+
 	context->resultData = result;
 	context->resultType = resultType;
 
@@ -45,9 +49,11 @@ void CoreClrFuncInvokeContext::TaskComplete(void* result, int resultType, CoreCl
 
 void CoreClrFuncInvokeContext::InvokeCallback(void* data)
 {
-	CoreClrFuncInvokeContext* context = (CoreClrFuncInvokeContext*)data;
-	DBG("Invoking callback function");
+	DBG("CoreClrFuncInvokeContext::InvokeCallback");
 
+	CoreClrFuncInvokeContext* context = (CoreClrFuncInvokeContext*)data;
+
+	// TODO: pass errors if provided
 	Handle<Value> argv[] = { NanUndefined(), CoreClrFunc::MarshalCLRToV8(context->resultData, context->resultType) };
 	int argc = 2;
 

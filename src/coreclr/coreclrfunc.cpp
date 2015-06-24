@@ -25,7 +25,7 @@ NAN_WEAK_CALLBACK(coreClrFuncProxyNearDeath)
 
 Handle<v8::Function> CoreClrFunc::InitializeInstance(CoreClrGcHandle functionHandle)
 {
-    DBG("CoreClrFunc::InitializeInstance");
+    DBG("CoreClrFunc::InitializeInstance - Started");
 
     static Persistent<v8::Function> proxyFactory;
     static Persistent<v8::Function> proxyFunction;
@@ -41,6 +41,8 @@ Handle<v8::Function> CoreClrFunc::InitializeInstance(CoreClrGcHandle functionHan
 
     if (proxyFactory.IsEmpty())
     {
+    	DBG("CoreClrFunc::InitializeInstance - Creating proxy factory");
+
         NanAssignPersistent(
             proxyFunction, NanNew<FunctionTemplate>(coreClrFuncProxy)->GetFunction());
         Handle<v8::String> code = NanNew<v8::String>(
@@ -54,12 +56,14 @@ Handle<v8::Function> CoreClrFunc::InitializeInstance(CoreClrGcHandle functionHan
             (NanNew(proxyFactory)->Call(NanGetCurrentContext()->Global(), 2, factoryArgv)).As<v8::Function>();
     NanMakeWeakPersistent(funcProxy, (void*)wrap, &coreClrFuncProxyNearDeath);
 
+    DBG("CoreClrFunc::InitializeInstance - Finished");
+
     return NanEscapeScope(funcProxy);
 }
 
 Handle<v8::Value> CoreClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> callbackOrSync)
 {
-	DBG("CoreClrFunc::Call instance");
+	DBG("CoreClrFunc::Call - Started");
 	NanEscapableScope();
 
 	void* marshalData;
@@ -68,32 +72,39 @@ Handle<v8::Value> CoreClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value>
 	void* result;
 	int resultType;
 
-	MarshalV8ToCLR(payload, &marshalData, &payloadType);
-	CoreClrEmbedding::CallClrFunc(functionHandle, marshalData, payloadType, &taskState, &result, &resultType);
-	FreeMarshalData(marshalData, payloadType);
+	DBG("CoreClrFunc::Call - Marshalling data in preparating for calling the CLR");
 
-	DBG("Task state is %d", taskState);
+	MarshalV8ToCLR(payload, &marshalData, &payloadType);
+	DBG("CoreClrFunc::Call - Object type of %d is being marshalled", payloadType);
+
+	DBG("CoreClrFunc::Call - Calling CoreClrEmbedding::CallClrFunc()");
+	CoreClrEmbedding::CallClrFunc(functionHandle, marshalData, payloadType, &taskState, &result, &resultType);
+	DBG("CoreClrFunc::Call - CoreClrEmbedding::CallClrFunc() returned a task state of %d", taskState);
+
+	DBG("CoreClrFunc::Call - Freeing the marshalled data");
+	FreeMarshalData(marshalData, payloadType);
 
 	if (taskState == TaskStatus::RanToCompletion)
 	{
-		// TODO: marshal data to V8 and invoke the callback
-		DBG("Task ran synchronously, returning");
+		DBG("CoreClrFunc::Call - Task ran synchronously, marshalling CLR data for the callback");
+		// TODO: marshal data to V8 and invoke the callback or return the data
 	}
 
 	else if (taskState == TaskStatus::Faulted)
 	{
-		// TODO: marshal exception info and throw
-		DBG("Task threw an exception");
+		DBG("CoreClrFunc::Call - Task threw an exception, marshalling CLR exception data for the callback");
+		// TODO: marshal exception info and pass it to the callback
 	}
 
 	else if (callbackOrSync->IsBoolean())
 	{
+		DBG("CoreClrFunc::Call - Task was expected to run synchronously, but did not run to completion");
 		// TODO: throw error for async being returned when we expected sync
 	}
 
 	else
 	{
-		DBG("Task running asynchronously, registering callback");
+		DBG("CoreClrFunc::Call - Task running asynchronously, registering callback");
 
 		CoreClrGcHandle taskHandle = result;
 		CoreClrFuncInvokeContext* invokeContext = new CoreClrFuncInvokeContext(callbackOrSync, taskHandle);
@@ -102,11 +113,15 @@ Handle<v8::Value> CoreClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value>
 		CoreClrEmbedding::ContinueTask(taskHandle, invokeContext, CoreClrFuncInvokeContext::TaskComplete);
 	}
 
+	DBG("CoreClrFunc::Call - Finished");
+
 	return NanEscapeScope(NanUndefined());
 }
 
 NAN_METHOD(CoreClrFunc::Initialize)
 {
+	DBG("CoreClrFunc::Initialize - Starting");
+
 	NanEscapableScope();
 	Handle<v8::Object> options = args[0]->ToObject();
 	Handle<v8::Function> result;
@@ -119,19 +134,21 @@ NAN_METHOD(CoreClrFunc::Initialize)
 		v8::String::Utf8Value typeName(options->Get(NanNew<v8::String>("typeName")));
 		v8::String::Utf8Value methodName(options->Get(NanNew<v8::String>("methodName")));
 
-		DBG("Loading %s.%s() from %s", *typeName, *methodName, *assemblyFile);
+		DBG("CoreClrFunc::Initialize - Loading %s.%s() from %s", *typeName, *methodName, *assemblyFile);
 		CoreClrGcHandle functionHandle = CoreClrEmbedding::GetClrFuncReflectionWrapFunc(*assemblyFile, *typeName, *methodName);
-		DBG("Function loaded successfully")
+		DBG("CoreClrFunc::Initialize - Function loaded successfully")
 
 		result = CoreClrFunc::InitializeInstance(functionHandle);
-		DBG("Callback initialized successfully")
+		DBG("CoreClrFunc::Initialize - Callback initialized successfully")
 	}
 
 	else
 	{
 		// TODO: support compilation from source once the Roslyn C# compiler is made available on CoreCLR
-		NanThrowError("Compiling .NET methods from source is not yet supported with CoreCLR, you must provide an assembly path, type name, and method name as arguments to edge.initializeClrFunction().");
+		throwV8Exception("Compiling .NET methods from source is not yet supported with CoreCLR, you must provide an assembly path, type name, and method name as arguments to edge.initializeClrFunction().");
 	}
+
+	DBG("CoreClrFunc::Initialize - Finished");
 
 	NanReturnValue(result);
 }
@@ -362,7 +379,7 @@ Handle<v8::Value> CoreClrFunc::MarshalCLRToV8(void* marshalData, int payloadType
 
 	else
 	{
-		NanThrowErrorF("Unsupported object type received from the CLR: %d", payloadType);
+		throwV8Exception("Unsupported object type received from the CLR: %d", payloadType);
 		return NanEscapeScope(NanUndefined());
 	}
 }

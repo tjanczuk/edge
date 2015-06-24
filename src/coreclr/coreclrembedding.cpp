@@ -36,7 +36,7 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
     // Much of the CoreCLR bootstrapping process is cribbed from 
     // https://github.com/aspnet/dnx/blob/dev/src/dnx.coreclr.unix/dnx.coreclr.cpp
 
-	DBG("CoreClrEmbedding::Initialize")
+	DBG("CoreClrEmbedding::Initialize - Started")
 
     HRESULT result = S_OK;
     char currentDirectory[PATH_MAX];
@@ -58,14 +58,14 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
     char bootstrapper[PATH_MAX];
 
     GetPathToBootstrapper(&bootstrapper[0], PATH_MAX);
-    DBG("Bootstrapper is %s", bootstrapper);
+    DBG("CoreClrEmbedding::Initialize - Bootstrapper is %s", bootstrapper);
 
     char coreClrDirectory[PATH_MAX];
     char* coreClrEnvironmentVariable = getenv("CORECLR_DIR");
 
     if (coreClrEnvironmentVariable)
     {
-    	DBG("Trying to load %s from the path specified in the CORECLR_DIR environment variable: %s", LIBCORECLR_NAME, coreClrEnvironmentVariable);
+    	DBG("CoreClrEmbedding::Initialize - Trying to load %s from the path specified in the CORECLR_DIR environment variable: %s", LIBCORECLR_NAME, coreClrEnvironmentVariable);
 
     	strncpy(&coreClrDirectory[0], coreClrEnvironmentVariable, strlen(coreClrEnvironmentVariable) + 1);
         LoadCoreClrAtPath(coreClrDirectory, &libCoreClr);
@@ -93,7 +93,7 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
         return E_FAIL;
     }
 
-    DBG("%s loaded successfully from %s", LIBCORECLR_NAME, &coreClrDirectory[0]);
+    DBG("CoreClrEmbedding::Initialize - %s loaded successfully from %s", LIBCORECLR_NAME, &coreClrDirectory[0]);
 
     std::string assemblySearchDirectories;
 
@@ -101,7 +101,7 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
     assemblySearchDirectories.append(":");
     assemblySearchDirectories.append(&coreClrDirectory[0]);
 
-    DBG("Assembly search path is %s", assemblySearchDirectories.c_str());
+    DBG("CoreClrEmbedding::Initialize - Assembly search path is %s", assemblySearchDirectories.c_str());
 
     ICLRRuntimeHost2* runtimeHost = NULL;
 
@@ -109,7 +109,7 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 
     if (!initializeCoreCLR)
     {
-        NanThrowErrorF("Error loading the PAL_InitializeCoreCLR function from %s: %s.", LIBCORECLR_NAME, dlerror());
+    	throwV8Exception("Error loading the PAL_InitializeCoreCLR function from %s: %s.", LIBCORECLR_NAME, dlerror());
         return E_FAIL;
     }
 
@@ -117,7 +117,7 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 
     if (!getCLRRuntimeHost)
     {
-    	NanThrowErrorF("Error loading the GetCLRRuntimeHost function from %s: %s.", LIBCORECLR_NAME, dlerror());
+    	throwV8Exception("Error loading the GetCLRRuntimeHost function from %s: %s.", LIBCORECLR_NAME, dlerror());
     	return E_FAIL;
     }
 
@@ -125,7 +125,7 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 
     if (!clrRuntimeHostGuid)
     {
-    	NanThrowErrorF("Error loading the IID_ICLRRuntimeHost2 GUID from %s: %s.", LIBCORECLR_NAME, dlerror());
+    	throwV8Exception("Error loading the IID_ICLRRuntimeHost2 GUID from %s: %s.", LIBCORECLR_NAME, dlerror());
     	return E_FAIL;
     }
 
@@ -134,43 +134,43 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
     coreClrDllPath.append("/");
     coreClrDllPath.append(LIBCORECLR_NAME);
 
-    DBG("Calling PAL_InitializeCoreCLR()");
+    DBG("CoreClrEmbedding::Initialize - Calling PAL_InitializeCoreCLR()");
     result = initializeCoreCLR(bootstrapper, coreClrDllPath.c_str(), true);
 
     if (FAILED(result))
     {
-    	NanThrowErrorF("Call to PAL_InitializeCoreCLR() failed with a return code of 0x%x.", result);
+    	throwV8Exception("Call to PAL_InitializeCoreCLR() failed with a return code of 0x%x.", result);
         return result;
     }
 
-    DBG("CoreCLR initialized successfully");
+    DBG("CoreClrEmbedding::Initialize - CoreCLR initialized successfully");
     result = getCLRRuntimeHost(clrRuntimeHostGuid, (void**) &runtimeHost);
 
     if (FAILED(result))
     {
-    	NanThrowErrorF("Call to GetCLRRuntimeHost() failed with a return code of 0x%x.", result);
+    	throwV8Exception("Call to GetCLRRuntimeHost() failed with a return code of 0x%x.", result);
         return result;
     }
 
-    DBG("Got the runtime host successfully");
+    DBG("CoreClrEmbedding::Initialize - Got the runtime host successfully");
     result = runtimeHost->SetStartupFlags((STARTUP_FLAGS) (STARTUP_LOADER_OPTIMIZATION_SINGLE_DOMAIN | STARTUP_SINGLE_APPDOMAIN));
 
     if (FAILED(result))
     {
-    	NanThrowErrorF("Call to ICLRRuntimeHost2::SetStartupFlags() failed with a return code of 0x%x.", result);
+    	throwV8Exception("Call to ICLRRuntimeHost2::SetStartupFlags() failed with a return code of 0x%x.", result);
         return result;
     }
 
-    DBG("Set runtime host startup flags successfully");
+    DBG("CoreClrEmbedding::Initialize - Set runtime host startup flags successfully");
     result = runtimeHost->Start();
 
     if (FAILED(result))
     {
-    	NanThrowErrorF("Call to ICLRRuntimeHost2::Start() failed with a return code of 0x%x.", result);
+    	throwV8Exception("Call to ICLRRuntimeHost2::Start() failed with a return code of 0x%x.", result);
         return result;
     }
 
-    DBG("Runtime host started successfully");
+    DBG("CoreClrEmbedding::Initialize - Runtime host started successfully");
 
     LPCWSTR propertyKeys[] = {
     	u"TRUSTED_PLATFORM_ASSEMBLIES",
@@ -219,11 +219,11 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 
     if (FAILED(result))
     {
-    	NanThrowErrorF("Call to ICLRRuntimeHost2::CreateAppDomainWithManager() failed with a return code of 0x%x.", result);
+    	throwV8Exception("Call to ICLRRuntimeHost2::CreateAppDomainWithManager() failed with a return code of 0x%x.", result);
         return result;
     }
 
-    DBG("App domain created successfully (app domain ID: %d)", appDomainId);
+    DBG("CoreClrEmbedding::Initialize - App domain created successfully (app domain ID: %d)", appDomainId);
 
     result = runtimeHost->CreateDelegate(
     		appDomainId,
@@ -234,11 +234,11 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 
     if (FAILED(result))
     {
-    	NanThrowErrorF("Call to ICLRRuntimeHost2::CreateDelegate() for GetFunc failed with a return code of 0x%x.", result);
+    	throwV8Exception("Call to ICLRRuntimeHost2::CreateDelegate() for GetFunc failed with a return code of 0x%x.", result);
         return result;
     }
 
-    DBG("CoreCLREmbedding.GetFunc() loaded successfully");
+    DBG("CoreClrEmbedding::Initialize - CoreCLREmbedding.GetFunc() loaded successfully");
 
 	result = runtimeHost->CreateDelegate(
 				appDomainId,
@@ -249,11 +249,11 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 
 	if (FAILED(result))
 	{
-		NanThrowErrorF("Call to ICLRRuntimeHost2::CreateDelegate() for CallFunc failed with a return code of 0x%x.", result);
+		throwV8Exception("Call to ICLRRuntimeHost2::CreateDelegate() for CallFunc failed with a return code of 0x%x.", result);
 		return result;
 	}
 
-	DBG("CoreCLREmbedding.CallFunc() loaded successfully");
+	DBG("CoreClrEmbedding::Initialize - CoreCLREmbedding.CallFunc() loaded successfully");
 
 	result = runtimeHost->CreateDelegate(
 				appDomainId,
@@ -264,11 +264,11 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 
 	if (FAILED(result))
 	{
-		NanThrowErrorF("Call to ICLRRuntimeHost2::CreateDelegate() for ContinueTask failed with a return code of 0x%x.", result);
+		throwV8Exception("Call to ICLRRuntimeHost2::CreateDelegate() for ContinueTask failed with a return code of 0x%x.", result);
 		return result;
 	}
 
-	DBG("CoreCLREmbedding.ContinueTask() loaded successfully");
+	DBG("CoreClrEmbedding::Initialize - CoreCLREmbedding.ContinueTask() loaded successfully");
 
 	result = runtimeHost->CreateDelegate(
 				appDomainId,
@@ -279,11 +279,11 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 
 	if (FAILED(result))
 	{
-		NanThrowErrorF("Call to ICLRRuntimeHost2::CreateDelegate() for FreeHandle failed with a return code of 0x%x.", result);
+		throwV8Exception("Call to ICLRRuntimeHost2::CreateDelegate() for FreeHandle failed with a return code of 0x%x.", result);
 		return result;
 	}
 
-	DBG("CoreCLREmbedding.FreeHandle() loaded successfully");
+	DBG("CoreClrEmbedding::Initialize - CoreCLREmbedding.FreeHandle() loaded successfully");
 
     SetDebugModeFunction setDebugMode;
     result = runtimeHost->CreateDelegate(
@@ -295,14 +295,16 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 
 	if (FAILED(result))
 	{
-		NanThrowErrorF("Call to ICLRRuntimeHost2::CreateDelegate() for SetDebugMode failed with a return code of 0x%x.", result);
+		throwV8Exception("Call to ICLRRuntimeHost2::CreateDelegate() for SetDebugMode failed with a return code of 0x%x.", result);
 		return result;
 	}
 
-	DBG("CoreCLREmbedding.SetDebugMode() loaded successfully");
+	DBG("CoreClrEmbedding::Initialize - CoreCLREmbedding.SetDebugMode() loaded successfully");
 
 	setDebugMode(debugMode);
-	DBG("Debug mode set successfully")
+	DBG("CoreClrEmbedding::Initialize - Debug mode set successfully");
+
+	DBG("CoreClrEmbedding::Initialize - Completed");
 
     return S_OK;
 }
@@ -416,7 +418,7 @@ bool CoreClrEmbedding::LoadCoreClrAtPath(const char* loadPath, void** libCoreClr
 {
     std::string coreClrDllPath(loadPath);
 
-    DBG("Trying to load %s from %s", LIBCORECLR_NAME, loadPath);
+    DBG("CoreClrEmbedding::LoadCoreClrAtPath - Trying to load %s from %s", LIBCORECLR_NAME, loadPath);
 
     coreClrDllPath.append("/");
     coreClrDllPath.append(LIBCORECLR_NAME);
@@ -425,12 +427,12 @@ bool CoreClrEmbedding::LoadCoreClrAtPath(const char* loadPath, void** libCoreClr
 
     if (*libCoreClrPointer == NULL )
     {
-        DBG("Errors loading %s from %s: %s", LIBCORECLR_NAME, loadPath, dlerror());
+        DBG("CoreClrEmbedding::LoadCoreClrAtPath - Errors loading %s from %s: %s", LIBCORECLR_NAME, loadPath, dlerror());
     }
 
     else
     {
-    	DBG("Load of %s succeeded", LIBCORECLR_NAME);
+    	DBG("CoreClrEmbedding::LoadCoreClrAtPath - Load of %s succeeded", LIBCORECLR_NAME);
     }
 
     return *libCoreClrPointer != NULL;
@@ -452,11 +454,13 @@ void CoreClrEmbedding::GetPathToBootstrapper(char* pathToBootstrapper, size_t bu
 
 void CoreClrEmbedding::CallClrFunc(CoreClrGcHandle functionHandle, void* payload, int payloadType, int* taskState, void** result, int* resultType)
 {
+	DBG("CoreClrEmbedding::CallClrFunc");
 	callFunc(functionHandle, payload, payloadType, taskState, result, resultType);
 }
 
 void CoreClrEmbedding::ContinueTask(CoreClrGcHandle taskHandle, void* context, TaskCompleteFunction callback)
 {
+	DBG("CoreClrEmbedding::ContinueTask");
 	continueTask(taskHandle, context, callback);
 }
 
