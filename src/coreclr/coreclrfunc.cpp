@@ -2,7 +2,7 @@
 
 CoreClrFunc::CoreClrFunc()
 {
-	func = NULL;
+	functionHandle = NULL;
 }
 
 NAN_METHOD(coreClrFuncProxy)
@@ -23,7 +23,7 @@ NAN_WEAK_CALLBACK(coreClrFuncProxyNearDeath)
     delete wrap;
 }
 
-Handle<v8::Function> CoreClrFunc::InitializeInstance(void* func)
+Handle<v8::Function> CoreClrFunc::InitializeInstance(CoreClrGcHandle functionHandle)
 {
     DBG("CoreClrFunc::InitializeInstance");
 
@@ -33,7 +33,7 @@ Handle<v8::Function> CoreClrFunc::InitializeInstance(void* func)
     NanEscapableScope();
 
     CoreClrFunc* app = new CoreClrFunc();
-    app->func = func;
+    app->functionHandle = functionHandle;
     CoreClrFuncWrap* wrap = new CoreClrFuncWrap();
     wrap->clrFunc = app;
 
@@ -57,7 +57,7 @@ Handle<v8::Function> CoreClrFunc::InitializeInstance(void* func)
     return NanEscapeScope(funcProxy);
 }
 
-Handle<v8::Value> CoreClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> callback)
+Handle<v8::Value> CoreClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> callbackOrSync)
 {
 	DBG("CoreClrFunc::Call instance");
 	NanEscapableScope();
@@ -69,7 +69,7 @@ Handle<v8::Value> CoreClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value>
 	int resultType;
 
 	MarshalV8ToCLR(payload, &marshalData, &payloadType);
-	CoreClrEmbedding::CallClrFunc(func, marshalData, payloadType, &taskState, &result, &resultType);
+	CoreClrEmbedding::CallClrFunc(functionHandle, marshalData, payloadType, &taskState, &result, &resultType);
 	FreeMarshalData(marshalData, payloadType);
 
 	DBG("Task state is %d", taskState);
@@ -77,19 +77,29 @@ Handle<v8::Value> CoreClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value>
 	if (taskState == TaskStatus::RanToCompletion)
 	{
 		// TODO: marshal data to V8 and invoke the callback
-		DBG("Task ran synchronously, returning")
+		DBG("Task ran synchronously, returning");
 	}
 
 	else if (taskState == TaskStatus::Faulted)
 	{
 		// TODO: marshal exception info and throw
-		DBG("Task threw an exception")
+		DBG("Task threw an exception");
+	}
+
+	else if (callbackOrSync->IsBoolean())
+	{
+		// TODO: throw error for async being returned when we expected sync
 	}
 
 	else
 	{
-		// TODO: continue the task and invoke the callback on its completion
-		DBG("Task running asynchronously, registering callback")
+		DBG("Task running asynchronously, registering callback");
+
+		CoreClrGcHandle taskHandle = result;
+		CoreClrFuncInvokeContext* invokeContext = new CoreClrFuncInvokeContext(callbackOrSync, taskHandle);
+
+		invokeContext->InitializeAsyncOperation();
+		CoreClrEmbedding::ContinueTask(taskHandle, invokeContext, CoreClrFuncInvokeContext::TaskComplete);
 	}
 
 	return NanEscapeScope(NanUndefined());
@@ -110,10 +120,10 @@ NAN_METHOD(CoreClrFunc::Initialize)
 		v8::String::Utf8Value methodName(options->Get(NanNew<v8::String>("methodName")));
 
 		DBG("Loading %s.%s() from %s", *typeName, *methodName, *assemblyFile);
-		void* func = CoreClrEmbedding::GetClrFuncReflectionWrapFunc(*assemblyFile, *typeName, *methodName);
+		CoreClrGcHandle functionHandle = CoreClrEmbedding::GetClrFuncReflectionWrapFunc(*assemblyFile, *typeName, *methodName);
 		DBG("Function loaded successfully")
 
-		result = CoreClrFunc::InitializeInstance(func);
+		result = CoreClrFunc::InitializeInstance(functionHandle);
 		DBG("Callback initialized successfully")
 	}
 
@@ -286,5 +296,34 @@ void CoreClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata, void** marshalData, i
 
 		*marshalData = objectData;
 		*payloadType = JsPropertyType::PropertyTypeObject;
+	}
+}
+
+Handle<v8::Value> CoreClrFunc::MarshalCLRToV8(void* marshalData, int payloadType)
+{
+	Isolate* isolate = Isolate::GetCurrent();
+
+	if (!isolate)
+	{
+		isolate = v8::Isolate::New();
+		isolate->Enter();
+	}
+
+	NanEscapableScope();
+
+	if (payloadType == JsPropertyType::PropertyTypeString)
+	{
+		return NanEscapeScope(NanNew<v8::String>((char*) marshalData));
+	}
+
+	else if (payloadType == JsPropertyType::PropertyTypeNull)
+	{
+		return NanEscapeScope(NanNull());
+	}
+
+	else
+	{
+		NanThrowErrorF("Unsupported object type received from CLR: %d", payloadType);
+		return NanEscapeScope(NanUndefined());
 	}
 }

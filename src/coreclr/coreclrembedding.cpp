@@ -28,6 +28,8 @@ typedef HRESULT (*PAL_InitializeCoreCLRFunction)(const char *szExePath, const ch
 DWORD appDomainId;
 GetFuncFunction getFunc;
 CallFuncFunction callFunc;
+ContinueTaskFunction continueTask;
+FreeHandleFunction freeHandle;
 
 HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 {
@@ -253,6 +255,36 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 
 	DBG("CoreCLREmbedding.CallFunc() loaded successfully");
 
+	result = runtimeHost->CreateDelegate(
+				appDomainId,
+				u"CoreCLREmbedding",
+				u"CoreCLREmbedding",
+				u"ContinueTask",
+				(INT_PTR*) &continueTask);
+
+	if (FAILED(result))
+	{
+		NanThrowErrorF("Call to ICLRRuntimeHost2::CreateDelegate() for ContinueTask failed with a return code of 0x%x.", result);
+		return result;
+	}
+
+	DBG("CoreCLREmbedding.ContinueTask() loaded successfully");
+
+	result = runtimeHost->CreateDelegate(
+				appDomainId,
+				u"CoreCLREmbedding",
+				u"CoreCLREmbedding",
+				u"FreeHandle",
+				(INT_PTR*) &freeHandle);
+
+	if (FAILED(result))
+	{
+		NanThrowErrorF("Call to ICLRRuntimeHost2::CreateDelegate() for FreeHandle failed with a return code of 0x%x.", result);
+		return result;
+	}
+
+	DBG("CoreCLREmbedding.FreeHandle() loaded successfully");
+
     SetDebugModeFunction setDebugMode;
     result = runtimeHost->CreateDelegate(
         		appDomainId,
@@ -275,9 +307,9 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
     return S_OK;
 }
 
-void* CoreClrEmbedding::GetClrFuncReflectionWrapFunc(const char* assemblyFile, const char* typeName, const char* methodName)
+CoreClrGcHandle CoreClrEmbedding::GetClrFuncReflectionWrapFunc(const char* assemblyFile, const char* typeName, const char* methodName)
 {
-	return (void*)getFunc(assemblyFile, typeName, methodName);
+	return getFunc(assemblyFile, typeName, methodName);
 }
 
 void CoreClrEmbedding::AddToTpaList(std::string directoryPath, std::string* tpaList)
@@ -418,7 +450,17 @@ void CoreClrEmbedding::GetPathToBootstrapper(char* pathToBootstrapper, size_t bu
     pathToBootstrapper[pathLength] = '\0';
 }
 
-void CoreClrEmbedding::CallClrFunc(void* func, void* payload, int payloadType, int* taskState, void** result, int* resultType)
+void CoreClrEmbedding::CallClrFunc(CoreClrGcHandle functionHandle, void* payload, int payloadType, int* taskState, void** result, int* resultType)
 {
-	callFunc(func, payload, payloadType, taskState, result, resultType);
+	callFunc(functionHandle, payload, payloadType, taskState, result, resultType);
+}
+
+void CoreClrEmbedding::ContinueTask(CoreClrGcHandle taskHandle, void* context, TaskCompleteFunction callback)
+{
+	continueTask(taskHandle, context, callback);
+}
+
+void CoreClrEmbedding::FreeHandle(CoreClrGcHandle handle)
+{
+	freeHandle(handle);
 }

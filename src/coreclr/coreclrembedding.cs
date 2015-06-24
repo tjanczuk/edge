@@ -43,10 +43,22 @@ public enum JsPropertyType
 [SecurityCritical]
 public class CoreCLREmbedding
 {
+	private class TaskState
+	{
+		public TaskCompleteDelegate Callback;
+		public IntPtr Context;
+
+		public TaskState(TaskCompleteDelegate callback, IntPtr context)
+		{
+			Callback = callback;
+			Context = context;
+		}
+	}
+
 	private static bool DebugMode = false;
 	private static long MinDateTimeTicks = 621355968000000000;
 
-	public delegate Task<Object> CallFunctionDelegate(object payload);
+	public delegate void TaskCompleteDelegate(IntPtr result, int resultType, IntPtr context);
 
     [SecurityCritical]
 	public static IntPtr GetFunc(string assemblyFile, string typeName, string methodName)
@@ -63,7 +75,7 @@ public class CoreCLREmbedding
     }
 
 	[SecurityCritical]
-	public static void ReleaseFunc(IntPtr gcHandle)
+	public static void FreeHandle(IntPtr gcHandle)
 	{
 		GCHandle actualHandle = GCHandle.FromIntPtr(gcHandle);
 		actualHandle.Free();
@@ -98,14 +110,44 @@ public class CoreCLREmbedding
 		}
 	}
 
+	private static void TaskCompleted(Task<object> task, object state)
+	{
+		int objectType;
+		IntPtr resultObject = ObjectToJs(task.Result, out objectType);
+		TaskState actualState = (TaskState) state;
 
+		actualState.Callback(resultObject, objectType, actualState.Context);
+	}
+
+	[SecurityCritical]
+	public static void ContinueTask(IntPtr task, IntPtr context, IntPtr callback)
+	{
+		GCHandle taskHandle = GCHandle.FromIntPtr(task);
+		Task<Object> actualTask = (Task<Object>) taskHandle.Target;
+		TaskCompleteDelegate taskCompleteDelegate = Marshal.GetDelegateForFunctionPointer<TaskCompleteDelegate>(callback);
+
+		// Will complete asynchronously. Schedule continuation to finish processing.
+		actualTask.ContinueWith(new Action<Task<object>, object>(TaskCompleted), new TaskState(taskCompleteDelegate, context));
+	}
 
 	private static IntPtr ObjectToJs(object clrObject, out int objectType)
-	{
-		objectType = 0;
-		
-		// TODO: implement
-		return IntPtr.Zero;
+	{	
+		if (clrObject == null)
+		{
+			objectType = (int)JsPropertyType.Null;
+			return IntPtr.Zero;
+		}
+
+		if (clrObject is string)
+		{
+			objectType = (int)JsPropertyType.String;
+			return Marshal.StringToHGlobalAnsi((string)clrObject);
+		}
+
+		else
+		{
+			throw new Exception("Unsupported CLR object type: " + clrObject.GetType().FullName + ".");
+		}
 	}
 
 	private static object JsToObject(IntPtr payload, int payloadType)

@@ -26,11 +26,14 @@ typedef const char* LPCSTR;
 typedef uint32_t DWORD;
 typedef void IUnknown;
 typedef HRESULT (FExecuteInAppDomainCallback)(void *cookie);
+typedef void* CoreClrGcHandle;
 
-typedef void (*CallFuncFunction)(void* function, void* payload, int payloadType, int* taskState, void** result, int* resultType);
-typedef void* (*GetFuncFunction)(const char* assemblyFile, const char* typeName, const char* methodName);
-typedef void* (*SetDebugModeFunction)(const BOOL debugMode);
+typedef void (*CallFuncFunction)(CoreClrGcHandle functionHandle, void* payload, int payloadType, int* taskState, void** result, int* resultType);
+typedef CoreClrGcHandle (*GetFuncFunction)(const char* assemblyFile, const char* typeName, const char* methodName);
+typedef void (*SetDebugModeFunction)(const BOOL debugMode);
+typedef void (*FreeHandleFunction)(CoreClrGcHandle handle);
 
+// TODO: use NaN for this
 #define StringToUTF16(input, output)\
 {\
 	char16_t c16str[3] = u"\0";\
@@ -185,6 +188,31 @@ typedef enum jsPropertyType
     PropertyTypeTask = 12
 } JsPropertyType;
 
+class CoreClrFuncInvokeContext
+{
+	private:
+		Persistent<Function>* callback;
+		CoreClrGcHandle task;
+		uv_edge_async_t* uv_edge_async;
+		void* resultData;
+		int resultType;
+
+	public:
+		bool Sync();
+		void Sync(bool value);
+
+		CoreClrFuncInvokeContext(Handle<v8::Value> callback, void* task);
+		~CoreClrFuncInvokeContext();
+
+		void InitializeAsyncOperation();
+
+		static void TaskComplete(void* result, int resultType, CoreClrFuncInvokeContext* context);
+		static void InvokeCallback(void* data);
+};
+
+typedef void (*TaskCompleteFunction)(void* result, int resultType, CoreClrFuncInvokeContext* context);
+typedef void (*ContinueTaskFunction)(void* task, void* context, TaskCompleteFunction callback);
+
 class CoreClrEmbedding
 {
     private:
@@ -195,30 +223,35 @@ class CoreClrEmbedding
         static void AddToTpaList(std::string directoryPath, std::string* tpaList);
 
     public:
-        static void* GetClrFuncReflectionWrapFunc(const char* assemblyFile, const char* typeName, const char* methodName);
-        static void CallClrFunc(void* func, void* payload, int payloadType, int* taskState, void** result, int* resultType);
+        static CoreClrGcHandle GetClrFuncReflectionWrapFunc(const char* assemblyFile, const char* typeName, const char* methodName);
+        static void CallClrFunc(CoreClrGcHandle functionHandle, void* payload, int payloadType, int* taskState, void** result, int* resultType);
         static HRESULT Initialize(BOOL debugMode);
+        static void ContinueTask(CoreClrGcHandle taskHandle, void* context, TaskCompleteFunction callback);
+        static void FreeHandle(CoreClrGcHandle handle);
 };
 
-class CoreClrFunc {
+class CoreClrFunc
+{
 	private:
-		void* func;
+		CoreClrGcHandle functionHandle;
 
 		CoreClrFunc();
 
-		static void MarshalV8ToCLR(Handle<v8::Value> jsdata, void** marshalData, int* payloadType);
 		static char* CopyV8StringBytes(Handle<v8::String> v8String);
-		static Handle<v8::Function> InitializeInstance(void* func);
+		static Handle<v8::Function> InitializeInstance(CoreClrGcHandle functionHandle);
 
 	public:
 		static NAN_METHOD(Initialize);
-		Handle<v8::Value> Call(Handle<v8::Value> payload, Handle<v8::Value> callback);
+		Handle<v8::Value> Call(Handle<v8::Value> payload, Handle<v8::Value> callbackOrSync);
 		static void FreeMarshalData(void* marshalData, int payloadType);
+		static void MarshalV8ToCLR(Handle<v8::Value> jsdata, void** marshalData, int* payloadType);
+		static Handle<v8::Value> MarshalCLRToV8(void* marshalData, int payloadType);
 		//static Handle<v8::Value> MarshalCLRToV8(MonoObject* netdata, MonoException** exc);
 		//static Handle<v8::Object> MarshalCLRExceptionToV8(MonoException* exception);
 };
 
-typedef struct jsObjectData {
+typedef struct jsObjectData
+{
 	int propertiesCount = 0;
 	int* propertyTypes;
 	char** propertyNames;
@@ -238,7 +271,8 @@ typedef struct jsObjectData {
 	}
 } JsObjectData;
 
-typedef struct jsArrayData {
+typedef struct jsArrayData
+{
 	int arrayLength = 0;
 	int* itemTypes;
 	void** itemValues;
@@ -255,7 +289,8 @@ typedef struct jsArrayData {
 	}
 } JsArrayData;
 
-typedef struct coreClrFuncWrap {
+typedef struct coreClrFuncWrap
+{
     CoreClrFunc* clrFunc;
 } CoreClrFuncWrap;
 
