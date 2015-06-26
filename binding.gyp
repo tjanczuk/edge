@@ -226,6 +226,8 @@
                               '/r:<!(dirname `which dnx`)/System.ObjectModel.dll',
                               '/r:<!(dirname `which dnx`)/System.Private.Uri.dll',
                               '/r:<!(dirname `which dnx`)/mscorlib.dll',
+                              '/r:<!(dirname `which dnx`)/System.Linq.Expressions.dll',
+                              '/r:<!(dirname `which dnx`)/System.Reflection.dll',
                               '-sdk:4.5',
                               '-target:library',
                               '-out:build/$(BUILDTYPE)/CoreCLREmbedding.dll',

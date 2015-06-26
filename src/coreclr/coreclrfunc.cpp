@@ -157,36 +157,36 @@ void CoreClrFunc::FreeMarshalData(void* marshalData, int payloadType)
 {
 	switch (payloadType)
 	{
-		case JsPropertyType::PropertyTypeString:
+		case V8Type::PropertyTypeString:
 			delete ((char*)marshalData);
 			break;
 
-		case JsPropertyType::PropertyTypeObject:
-			delete ((JsObjectData*)marshalData);
+		case V8Type::PropertyTypeObject:
+			delete ((V8ObjectData*)marshalData);
 			break;
 
-		case JsPropertyType::PropertyTypeBoolean:
+		case V8Type::PropertyTypeBoolean:
 			delete ((bool*)marshalData);
 			break;
 
-		case JsPropertyType::PropertyTypeNumber:
-		case JsPropertyType::PropertyTypeDate:
+		case V8Type::PropertyTypeNumber:
+		case V8Type::PropertyTypeDate:
 			delete ((double*)marshalData);
 			break;
 
-		case JsPropertyType::PropertyTypeInt32:
+		case V8Type::PropertyTypeInt32:
 			delete ((int32_t*)marshalData);
 			break;
 
-		case JsPropertyType::PropertyTypeUInt32:
+		case V8Type::PropertyTypeUInt32:
 			delete ((uint32_t*)marshalData);
 			break;
 
-		case JsPropertyType::PropertyTypeNull:
+		case V8Type::PropertyTypeNull:
 			break;
 
-		case JsPropertyType::PropertyTypeArray:
-			delete ((JsArrayData*)marshalData);
+		case V8Type::PropertyTypeArray:
+			delete ((V8ArrayData*)marshalData);
 			break;
 	}
 }
@@ -209,7 +209,7 @@ void CoreClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata, void** marshalData, i
 	if (jsdata->IsString())
 	{
 		*marshalData = CopyV8StringBytes(Handle<v8::String>::Cast(jsdata));
-		*payloadType = JsPropertyType::PropertyTypeString;
+		*payloadType = V8Type::PropertyTypeString;
 	}
 
 	else if (jsdata->IsFunction())
@@ -225,7 +225,7 @@ void CoreClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata, void** marshalData, i
 	else if (jsdata->IsArray())
 	{
 		Handle<v8::Array> jsarray = Handle<v8::Array>::Cast(jsdata);
-		JsArrayData* arrayData = new JsArrayData();
+		V8ArrayData* arrayData = new V8ArrayData();
 
 		arrayData->arrayLength = jsarray->Length();
 		arrayData->itemTypes = new int[arrayData->arrayLength];
@@ -237,7 +237,7 @@ void CoreClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata, void** marshalData, i
 		}
 
 		*marshalData = arrayData;
-		*payloadType = JsPropertyType::PropertyTypeArray;
+		*payloadType = V8Type::PropertyTypeArray;
 	}
 
 	else if (jsdata->IsDate())
@@ -247,7 +247,7 @@ void CoreClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata, void** marshalData, i
 
 		*ticks = jsdate->NumberValue();
 		*marshalData = ticks;
-		*payloadType = JsPropertyType::PropertyTypeDate;
+		*payloadType = V8Type::PropertyTypeDate;
 	}
 
 	else if (jsdata->IsBoolean())
@@ -256,7 +256,7 @@ void CoreClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata, void** marshalData, i
 		*value = jsdata->BooleanValue();
 
 		*marshalData = value;
-		*payloadType = JsPropertyType::PropertyTypeBoolean;
+		*payloadType = V8Type::PropertyTypeBoolean;
 	}
 
 	else if (jsdata->IsInt32())
@@ -265,7 +265,7 @@ void CoreClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata, void** marshalData, i
 		*value = jsdata->Int32Value();
 
 		*marshalData = value;
-		*payloadType = JsPropertyType::PropertyTypeInt32;
+		*payloadType = V8Type::PropertyTypeInt32;
 	}
 
 	else if (jsdata->IsUint32())
@@ -274,7 +274,7 @@ void CoreClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata, void** marshalData, i
 		*value = jsdata->Uint32Value();
 
 		*marshalData = value;
-		*payloadType = JsPropertyType::PropertyTypeUInt32;
+		*payloadType = V8Type::PropertyTypeUInt32;
 	}
 
 	else if (jsdata->IsNumber())
@@ -283,17 +283,17 @@ void CoreClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata, void** marshalData, i
 		*value = jsdata->NumberValue();
 
 		*marshalData = value;
-		*payloadType = JsPropertyType::PropertyTypeNumber;
+		*payloadType = V8Type::PropertyTypeNumber;
 	}
 
 	else if (jsdata->IsUndefined() || jsdata->IsNull())
 	{
-		*payloadType = JsPropertyType::PropertyTypeNull;
+		*payloadType = V8Type::PropertyTypeNull;
 	}
 
 	else if (jsdata->IsObject())
 	{
-		JsObjectData* objectData = new JsObjectData();
+		V8ObjectData* objectData = new V8ObjectData();
 
 		Handle<v8::Object> jsobject = Handle<v8::Object>::Cast(jsdata);
 		Handle<v8::Array> propertyNames = jsobject->GetPropertyNames();
@@ -312,7 +312,7 @@ void CoreClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata, void** marshalData, i
 		}
 
 		*marshalData = objectData;
-		*payloadType = JsPropertyType::PropertyTypeObject;
+		*payloadType = V8Type::PropertyTypeObject;
 	}
 }
 
@@ -320,35 +320,35 @@ Handle<v8::Value> CoreClrFunc::MarshalCLRToV8(void* marshalData, int payloadType
 {
 	NanEscapableScope();
 
-	if (payloadType == JsPropertyType::PropertyTypeString)
+	if (payloadType == V8Type::PropertyTypeString)
 	{
 		return NanEscapeScope(NanNew<v8::String>((char*) marshalData));
 	}
 
-	else if (payloadType == JsPropertyType::PropertyTypeInt32)
+	else if (payloadType == V8Type::PropertyTypeInt32)
 	{
 		return NanEscapeScope(NanNew<v8::Integer>(*(int*) marshalData));
 	}
 
-	else if (payloadType == JsPropertyType::PropertyTypeNumber)
+	else if (payloadType == V8Type::PropertyTypeNumber)
 	{
 		return NanEscapeScope(NanNew<v8::Number>(*(double*) marshalData));
 	}
 
-	else if (payloadType == JsPropertyType::PropertyTypeDate)
+	else if (payloadType == V8Type::PropertyTypeDate)
 	{
 		return NanEscapeScope(NanNew<v8::Date>(*(double*) marshalData));
 	}
 
-	else if (payloadType == JsPropertyType::PropertyTypeBoolean)
+	else if (payloadType == V8Type::PropertyTypeBoolean)
 	{
 		bool value = (*(int*) marshalData) != 0;
 		return NanEscapeScope(NanNew<v8::Boolean>(value));
 	}
 
-	else if (payloadType == JsPropertyType::PropertyTypeArray)
+	else if (payloadType == V8Type::PropertyTypeArray)
 	{
-		JsArrayData* arrayData = (JsArrayData*) marshalData;
+		V8ArrayData* arrayData = (V8ArrayData*) marshalData;
 		Handle<v8::Array> result = NanNew<v8::Array>();
 
 		for (int i = 0; i < arrayData->arrayLength; i++)
@@ -359,9 +359,9 @@ Handle<v8::Value> CoreClrFunc::MarshalCLRToV8(void* marshalData, int payloadType
 		return NanEscapeScope(result);
 	}
 
-	else if (payloadType == JsPropertyType::PropertyTypeObject)
+	else if (payloadType == V8Type::PropertyTypeObject)
 	{
-		JsObjectData* objectData = (JsObjectData*) marshalData;
+		V8ObjectData* objectData = (V8ObjectData*) marshalData;
 		Handle<v8::Object> result = NanNew<v8::Object>();
 
 		for (int i = 0; i < objectData->propertiesCount; i++)
@@ -372,7 +372,7 @@ Handle<v8::Value> CoreClrFunc::MarshalCLRToV8(void* marshalData, int payloadType
 		return NanEscapeScope(result);
 	}
 
-	else if (payloadType == JsPropertyType::PropertyTypeNull)
+	else if (payloadType == V8Type::PropertyTypeNull)
 	{
 		return NanEscapeScope(NanNull());
 	}

@@ -163,7 +163,7 @@ class ICLRRuntimeHost2
         virtual HRESULT Authenticate(
             /* [in] */ ULONGLONG authKey) = 0;
 
-        virtual HRESULT RegisterMacEHPort( void) = 0;
+        virtual HRESULT RegisterMacEHPort() = 0;
 
         virtual HRESULT SetStartupFlags(
             /* [in] */ STARTUP_FLAGS dwFlags) = 0;
@@ -172,7 +172,7 @@ class ICLRRuntimeHost2
 const HRESULT S_OK = 0;
 const HRESULT E_FAIL = -1;
 
-typedef enum jsPropertyType
+typedef enum v8Type
 {
     PropertyTypeFunction = 1,
     PropertyTypeBuffer = 2,
@@ -186,7 +186,7 @@ typedef enum jsPropertyType
     PropertyTypeNumber = 10,
     PropertyTypeNull = 11,
     PropertyTypeTask = 12
-} JsPropertyType;
+} V8Type;
 
 class CoreClrFuncInvokeContext
 {
@@ -250,14 +250,14 @@ class CoreClrFunc
 		//static Handle<v8::Object> MarshalCLRExceptionToV8(MonoException* exception);
 };
 
-typedef struct jsObjectData
+typedef struct v8ObjectData
 {
 	int propertiesCount = 0;
 	int* propertyTypes;
 	char** propertyNames;
 	void** propertyData;
 
-	~jsObjectData()
+	~v8ObjectData()
 	{
 		for (int i = 0; i < propertiesCount; i++)
 		{
@@ -269,15 +269,15 @@ typedef struct jsObjectData
 		delete propertyData;
 		delete propertyTypes;
 	}
-} JsObjectData;
+} V8ObjectData;
 
-typedef struct jsArrayData
+typedef struct v8ArrayData
 {
 	int arrayLength = 0;
 	int* itemTypes;
 	void** itemValues;
 
-	~jsArrayData()
+	~v8ArrayData()
 	{
 		for (int i = 0; i < arrayLength; i++)
 		{
@@ -287,7 +287,7 @@ typedef struct jsArrayData
 		delete itemValues;
 		delete itemTypes;
 	}
-} JsArrayData;
+} V8ArrayData;
 
 typedef struct coreClrFuncWrap
 {

@@ -2,6 +2,7 @@ using System;
 using System.Security;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Linq.Expressions;
 using System.Dynamic;
 using System.Collections.Generic;
 using System.Collections;
@@ -58,6 +59,7 @@ public class CoreCLREmbedding
 
 	private static bool DebugMode = false;
 	private static long MinDateTimeTicks = 621355968000000000;
+	private static Dictionary<Type, List<Tuple<string, Func<object, object>>>> TypePropertyAccessors = new Dictionary<Type, List<Tuple<string, Func<object, object>>>>();
 
 	public delegate void TaskCompleteDelegate(IntPtr result, int resultType, IntPtr context);
 
@@ -382,7 +384,7 @@ public class CoreCLREmbedding
 			return destinationPointer;
 		}
 
-		else if (clrObject.GetType().GetGenericTypeDefinition() == typeof(Func<>))
+		else if (clrObject.GetType().IsGenericType && clrObject.GetType().GetGenericTypeDefinition() == typeof(Func<>))
 		{
 			v8Type = V8Type.Function;
 			// TODO: implement
@@ -397,7 +399,38 @@ public class CoreCLREmbedding
 		else
 		{
 			v8Type = V8Type.Object;
-			// TODO: implement
+
+			List<Tuple<string, Func<object, object>>> propertyAccessors = GetPropertyAccessors(clrObject.GetType());
+			V8ObjectData objectData = new V8ObjectData();
+			IntPtr[] propertyNames = new IntPtr[propertyAccessors.Count];
+			int[] propertyTypes = new int[propertyAccessors.Count];
+			IntPtr[] propertyValues = new IntPtr[propertyAccessors.Count];
+			int pointerSize = Marshal.SizeOf(typeof(IntPtr));
+			int counter = 0;
+			V8Type propertyType;
+
+			objectData.propertiesCount = propertyAccessors.Count;
+			objectData.propertyNames = Marshal.AllocHGlobal(pointerSize * propertyAccessors.Count);
+			objectData.propertyTypes = Marshal.AllocHGlobal(sizeof(int) * propertyAccessors.Count);
+			objectData.propertyValues = Marshal.AllocHGlobal(pointerSize * propertyAccessors.Count);
+
+			foreach (Tuple<string, Func<object, object>> propertyAccessor in propertyAccessors)
+			{
+				propertyNames[counter] = Marshal.StringToHGlobalAnsi(propertyAccessor.Item1);
+				propertyValues[counter] = MarshalCLRToV8(propertyAccessor.Item2(clrObject), out propertyType);
+				propertyTypes[counter] = (int)propertyType;
+
+				counter++;
+			}
+
+			Marshal.Copy(propertyNames, 0, objectData.propertyNames, propertyNames.Length);
+			Marshal.Copy(propertyTypes, 0, objectData.propertyTypes, propertyTypes.Length);
+			Marshal.Copy(propertyValues, 0, objectData.propertyValues, propertyValues.Length);
+
+			IntPtr destinationPointer = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(V8ObjectData)));
+			Marshal.StructureToPtr<V8ObjectData>(objectData, destinationPointer, false);
+
+			return destinationPointer;
 		}
 
 		throw new Exception("Unsupported CLR object type: " + clrObject.GetType().FullName);
@@ -556,5 +589,39 @@ public class CoreCLREmbedding
 	public static void SetDebugMode(bool debugMode)
 	{
 		DebugMode = debugMode;
+	}
+
+	private static List<Tuple<string, Func<object, object>>> GetPropertyAccessors(Type type)
+	{
+		if (TypePropertyAccessors.ContainsKey(type))
+		{
+			return TypePropertyAccessors[type];
+		}
+
+		List<Tuple<string, Func<object, object>>> propertyAccessors = new List<Tuple<string, Func<object, object>>>();
+
+		foreach (PropertyInfo propertyInfo in type.GetProperties(BindingFlags.Instance | BindingFlags.Public))
+		{
+			ParameterExpression instance = Expression.Parameter(typeof(object));
+			UnaryExpression instanceConvert = Expression.TypeAs(instance, type);
+			MemberExpression property = Expression.Property(instanceConvert, propertyInfo);
+			UnaryExpression propertyConvert = Expression.TypeAs(property, typeof(object));
+
+			propertyAccessors.Add(new Tuple<string, Func<object, object>>(propertyInfo.Name, (Func<object, object>) Expression.Lambda(propertyConvert, instance).Compile()));
+		}
+
+		foreach (FieldInfo fieldInfo in type.GetFields(BindingFlags.Instance | BindingFlags.Public))
+		{
+			ParameterExpression instance = Expression.Parameter(typeof(object));
+			UnaryExpression instanceConvert = Expression.TypeAs(instance, type);
+			MemberExpression field = Expression.Field(instanceConvert, fieldInfo);
+			UnaryExpression fieldConvert = Expression.TypeAs(field, typeof(object));
+
+			propertyAccessors.Add(new Tuple<string, Func<object, object>>(fieldInfo.Name, (Func<object, object>) Expression.Lambda(fieldConvert, instance).Compile()));
+		}
+
+		TypePropertyAccessors[type] = propertyAccessors;
+
+		return propertyAccessors;
 	}
 }
