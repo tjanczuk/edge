@@ -168,11 +168,40 @@ public class CoreCLREmbedding
 				break;
 
 			case V8Type.Object:
-				// TODO: implement
+				V8ObjectData objectData = Marshal.PtrToStructure<V8ObjectData>(marshalData);
+
+				for (int i = 0; i < objectData.propertiesCount; i++)
+				{
+					int propertyType = Marshal.ReadInt32(objectData.propertyTypes, i * sizeof(int));
+					IntPtr propertyValue = Marshal.ReadIntPtr(objectData.propertyValues, i * Marshal.SizeOf(typeof(IntPtr)));
+					IntPtr propertyName = Marshal.ReadIntPtr(objectData.propertyNames, i * Marshal.SizeOf(typeof(IntPtr)));
+
+					FreeMarshalData(propertyValue, propertyType);
+					Marshal.FreeHGlobal(propertyName);
+				}
+
+				Marshal.FreeHGlobal(objectData.propertyTypes);
+				Marshal.FreeHGlobal(objectData.propertyValues);
+				Marshal.FreeHGlobal(objectData.propertyNames);
+				Marshal.FreeHGlobal(marshalData);
+
 				break;
 
 			case V8Type.Array:
-				// TODO: implement
+				V8ArrayData arrayData = Marshal.PtrToStructure<V8ArrayData>(marshalData);
+
+				for (int i = 0; i < arrayData.arrayLength; i++)
+				{
+					int itemType = Marshal.ReadInt32(arrayData.itemTypes, i * sizeof(int));
+					IntPtr itemValue = Marshal.ReadIntPtr(arrayData.itemValues, i * Marshal.SizeOf(typeof(IntPtr)));
+
+					FreeMarshalData(itemValue, itemType);
+				}
+
+				Marshal.FreeHGlobal(arrayData.itemTypes);
+				Marshal.FreeHGlobal(arrayData.itemValues);
+				Marshal.FreeHGlobal(marshalData);
+
 				break;
 
 			default:
@@ -313,28 +342,28 @@ public class CoreCLREmbedding
 			// TODO: implement
 		}
 
-		else if (clrObject is IDictionary<string, object>)
+		else if (clrObject is IDictionary)
 		{
 			v8Type = V8Type.Object;
 
 			V8ObjectData objectData = new V8ObjectData();
-			IDictionary<string, object> expandoDictionary = (IDictionary<string, object>)clrObject;
-			IntPtr[] propertyNames = new IntPtr[expandoDictionary.Keys.Count];
-			int[] propertyTypes = new int[expandoDictionary.Keys.Count];
-			IntPtr[] propertyValues = new IntPtr[expandoDictionary.Keys.Count];
+			IDictionary objectDictionary = (IDictionary)clrObject;
+			IntPtr[] propertyNames = new IntPtr[objectDictionary.Keys.Count];
+			int[] propertyTypes = new int[objectDictionary.Keys.Count];
+			IntPtr[] propertyValues = new IntPtr[objectDictionary.Keys.Count];
 			int pointerSize = Marshal.SizeOf(typeof(IntPtr));
 			int counter = 0;
 			V8Type propertyType;
 
-			objectData.propertiesCount = expandoDictionary.Keys.Count;
-			objectData.propertyNames = Marshal.AllocHGlobal(pointerSize * expandoDictionary.Keys.Count);
-			objectData.propertyTypes = Marshal.AllocHGlobal(sizeof(int) * expandoDictionary.Keys.Count);
-			objectData.propertyValues = Marshal.AllocHGlobal(pointerSize * expandoDictionary.Keys.Count);
+			objectData.propertiesCount = objectDictionary.Keys.Count;
+			objectData.propertyNames = Marshal.AllocHGlobal(pointerSize * objectDictionary.Keys.Count);
+			objectData.propertyTypes = Marshal.AllocHGlobal(sizeof(int) * objectDictionary.Keys.Count);
+			objectData.propertyValues = Marshal.AllocHGlobal(pointerSize * objectDictionary.Keys.Count);
 
-			foreach (string propertyName in expandoDictionary.Keys)
+			foreach (object key in objectDictionary.Keys)
 			{
-				propertyNames[counter] = Marshal.StringToHGlobalAnsi(propertyName);
-				propertyValues[counter] = MarshalCLRToV8(expandoDictionary[propertyName], out propertyType);
+				propertyNames[counter] = Marshal.StringToHGlobalAnsi(key.ToString());
+				propertyValues[counter] = MarshalCLRToV8(objectDictionary[key], out propertyType);
 				propertyTypes[counter] = (int)propertyType;
 
 				counter++;
@@ -348,12 +377,6 @@ public class CoreCLREmbedding
 			Marshal.StructureToPtr<V8ObjectData>(objectData, destinationPointer, false);
 
 			return destinationPointer;
-		}
-
-		else if (clrObject is IDictionary)
-		{
-			v8Type = V8Type.Object;
-			// TODO: implement
 		}
 
 		else if (clrObject is IEnumerable)

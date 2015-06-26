@@ -27,7 +27,8 @@ CoreClrFuncInvokeContext::~CoreClrFuncInvokeContext()
 
     if (this->resultData)
     {
-    	// TODO: free marshal data
+    	CoreClrEmbedding::FreeMarshalData(this->resultData, this->resultType);
+    	this->resultData = NULL;
     }
 }
 

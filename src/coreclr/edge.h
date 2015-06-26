@@ -32,6 +32,7 @@ typedef void (*CallFuncFunction)(CoreClrGcHandle functionHandle, void* payload, 
 typedef CoreClrGcHandle (*GetFuncFunction)(const char* assemblyFile, const char* typeName, const char* methodName);
 typedef void (*SetDebugModeFunction)(const BOOL debugMode);
 typedef void (*FreeHandleFunction)(CoreClrGcHandle handle);
+typedef void (*FreeMarshalDataFunction)(void* marshalData, int marshalDataType);
 
 // TODO: use NaN for this
 #define StringToUTF16(input, output)\
@@ -228,6 +229,7 @@ class CoreClrEmbedding
         static HRESULT Initialize(BOOL debugMode);
         static void ContinueTask(CoreClrGcHandle taskHandle, void* context, TaskCompleteFunction callback);
         static void FreeHandle(CoreClrGcHandle handle);
+        static void FreeMarshalData(void* marshalData, int marshalDataType);
 };
 
 class CoreClrFunc

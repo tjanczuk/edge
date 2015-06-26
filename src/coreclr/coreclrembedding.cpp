@@ -30,6 +30,7 @@ GetFuncFunction getFunc;
 CallFuncFunction callFunc;
 ContinueTaskFunction continueTask;
 FreeHandleFunction freeHandle;
+FreeMarshalDataFunction freeMarshalData;
 
 HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 {
@@ -285,6 +286,21 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 
 	DBG("CoreClrEmbedding::Initialize - CoreCLREmbedding.FreeHandle() loaded successfully");
 
+	result = runtimeHost->CreateDelegate(
+				appDomainId,
+				u"CoreCLREmbedding",
+				u"CoreCLREmbedding",
+				u"FreeMarshalData",
+				(INT_PTR*) &freeMarshalData);
+
+	if (FAILED(result))
+	{
+		throwV8Exception("Call to ICLRRuntimeHost2::CreateDelegate() for FreeMarshalData failed with a return code of 0x%x.", result);
+		return result;
+	}
+
+	DBG("CoreClrEmbedding::Initialize - CoreCLREmbedding.FreeMarshalData() loaded successfully");
+
     SetDebugModeFunction setDebugMode;
     result = runtimeHost->CreateDelegate(
         		appDomainId,
@@ -467,4 +483,9 @@ void CoreClrEmbedding::ContinueTask(CoreClrGcHandle taskHandle, void* context, T
 void CoreClrEmbedding::FreeHandle(CoreClrGcHandle handle)
 {
 	freeHandle(handle);
+}
+
+void CoreClrEmbedding::FreeMarshalData(void* marshalData, int marshalDataType)
+{
+	freeMarshalData(marshalData, marshalDataType);
 }
