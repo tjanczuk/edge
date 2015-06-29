@@ -29,7 +29,7 @@ typedef HRESULT (FExecuteInAppDomainCallback)(void *cookie);
 typedef void* CoreClrGcHandle;
 
 typedef void (*CallFuncFunction)(CoreClrGcHandle functionHandle, void* payload, int payloadType, int* taskState, void** result, int* resultType);
-typedef CoreClrGcHandle (*GetFuncFunction)(const char* assemblyFile, const char* typeName, const char* methodName);
+typedef CoreClrGcHandle (*GetFuncFunction)(const char* assemblyFile, const char* typeName, const char* methodName, void** exception);
 typedef void (*SetDebugModeFunction)(const BOOL debugMode);
 typedef void (*FreeHandleFunction)(CoreClrGcHandle handle);
 typedef void (*FreeMarshalDataFunction)(void* marshalData, int marshalDataType);
@@ -186,7 +186,8 @@ typedef enum v8Type
     PropertyTypeUInt32 = 9,
     PropertyTypeNumber = 10,
     PropertyTypeNull = 11,
-    PropertyTypeTask = 12
+    PropertyTypeTask = 12,
+    PropertyTypeException = 13
 } V8Type;
 
 class CoreClrFuncInvokeContext
@@ -197,6 +198,7 @@ class CoreClrFuncInvokeContext
 		uv_edge_async_t* uv_edge_async;
 		void* resultData;
 		int resultType;
+		int taskState;
 
 	public:
 		bool Sync();
@@ -207,12 +209,13 @@ class CoreClrFuncInvokeContext
 
 		void InitializeAsyncOperation();
 
-		static void TaskComplete(void* result, int resultType, CoreClrFuncInvokeContext* context);
+		static void TaskComplete(void* result, int resultType, int taskState, CoreClrFuncInvokeContext* context);
+		static void TaskCompleteSynchronous(void* result, int resultType, int taskState, Handle<v8::Value> callback);
 		static void InvokeCallback(void* data);
 };
 
-typedef void (*TaskCompleteFunction)(void* result, int resultType, CoreClrFuncInvokeContext* context);
-typedef void (*ContinueTaskFunction)(void* task, void* context, TaskCompleteFunction callback);
+typedef void (*TaskCompleteFunction)(void* result, int resultType, int taskState, CoreClrFuncInvokeContext* context);
+typedef void (*ContinueTaskFunction)(void* task, void* context, TaskCompleteFunction callback, void** exception);
 
 class CoreClrEmbedding
 {
@@ -224,10 +227,10 @@ class CoreClrEmbedding
         static void AddToTpaList(std::string directoryPath, std::string* tpaList);
 
     public:
-        static CoreClrGcHandle GetClrFuncReflectionWrapFunc(const char* assemblyFile, const char* typeName, const char* methodName);
+        static CoreClrGcHandle GetClrFuncReflectionWrapFunc(const char* assemblyFile, const char* typeName, const char* methodName, v8::Handle<v8::Value>* exception);
         static void CallClrFunc(CoreClrGcHandle functionHandle, void* payload, int payloadType, int* taskState, void** result, int* resultType);
         static HRESULT Initialize(BOOL debugMode);
-        static void ContinueTask(CoreClrGcHandle taskHandle, void* context, TaskCompleteFunction callback);
+        static void ContinueTask(CoreClrGcHandle taskHandle, void* context, TaskCompleteFunction callback, void** exception);
         static void FreeHandle(CoreClrGcHandle handle);
         static void FreeMarshalData(void* marshalData, int marshalDataType);
 };

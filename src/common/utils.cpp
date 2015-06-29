@@ -13,9 +13,9 @@ Handle<Value> throwV8Exception(const char* format, ...)
 	va_start(args, format);
 
 	size_t size = vsnprintf(NULL, 0, format, args);
-	char* message = new char[size];
+	char* message = new char[size + 1];
 
-	vsnprintf(message, size, format, args);
+	vsnprintf(message, size + 1, format, args);
 
 	NanEscapableScope();
 

@@ -38,14 +38,28 @@ void CoreClrFuncInvokeContext::InitializeAsyncOperation()
     this->uv_edge_async = V8SynchronizationContext::RegisterAction(CoreClrFuncInvokeContext::InvokeCallback, this);
 }
 
-void CoreClrFuncInvokeContext::TaskComplete(void* result, int resultType, CoreClrFuncInvokeContext* context)
+void CoreClrFuncInvokeContext::TaskComplete(void* result, int resultType, int taskState, CoreClrFuncInvokeContext* context)
 {
 	DBG("CoreClrFuncInvokeContext::TaskComplete");
 
 	context->resultData = result;
 	context->resultType = resultType;
+	context->taskState = taskState;
 
 	V8SynchronizationContext::ExecuteAction(context->uv_edge_async);
+}
+
+void CoreClrFuncInvokeContext::TaskCompleteSynchronous(void* result, int resultType, int taskState, Handle<v8::Value> callback)
+{
+	DBG("CoreClrFuncInvokeContext::TaskCompleteSynchronous");
+
+	CoreClrFuncInvokeContext* context = new CoreClrFuncInvokeContext(callback, NULL);
+
+	context->resultData = result;
+	context->resultType = resultType;
+	context->taskState = taskState;
+
+	InvokeCallback(context);
 }
 
 void CoreClrFuncInvokeContext::InvokeCallback(void* data)
@@ -53,9 +67,21 @@ void CoreClrFuncInvokeContext::InvokeCallback(void* data)
 	DBG("CoreClrFuncInvokeContext::InvokeCallback");
 
 	CoreClrFuncInvokeContext* context = (CoreClrFuncInvokeContext*)data;
+	v8::Handle<v8::Value> callbackData = NanNull();
+	v8::Handle<v8::Value> errors = NanNull();
+
+	if (context->taskState == TaskStatus::Faulted)
+	{
+		errors = CoreClrFunc::MarshalCLRToV8(context->resultData, context->resultType);
+	}
+
+	else
+	{
+		callbackData = CoreClrFunc::MarshalCLRToV8(context->resultData, context->resultType);
+	}
 
 	// TODO: pass errors if provided
-	Handle<Value> argv[] = { NanUndefined(), CoreClrFunc::MarshalCLRToV8(context->resultData, context->resultType) };
+	Handle<Value> argv[] = { errors, callbackData };
 	int argc = 2;
 
 	TryCatch tryCatch;

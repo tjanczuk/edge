@@ -69,20 +69,35 @@ public class CoreCLREmbedding
 	private static long MinDateTimeTicks = 621355968000000000;
 	private static Dictionary<Type, List<Tuple<string, Func<object, object>>>> TypePropertyAccessors = new Dictionary<Type, List<Tuple<string, Func<object, object>>>>();
 
-	public delegate void TaskCompleteDelegate(IntPtr result, int resultType, IntPtr context);
+	public delegate void TaskCompleteDelegate(IntPtr result, int resultType, int taskState, IntPtr context);
 
     [SecurityCritical]
-	public static IntPtr GetFunc(string assemblyFile, string typeName, string methodName)
+	public static IntPtr GetFunc(string assemblyFile, string typeName, string methodName, IntPtr exception)
     {
-		Assembly assembly = Assembly.LoadFile(assemblyFile);
-		DebugMessage("CoreCLREmbedding::GetFunc (CLR) - Assembly {0} loaded successfully", assemblyFile);
+		try
+		{
+			Marshal.WriteIntPtr(exception, IntPtr.Zero);
 
-		ClrFuncReflectionWrap wrapper = ClrFuncReflectionWrap.Create(assembly, typeName, methodName);
-		DebugMessage("CoreCLREmbedding::GetFunc (CLR) - Method {0}.{1}() loaded successfully", typeName, methodName);
+			Assembly assembly = Assembly.LoadFile(assemblyFile);
+			DebugMessage("CoreCLREmbedding::GetFunc (CLR) - Assembly {0} loaded successfully", assemblyFile);
 
-		GCHandle wrapperHandle = GCHandle.Alloc(wrapper);
+			ClrFuncReflectionWrap wrapper = ClrFuncReflectionWrap.Create(assembly, typeName, methodName);
+			DebugMessage("CoreCLREmbedding::GetFunc (CLR) - Method {0}.{1}() loaded successfully", typeName, methodName);
 
-		return GCHandle.ToIntPtr(wrapperHandle);
+			GCHandle wrapperHandle = GCHandle.Alloc(wrapper);
+
+			return GCHandle.ToIntPtr(wrapperHandle);
+		}
+
+		catch (Exception e)
+		{
+			DebugMessage("CoreCLREmbedding::GetFunc (CLR) - Exception was thrown: {0}", e.Message);
+
+			V8Type v8type;
+			Marshal.WriteIntPtr(exception, MarshalCLRToV8(e, out v8type));
+
+			return IntPtr.Zero;
+		}
     }
 
 	[SecurityCritical]
@@ -95,71 +110,117 @@ public class CoreCLREmbedding
 	[SecurityCritical]
 	public static void CallFunc(IntPtr function, IntPtr payload, int payloadType, IntPtr taskState, IntPtr result, IntPtr resultType)
 	{
-		DebugMessage("CoreCLREmbedding::CallFunc (CLR) - Starting");
-
-		// TODO: add exception handling
-		GCHandle wrapperHandle = GCHandle.FromIntPtr(function);
-		ClrFuncReflectionWrap wrapper = (ClrFuncReflectionWrap)wrapperHandle.Target;
-
-		DebugMessage("CoreCLREmbedding::CallFunc (CLR) - Marshalling data of type {0} and calling the .NET method", ((V8Type)payloadType).ToString("G"));
-		Task<Object> functionTask = wrapper.Call(MarshalV8ToCLR(payload, (V8Type)payloadType));
-
-		if (functionTask.IsCompleted)
+		try
 		{
-			DebugMessage("CoreCLREmbedding::CallFunc (CLR) - .NET method ran synchronously, marshalling data for V8");
+			DebugMessage("CoreCLREmbedding::CallFunc (CLR) - Starting");
 
-			V8Type taskResultType;
-			IntPtr marshalData = MarshalCLRToV8(functionTask.Result, out taskResultType);
+			GCHandle wrapperHandle = GCHandle.FromIntPtr(function);
+			ClrFuncReflectionWrap wrapper = (ClrFuncReflectionWrap)wrapperHandle.Target;
 
-			DebugMessage("CoreCLREmbedding::CallFunc (CLR) - Method return data is of type {0}", taskResultType.ToString("G"));
+			DebugMessage("CoreCLREmbedding::CallFunc (CLR) - Marshalling data of type {0} and calling the .NET method", ((V8Type)payloadType).ToString("G"));
+			Task<Object> functionTask = wrapper.Call(MarshalV8ToCLR(payload, (V8Type)payloadType));
 
-			Marshal.WriteInt32(taskState, (int)TaskStatus.RanToCompletion);
-			Marshal.WriteIntPtr(result, marshalData);
-			Marshal.WriteInt32(resultType, (int)taskResultType);
+			if (functionTask.IsFaulted)
+			{
+				DebugMessage("CoreCLREmbedding::CallFunc (CLR) - .NET method ran synchronously and faulted, marshalling exception data for V8");
+
+				V8Type taskExceptionType;
+
+				Marshal.WriteInt32(taskState, (int)TaskStatus.Faulted);
+				Marshal.WriteIntPtr(result, MarshalCLRToV8(functionTask.Exception, out taskExceptionType));
+				Marshal.WriteInt32(resultType, (int)V8Type.Exception);
+			}
+
+			else if (functionTask.IsCompleted)
+			{
+				DebugMessage("CoreCLREmbedding::CallFunc (CLR) - .NET method ran synchronously, marshalling data for V8");
+
+				V8Type taskResultType;
+				IntPtr marshalData = MarshalCLRToV8(functionTask.Result, out taskResultType);
+
+				DebugMessage("CoreCLREmbedding::CallFunc (CLR) - Method return data is of type {0}", taskResultType.ToString("G"));
+
+				Marshal.WriteInt32(taskState, (int)TaskStatus.RanToCompletion);
+				Marshal.WriteIntPtr(result, marshalData);
+				Marshal.WriteInt32(resultType, (int)taskResultType);
+			}
+
+			else
+			{
+				DebugMessage("CoreCLREmbedding::CallFunc (CLR) - .NET method ran asynchronously, returning task handle and status");
+
+				GCHandle taskHandle = GCHandle.Alloc(functionTask);
+
+				Marshal.WriteInt32(taskState, (int)functionTask.Status);
+				Marshal.WriteIntPtr(result, GCHandle.ToIntPtr(taskHandle));
+				Marshal.WriteInt32(resultType, (int)V8Type.Task);
+			}
+
+			DebugMessage("CoreCLREmbedding::CallFunc (CLR) - Finished");
 		}
 
-		else
+		catch (Exception e)
 		{
-			DebugMessage("CoreCLREmbedding::CallFunc (CLR) - .NET method ran asynchronously, returning task handle and status");
+			DebugMessage("CoreCLREmbedding::CallFunc (CLR) - Exception was thrown: {0}", e.Message);
 
-			GCHandle taskHandle = GCHandle.Alloc(functionTask);
+			V8Type v8Type;
 
-			Marshal.WriteInt32(taskState, (int)functionTask.Status);
-			Marshal.WriteIntPtr(result, GCHandle.ToIntPtr(taskHandle));
-			Marshal.WriteInt32(resultType, (int)V8Type.Task);
+			Marshal.WriteIntPtr(result, MarshalCLRToV8(e, out v8Type));
+			Marshal.WriteInt32(resultType, (int)v8Type);
+			Marshal.WriteInt32(taskState, (int)TaskStatus.Faulted);
 		}
-
-		DebugMessage("CoreCLREmbedding::CallFunc (CLR) - Finished");
 	}
 
 	private static void TaskCompleted(Task<object> task, object state)
 	{
-		// TODO: handle faulted case
 		DebugMessage("CoreCLREmbedding::TaskCompleted (CLR) - Task completed with a state of {0}", task.Status.ToString("G"));
 		DebugMessage("CoreCLREmbedding::TaskCompleted (CLR) - Marshalling data to return to V8", task.Status.ToString("G"));
 
 		V8Type v8Type;
-		IntPtr resultObject = MarshalCLRToV8(task.Result, out v8Type);
-		TaskState actualState = (TaskState) state;
+		TaskState actualState = (TaskState)state;
+		IntPtr resultObject;
+
+		if (task.IsFaulted)
+		{
+			resultObject = MarshalCLRToV8(task.Exception, out v8Type);
+		}
+
+		else
+		{
+			resultObject = MarshalCLRToV8(task.Result, out v8Type);
+		}
 
 		DebugMessage("CoreCLREmbedding::TaskCompleted (CLR) - Invoking unmanaged callback");
-		actualState.Callback(resultObject, (int)v8Type, actualState.Context);
+		actualState.Callback(resultObject, (int)v8Type, (int)task.Status, actualState.Context);
 	}
 
 	[SecurityCritical]
-	public static void ContinueTask(IntPtr task, IntPtr context, IntPtr callback)
+	public static void ContinueTask(IntPtr task, IntPtr context, IntPtr callback, IntPtr exception)
 	{
-		DebugMessage("CoreCLREmbedding::ContinueTask (CLR) - Starting");
+		try
+		{
+			Marshal.WriteIntPtr(exception, IntPtr.Zero);
 
-		GCHandle taskHandle = GCHandle.FromIntPtr(task);
-		Task<Object> actualTask = (Task<Object>) taskHandle.Target;
+			DebugMessage("CoreCLREmbedding::ContinueTask (CLR) - Starting");
 
-		TaskCompleteDelegate taskCompleteDelegate = Marshal.GetDelegateForFunctionPointer<TaskCompleteDelegate>(callback);
-		DebugMessage("CoreCLREmbedding::ContinueTask (CLR) - Marshalled unmanaged callback successfully");
+			GCHandle taskHandle = GCHandle.FromIntPtr(task);
+			Task<Object> actualTask = (Task<Object>) taskHandle.Target;
 
-		actualTask.ContinueWith(new Action<Task<object>, object>(TaskCompleted), new TaskState(taskCompleteDelegate, context));
+			TaskCompleteDelegate taskCompleteDelegate = Marshal.GetDelegateForFunctionPointer<TaskCompleteDelegate>(callback);
+			DebugMessage("CoreCLREmbedding::ContinueTask (CLR) - Marshalled unmanaged callback successfully");
 
-		DebugMessage("CoreCLREmbedding::ContinueTask (CLR) - Finished");
+			actualTask.ContinueWith(new Action<Task<object>, object>(TaskCompleted), new TaskState(taskCompleteDelegate, context));
+
+			DebugMessage("CoreCLREmbedding::ContinueTask (CLR) - Finished");
+		}
+
+		catch (Exception e)
+		{
+			DebugMessage("CoreCLREmbedding::ContinueTask (CLR) - Exception was thrown: {0}", e.Message);
+
+			V8Type v8type;
+			Marshal.WriteIntPtr(exception, MarshalCLRToV8(e, out v8type));
+		}
 	}
 
 	[SecurityCritical]
@@ -176,6 +237,7 @@ public class CoreCLREmbedding
 				break;
 
 			case V8Type.Object:
+			case V8Type.Exception:
 				V8ObjectData objectData = Marshal.PtrToStructure<V8ObjectData>(marshalData);
 
 				for (int i = 0; i < objectData.propertiesCount; i++)
@@ -231,6 +293,56 @@ public class CoreCLREmbedding
 		{
 			v8Type = V8Type.Null;
 			return IntPtr.Zero;
+		}
+
+		else if (clrObject is Exception)
+		{
+			Exception exception = (Exception)clrObject;
+			AggregateException aggregateException = exception as AggregateException;
+
+			if (aggregateException != null && aggregateException.InnerExceptions.Count == 1)
+			{
+				exception = aggregateException.InnerExceptions[0];
+			}
+
+			else 
+			{
+				TargetInvocationException targetInvocationException = exception as TargetInvocationException;
+
+				if (targetInvocationException != null && targetInvocationException.InnerException != null)
+				{
+					exception = targetInvocationException.InnerException;
+				}
+			}
+
+			v8Type = V8Type.Exception;
+
+			V8ObjectData exceptionData = new V8ObjectData();
+			IntPtr[] propertyNames = new IntPtr[2];
+			int[] propertyTypes = new int[2];
+			IntPtr[] propertyValues = new IntPtr[2];
+			int pointerSize = Marshal.SizeOf(typeof(IntPtr));
+
+			exceptionData.propertiesCount = propertyNames.Length;
+			exceptionData.propertyNames = Marshal.AllocHGlobal(pointerSize * propertyNames.Length);
+			exceptionData.propertyTypes = Marshal.AllocHGlobal(sizeof(int) * propertyNames.Length);
+			exceptionData.propertyValues = Marshal.AllocHGlobal(pointerSize * propertyNames.Length);
+
+			propertyNames[0] = Marshal.StringToHGlobalAnsi("Name");
+			propertyTypes[0] = (int)V8Type.String;
+			propertyValues[0] = Marshal.StringToHGlobalAnsi(exception.GetType().FullName);
+			propertyNames[1] = Marshal.StringToHGlobalAnsi("Message");
+			propertyTypes[1] = (int)V8Type.String;
+			propertyValues[1] = Marshal.StringToHGlobalAnsi(exception.Message);
+
+			Marshal.Copy(propertyNames, 0, exceptionData.propertyNames, propertyNames.Length);
+			Marshal.Copy(propertyTypes, 0, exceptionData.propertyTypes, propertyTypes.Length);
+			Marshal.Copy(propertyValues, 0, exceptionData.propertyValues, propertyValues.Length);
+
+			IntPtr destinationPointer = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(V8ObjectData)));
+			Marshal.StructureToPtr<V8ObjectData>(exceptionData, destinationPointer, false);
+
+			return destinationPointer;
 		}
 
 		// TODO: return strings as unicode

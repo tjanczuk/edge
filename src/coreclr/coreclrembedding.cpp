@@ -325,9 +325,26 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
     return S_OK;
 }
 
-CoreClrGcHandle CoreClrEmbedding::GetClrFuncReflectionWrapFunc(const char* assemblyFile, const char* typeName, const char* methodName)
+CoreClrGcHandle CoreClrEmbedding::GetClrFuncReflectionWrapFunc(const char* assemblyFile, const char* typeName, const char* methodName, v8::Handle<v8::Value>* v8Exception)
 {
-	return getFunc(assemblyFile, typeName, methodName);
+	DBG("CoreClrEmbedding::GetClrFuncReflectionWrapFunc - Starting");
+
+	CoreClrGcHandle exception;
+	CoreClrGcHandle function = getFunc(assemblyFile, typeName, methodName, &exception);
+
+	if (exception)
+	{
+		*v8Exception = CoreClrFunc::MarshalCLRToV8(exception, V8Type::PropertyTypeException);
+		FreeMarshalData(exception, V8Type::PropertyTypeException);
+
+		return NULL;
+	}
+
+	else
+	{
+		DBG("CoreClrEmbedding::GetClrFuncReflectionWrapFunc - Finished");
+		return function;
+	}
 }
 
 void CoreClrEmbedding::AddToTpaList(std::string directoryPath, std::string* tpaList)
@@ -474,10 +491,10 @@ void CoreClrEmbedding::CallClrFunc(CoreClrGcHandle functionHandle, void* payload
 	callFunc(functionHandle, payload, payloadType, taskState, result, resultType);
 }
 
-void CoreClrEmbedding::ContinueTask(CoreClrGcHandle taskHandle, void* context, TaskCompleteFunction callback)
+void CoreClrEmbedding::ContinueTask(CoreClrGcHandle taskHandle, void* context, TaskCompleteFunction callback, void** exception)
 {
 	DBG("CoreClrEmbedding::ContinueTask");
-	continueTask(taskHandle, context, callback);
+	continueTask(taskHandle, context, callback, exception);
 }
 
 void CoreClrEmbedding::FreeHandle(CoreClrGcHandle handle)

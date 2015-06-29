@@ -72,7 +72,7 @@ Handle<v8::Value> CoreClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value>
 	void* result;
 	int resultType;
 
-	DBG("CoreClrFunc::Call - Marshalling data in preparating for calling the CLR");
+	DBG("CoreClrFunc::Call - Marshalling data in preparation for calling the CLR");
 
 	MarshalV8ToCLR(payload, &marshalData, &payloadType);
 	DBG("CoreClrFunc::Call - Object type of %d is being marshalled", payloadType);
@@ -81,25 +81,44 @@ Handle<v8::Value> CoreClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value>
 	CoreClrEmbedding::CallClrFunc(functionHandle, marshalData, payloadType, &taskState, &result, &resultType);
 	DBG("CoreClrFunc::Call - CoreClrEmbedding::CallClrFunc() returned a task state of %d", taskState);
 
-	DBG("CoreClrFunc::Call - Freeing the marshalled data");
+	DBG("CoreClrFunc::Call - Freeing the data marshalled to the CLR");
 	FreeMarshalData(marshalData, payloadType);
 
-	if (taskState == TaskStatus::RanToCompletion)
+	if (taskState == TaskStatus::RanToCompletion || taskState == TaskStatus::Faulted)
 	{
-		DBG("CoreClrFunc::Call - Task ran synchronously, marshalling CLR data for the callback");
-		// TODO: marshal data to V8 and invoke the callback or return the data
-	}
+		if (taskState == TaskStatus::RanToCompletion)
+		{
+			DBG("CoreClrFunc::Call - Task ran synchronously, marshalling CLR data to V8");
+		}
 
-	else if (taskState == TaskStatus::Faulted)
-	{
-		DBG("CoreClrFunc::Call - Task threw an exception, marshalling CLR exception data for the callback");
-		// TODO: marshal exception info and pass it to the callback
+		else
+		{
+			DBG("CoreClrFunc::Call - Task threw an exception, marshalling CLR exception data to V8");
+		}
+
+		if (callbackOrSync->IsBoolean())
+		{
+			if (taskState == TaskStatus::RanToCompletion)
+			{
+				return NanEscapeScope(CoreClrFunc::MarshalCLRToV8(result, resultType));
+			}
+
+			else
+			{
+				throwV8Exception(CoreClrFunc::MarshalCLRToV8(result, resultType));
+			}
+		}
+
+		else
+		{
+			CoreClrFuncInvokeContext::TaskCompleteSynchronous(result, resultType, taskState, callbackOrSync);
+		}
 	}
 
 	else if (callbackOrSync->IsBoolean())
 	{
 		DBG("CoreClrFunc::Call - Task was expected to run synchronously, but did not run to completion");
-		// TODO: throw error for async being returned when we expected sync
+		throwV8Exception("Task was expected to run synchronously, but did not run to completion");
 	}
 
 	else
@@ -110,7 +129,14 @@ Handle<v8::Value> CoreClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value>
 		CoreClrFuncInvokeContext* invokeContext = new CoreClrFuncInvokeContext(callbackOrSync, taskHandle);
 
 		invokeContext->InitializeAsyncOperation();
-		CoreClrEmbedding::ContinueTask(taskHandle, invokeContext, CoreClrFuncInvokeContext::TaskComplete);
+
+		void* exception;
+		CoreClrEmbedding::ContinueTask(taskHandle, invokeContext, CoreClrFuncInvokeContext::TaskComplete, &exception);
+
+		if (exception)
+		{
+			CoreClrFuncInvokeContext::TaskComplete(exception, V8Type::PropertyTypeException, TaskStatus::Faulted, invokeContext);
+		}
 	}
 
 	DBG("CoreClrFunc::Call - Finished");
@@ -133,13 +159,26 @@ NAN_METHOD(CoreClrFunc::Initialize)
 		v8::String::Utf8Value assemblyFile(assemblyFileArgument);
 		v8::String::Utf8Value typeName(options->Get(NanNew<v8::String>("typeName")));
 		v8::String::Utf8Value methodName(options->Get(NanNew<v8::String>("methodName")));
+		v8::Handle<v8::Value> exception;
 
 		DBG("CoreClrFunc::Initialize - Loading %s.%s() from %s", *typeName, *methodName, *assemblyFile);
-		CoreClrGcHandle functionHandle = CoreClrEmbedding::GetClrFuncReflectionWrapFunc(*assemblyFile, *typeName, *methodName);
-		DBG("CoreClrFunc::Initialize - Function loaded successfully")
+		CoreClrGcHandle functionHandle = CoreClrEmbedding::GetClrFuncReflectionWrapFunc(*assemblyFile, *typeName, *methodName, &exception);
 
-		result = CoreClrFunc::InitializeInstance(functionHandle);
-		DBG("CoreClrFunc::Initialize - Callback initialized successfully")
+		if (functionHandle)
+		{
+			DBG("CoreClrFunc::Initialize - Function loaded successfully")
+
+			result = CoreClrFunc::InitializeInstance(functionHandle);
+			DBG("CoreClrFunc::Initialize - Callback initialized successfully");
+		}
+
+		else
+		{
+			DBG("CoreClrFunc::Initialize - Error loading function, V8 exception being thrown");
+			throwV8Exception(exception);
+
+			return NanEscapeScope(NanUndefined());
+		}
 	}
 
 	else
@@ -399,6 +438,20 @@ Handle<v8::Value> CoreClrFunc::MarshalCLRToV8(void* marshalData, int payloadType
 		{
 			return NanEscapeScope(NanNewBufferHandle(0));
 		}
+	}
+
+	else if (payloadType == V8Type::PropertyTypeException)
+	{
+		V8ObjectData* objectData = (V8ObjectData*) marshalData;
+		Handle<v8::Object> result = NanNew<v8::Object>();
+		Handle<v8::String> name = NanNew<v8::String>((char*) objectData->propertyData[0]);
+		Handle<v8::String> message = NanNew<v8::String>((char*) objectData->propertyData[1]);
+
+		result->SetPrototype(v8::Exception::Error(message));
+		result->Set(NanNew<v8::String>("message"), message);
+		result->Set(NanNew<v8::String>("name"), name);
+
+		return NanEscapeScope(result);
 	}
 
 	else
