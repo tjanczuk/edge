@@ -291,6 +291,17 @@ typedef struct v8ArrayData
 	}
 } V8ArrayData;
 
+typedef struct v8BufferData
+{
+	int bufferLength = 0;
+	char* buffer;
+
+	~v8BufferData()
+	{
+		delete buffer;
+	}
+} V8BufferData;
+
 typedef struct coreClrFuncWrap
 {
     CoreClrFunc* clrFunc;

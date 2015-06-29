@@ -482,10 +482,12 @@ void CoreClrEmbedding::ContinueTask(CoreClrGcHandle taskHandle, void* context, T
 
 void CoreClrEmbedding::FreeHandle(CoreClrGcHandle handle)
 {
+	DBG("CoreClrEmbedding::FreeHandle");
 	freeHandle(handle);
 }
 
 void CoreClrEmbedding::FreeMarshalData(void* marshalData, int marshalDataType)
 {
+	DBG("CoreClrEmbedding::FreeMarshalData");
 	freeMarshalData(marshalData, marshalDataType);
 }

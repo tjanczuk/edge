@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Security;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -23,6 +24,13 @@ public struct V8ArrayData
 	public int arrayLength;
 	public IntPtr itemTypes;
 	public IntPtr itemValues;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+public struct V8BufferData
+{
+	public int bufferLength;
+	public IntPtr buffer;
 }
 
 public enum V8Type
@@ -204,6 +212,14 @@ public class CoreCLREmbedding
 
 				break;
 
+			case V8Type.Buffer:
+				V8BufferData bufferData = Marshal.PtrToStructure<V8BufferData>(marshalData);
+
+				Marshal.FreeHGlobal(bufferData.buffer);
+				Marshal.FreeHGlobal(marshalData);
+
+				break;
+
 			default:
 				throw new Exception("Unsupported marshalled data type: " + v8Type);
 		}
@@ -339,7 +355,29 @@ public class CoreCLREmbedding
 		else if (clrObject is byte[] || clrObject is IEnumerable<byte>)
 		{
 			v8Type = V8Type.Buffer;
-			// TODO: implement
+
+			V8BufferData bufferData = new V8BufferData();
+			byte[] buffer;
+
+			if (clrObject is byte[])
+			{
+				buffer = (byte[]) clrObject;
+			}
+
+			else
+			{
+				buffer = ((IEnumerable<byte>) clrObject).ToArray();
+			}
+
+			bufferData.bufferLength = buffer.Length;
+			bufferData.buffer = Marshal.AllocHGlobal(buffer.Length * sizeof(byte));
+
+			Marshal.Copy(buffer, 0, bufferData.buffer, bufferData.bufferLength);
+
+			IntPtr destinationPointer = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(V8BufferData)));
+			Marshal.StructureToPtr<V8BufferData>(bufferData, destinationPointer, false);
+
+			return destinationPointer;
 		}
 
 		else if (clrObject is IDictionary)
@@ -504,6 +542,14 @@ public class CoreCLREmbedding
 				}
 
 				return array.ToArray();
+
+			case V8Type.Buffer:
+				V8BufferData bufferData = Marshal.PtrToStructure<V8BufferData>(v8Object);
+				byte[] buffer = new byte[bufferData.bufferLength];
+
+				Marshal.Copy(bufferData.buffer, buffer, 0, bufferData.bufferLength);
+
+				return buffer;
 
 			default:
 				throw new Exception("Unsupported V8 object type: " + objectType + ".");

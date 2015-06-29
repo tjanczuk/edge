@@ -219,7 +219,16 @@ void CoreClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata, void** marshalData, i
 
 	else if (node::Buffer::HasInstance(jsdata))
 	{
-		// TODO: implement
+		Handle<v8::Object> jsBuffer = jsdata->ToObject();
+		V8BufferData* bufferData = new V8BufferData();
+
+		bufferData->bufferLength = (int)node::Buffer::Length(jsBuffer);
+		bufferData->buffer = new char[bufferData->bufferLength];
+
+		memcpy(bufferData->buffer, node::Buffer::Data(jsBuffer), bufferData->bufferLength);
+
+		*marshalData = bufferData;
+		*payloadType = V8Type::PropertyTypeBuffer;
 	}
 
 	else if (jsdata->IsArray())
@@ -375,6 +384,21 @@ Handle<v8::Value> CoreClrFunc::MarshalCLRToV8(void* marshalData, int payloadType
 	else if (payloadType == V8Type::PropertyTypeNull)
 	{
 		return NanEscapeScope(NanNull());
+	}
+
+	else if (payloadType == V8Type::PropertyTypeBuffer)
+	{
+		V8BufferData* bufferData = (V8BufferData*) marshalData;
+
+		if (bufferData->bufferLength > 0)
+		{
+			return NanEscapeScope(NanNewBufferHandle(bufferData->buffer, bufferData->bufferLength));
+		}
+
+		else
+		{
+			return NanEscapeScope(NanNewBufferHandle(0));
+		}
 	}
 
 	else
