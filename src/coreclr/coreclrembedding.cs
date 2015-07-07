@@ -307,6 +307,9 @@ public class CoreCLREmbedding
 
 				break;
 
+			case V8Type.Null:
+				break;
+
 			default:
 				throw new Exception("Unsupported marshalled data type: " + v8Type);
 		}
@@ -318,56 +321,6 @@ public class CoreCLREmbedding
 		{
 			v8Type = V8Type.Null;
 			return IntPtr.Zero;
-		}
-
-		else if (clrObject is Exception)
-		{
-			Exception exception = (Exception)clrObject;
-			AggregateException aggregateException = exception as AggregateException;
-
-			if (aggregateException != null && aggregateException.InnerExceptions.Count == 1)
-			{
-				exception = aggregateException.InnerExceptions[0];
-			}
-
-			else 
-			{
-				TargetInvocationException targetInvocationException = exception as TargetInvocationException;
-
-				if (targetInvocationException != null && targetInvocationException.InnerException != null)
-				{
-					exception = targetInvocationException.InnerException;
-				}
-			}
-
-			v8Type = V8Type.Exception;
-
-			V8ObjectData exceptionData = new V8ObjectData();
-			IntPtr[] propertyNames = new IntPtr[2];
-			int[] propertyTypes = new int[2];
-			IntPtr[] propertyValues = new IntPtr[2];
-			int pointerSize = Marshal.SizeOf(typeof(IntPtr));
-
-			exceptionData.propertiesCount = propertyNames.Length;
-			exceptionData.propertyNames = Marshal.AllocHGlobal(pointerSize * propertyNames.Length);
-			exceptionData.propertyTypes = Marshal.AllocHGlobal(sizeof(int) * propertyNames.Length);
-			exceptionData.propertyValues = Marshal.AllocHGlobal(pointerSize * propertyNames.Length);
-
-			propertyNames[0] = Marshal.StringToHGlobalAnsi("Name");
-			propertyTypes[0] = (int)V8Type.String;
-			propertyValues[0] = Marshal.StringToHGlobalAnsi(exception.GetType().FullName);
-			propertyNames[1] = Marshal.StringToHGlobalAnsi("Message");
-			propertyTypes[1] = (int)V8Type.String;
-			propertyValues[1] = Marshal.StringToHGlobalAnsi(exception.Message);
-
-			Marshal.Copy(propertyNames, 0, exceptionData.propertyNames, propertyNames.Length);
-			Marshal.Copy(propertyTypes, 0, exceptionData.propertyTypes, propertyTypes.Length);
-			Marshal.Copy(propertyValues, 0, exceptionData.propertyValues, propertyValues.Length);
-
-			IntPtr destinationPointer = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(V8ObjectData)));
-			Marshal.StructureToPtr<V8ObjectData>(exceptionData, destinationPointer, false);
-
-			return destinationPointer;
 		}
 
 		// TODO: return strings as unicode
@@ -517,6 +470,43 @@ public class CoreCLREmbedding
 			return destinationPointer;
 		}
 
+		else if (clrObject is ExpandoObject)
+		{
+			// TODO: merge with IDictionary logic below
+			v8Type = V8Type.Object;
+			V8ObjectData objectData = new V8ObjectData();
+			IDictionary<string, object> objectDictionary = (IDictionary<string, object>)clrObject;
+			IntPtr[] propertyNames = new IntPtr[objectDictionary.Keys.Count];
+			int[] propertyTypes = new int[objectDictionary.Keys.Count];
+			IntPtr[] propertyValues = new IntPtr[objectDictionary.Keys.Count];
+			int pointerSize = Marshal.SizeOf(typeof(IntPtr));
+			int counter = 0;
+			V8Type propertyType;
+
+			objectData.propertiesCount = objectDictionary.Keys.Count;
+			objectData.propertyNames = Marshal.AllocHGlobal(pointerSize * objectDictionary.Keys.Count);
+			objectData.propertyTypes = Marshal.AllocHGlobal(sizeof(int) * objectDictionary.Keys.Count);
+			objectData.propertyValues = Marshal.AllocHGlobal(pointerSize * objectDictionary.Keys.Count);
+
+			foreach (string key in objectDictionary.Keys)
+			{
+				propertyNames[counter] = Marshal.StringToHGlobalAnsi(key);
+				propertyValues[counter] = MarshalCLRToV8(objectDictionary[key], out propertyType);
+				propertyTypes[counter] = (int)propertyType;
+
+				counter++;
+			}
+
+			Marshal.Copy(propertyNames, 0, objectData.propertyNames, propertyNames.Length);
+			Marshal.Copy(propertyTypes, 0, objectData.propertyTypes, propertyTypes.Length);
+			Marshal.Copy(propertyValues, 0, objectData.propertyValues, propertyValues.Length);
+
+			IntPtr destinationPointer = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(V8ObjectData)));
+			Marshal.StructureToPtr<V8ObjectData>(objectData, destinationPointer, false);
+
+			return destinationPointer;
+		}
+
 		else if (clrObject is IDictionary)
 		{
 			v8Type = V8Type.Object;
@@ -582,21 +572,37 @@ public class CoreCLREmbedding
 			return destinationPointer;
 		}
 
-		else if (clrObject.GetType().IsGenericType && clrObject.GetType().GetGenericTypeDefinition() == typeof(Func<>))
+		// TODO: we need a better test for this
+		else if (clrObject.GetType().Name.StartsWith("Func`"))
 		{
-			v8Type = V8Type.Function;
-			// TODO: implement
-		}
-
-		else if (clrObject is Exception)
-		{
-			v8Type = V8Type.Exception;
+			v8Type = V8Type.Null;
+			return IntPtr.Zero;
 			// TODO: implement
 		}
 
 		else
 		{
-			v8Type = V8Type.Object;
+			v8Type = clrObject is Exception ? V8Type.Exception : V8Type.Object;
+
+			if (clrObject is Exception)
+			{
+				AggregateException aggregateException = clrObject as AggregateException;
+					
+				if (aggregateException != null && aggregateException.InnerExceptions != null && aggregateException.InnerExceptions.Count > 0)
+                {
+					clrObject = aggregateException.InnerExceptions[0];
+                }
+							
+				else 
+				{
+					TargetInvocationException targetInvocationException = clrObject as TargetInvocationException;
+							
+					if (targetInvocationException != null && targetInvocationException.InnerException != null)
+					{
+						clrObject = targetInvocationException.InnerException;
+					}
+				}
+			}
 
 			List<Tuple<string, Func<object, object>>> propertyAccessors = GetPropertyAccessors(clrObject.GetType());
 			V8ObjectData objectData = new V8ObjectData();
@@ -630,8 +636,6 @@ public class CoreCLREmbedding
 
 			return destinationPointer;
 		}
-
-		throw new Exception("Unsupported CLR object type: " + clrObject.GetType().FullName);
 	}
 
 	public static object MarshalV8ToCLR(IntPtr v8Object, V8Type objectType)
@@ -828,6 +832,11 @@ public class CoreCLREmbedding
 			UnaryExpression fieldConvert = Expression.TypeAs(field, typeof(object));
 
 			propertyAccessors.Add(new Tuple<string, Func<object, object>>(fieldInfo.Name, (Func<object, object>) Expression.Lambda(fieldConvert, instance).Compile()));
+		}
+
+		if (typeof(Exception).IsAssignableFrom(type) && !propertyAccessors.Any(a => a.Item1 == "Name"))
+		{
+			propertyAccessors.Add(new Tuple<string, Func<object, object>>("Name", (o) => type.FullName));
 		}
 
 		TypePropertyAccessors[type] = propertyAccessors;

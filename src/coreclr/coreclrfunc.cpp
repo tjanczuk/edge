@@ -96,7 +96,7 @@ Handle<v8::Value> CoreClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value>
 			DBG("CoreClrFunc::Call - Task threw an exception, marshalling CLR exception data to V8");
 		}
 
-		if (callbackOrSync->IsBoolean())
+		if (callbackOrSync->IsBoolean() || taskState == TaskStatus::Faulted)
 		{
 			if (taskState == TaskStatus::RanToCompletion)
 			{
@@ -427,7 +427,7 @@ Handle<v8::Value> CoreClrFunc::MarshalCLRToV8(void* marshalData, int payloadType
 		return NanEscapeScope(result);
 	}
 
-	else if (payloadType == V8Type::PropertyTypeObject)
+	else if (payloadType == V8Type::PropertyTypeObject || payloadType == V8Type::PropertyTypeException)
 	{
 		V8ObjectData* objectData = (V8ObjectData*) marshalData;
 		Handle<v8::Object> result = NanNew<v8::Object>();
@@ -435,6 +435,16 @@ Handle<v8::Value> CoreClrFunc::MarshalCLRToV8(void* marshalData, int payloadType
 		for (int i = 0; i < objectData->propertiesCount; i++)
 		{
 			result->Set(NanNew<v8::String>(objectData->propertyNames[i]), MarshalCLRToV8(objectData->propertyData[i], objectData->propertyTypes[i]));
+		}
+
+		if (payloadType == V8Type::PropertyTypeException)
+		{
+			Handle<v8::String> name = Handle<v8::String>::Cast(result->Get(NanNew<v8::String>("Name")));
+			Handle<v8::String> message = Handle<v8::String>::Cast(result->Get(NanNew<v8::String>("Message")));
+
+			result->SetPrototype(v8::Exception::Error(message));
+			result->Set(NanNew<v8::String>("message"), message);
+			result->Set(NanNew<v8::String>("name"), name);
 		}
 
 		return NanEscapeScope(result);
@@ -458,20 +468,6 @@ Handle<v8::Value> CoreClrFunc::MarshalCLRToV8(void* marshalData, int payloadType
 		{
 			return NanEscapeScope(NanNewBufferHandle(0));
 		}
-	}
-
-	else if (payloadType == V8Type::PropertyTypeException)
-	{
-		V8ObjectData* objectData = (V8ObjectData*) marshalData;
-		Handle<v8::Object> result = NanNew<v8::Object>();
-		Handle<v8::String> name = NanNew<v8::String>((char*) objectData->propertyData[0]);
-		Handle<v8::String> message = NanNew<v8::String>((char*) objectData->propertyData[1]);
-
-		result->SetPrototype(v8::Exception::Error(message));
-		result->Set(NanNew<v8::String>("message"), message);
-		result->Set(NanNew<v8::String>("name"), name);
-
-		return NanEscapeScope(result);
 	}
 
 	else

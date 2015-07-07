@@ -100,13 +100,10 @@ describe('async call from node.js to .net', function () {
     });
 
     it('successfuly marshals structured .net exception from .net to node.js', function (done) {
-        var func = edge.func(function () {/*
-            async (input) => {
-                throw new InvalidOperationException(
-                    "Outer exception", 
-                    new ArgumentException("Inner exception", "input")); 
-            }
-        */});
+        var func = edge.func({
+        	assemblyFile: edgeTestDll,
+        	methodName: 'NetStructuredExceptionCLRThread'
+        });
 
         func(null, function (error, result) {
             assert.ok(error instanceof Error);
@@ -122,11 +119,10 @@ describe('async call from node.js to .net', function () {
     });    
 
     it('successfuly marshals empty buffer', function (done) {
-        var func = edge.func(function () {/*
-            async (object input) => {
-                return ((byte[])input).Length == 0;
-            }
-        */});
+        var func = edge.func({
+        	assemblyFile: edgeTestDll,
+        	methodName: 'MarshalEmptyBuffer'
+        });
 
         func(new Buffer(0), function (error, result) {
             assert.ifError(error);
@@ -136,11 +132,10 @@ describe('async call from node.js to .net', function () {
     });
 
     it('successfuly roundtrips unicode characters', function (done) {
-        var func = edge.func(function () {/*
-            async (input) => {
-                return input;
-            }
-        */});
+        var func = edge.func({
+        	assemblyFile: edgeTestDll,
+        	methodName: 'ReturnInput'
+        });
 
         var k = "ñòóôõöøùúûüýÿ";
         func(k, function (error, result) {
@@ -151,11 +146,10 @@ describe('async call from node.js to .net', function () {
     });
 
     it('successfuly roundtrips empty string', function (done) {
-        var func = edge.func(function () {/*
-            async (input) => {
-                return input;
-            }
-        */});
+        var func = edge.func({
+        	assemblyFile: edgeTestDll,
+        	methodName: 'ReturnInput'
+        });
 
         var k = "";
         func(k, function (error, result) {

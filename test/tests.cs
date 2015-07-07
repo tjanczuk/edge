@@ -251,6 +251,30 @@ namespace Edge.Tests
             return result;
         }
 
+        public Task<object> NetStructuredExceptionCLRThread(dynamic input)
+        {
+            Task<object> task = new Task<object>(() =>
+                {
+                    throw new InvalidOperationException(
+                        "Outer exception", 
+                        new ArgumentException("Inner exception", "input"));
+                });
+
+            task.Start();
+
+            return task; 
+        }
+
+        public async Task<object> MarshalEmptyBuffer(dynamic input)
+        {
+            return ((byte[])input).Length == 0;
+        }
+
+        public async Task<object> ReturnInput(dynamic input)
+        {
+            return input;
+        }
+
         class A 
         {
             public string A_field;
