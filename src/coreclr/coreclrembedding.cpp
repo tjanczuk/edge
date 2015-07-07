@@ -320,6 +320,38 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 	setDebugMode(debugMode);
 	DBG("CoreClrEmbedding::Initialize - Debug mode set successfully");
 
+	SetCallV8FunctionDelegateFunction setCallV8FunctionDelegate;
+	result = runtimeHost->CreateDelegate(
+				appDomainId,
+				u"CoreCLREmbedding",
+				u"CoreCLREmbedding",
+				u"SetCallV8FunctionDelegate",
+				(INT_PTR*) &setCallV8FunctionDelegate);
+
+	if (FAILED(result))
+	{
+		throwV8Exception("Call to ICLRRuntimeHost2::CreateDelegate() for SetCallV8FunctionDelegate failed with a return code of 0x%x.", result);
+		return result;
+	}
+
+	DBG("CoreClrEmbedding::Initialize - CoreCLREmbedding.SetCallV8FunctionDelegate() loaded successfully");
+
+	CoreClrGcHandle exception = NULL;
+	setCallV8FunctionDelegate(CoreClrNodejsFunc::Call, &exception);
+
+	if (exception)
+	{
+		Handle<v8::Value> v8Exception = CoreClrFunc::MarshalCLRToV8(exception, V8Type::PropertyTypeException);
+		FreeMarshalData(exception, V8Type::PropertyTypeException);
+
+		throwV8Exception(v8Exception);
+	}
+
+	else
+	{
+		DBG("CoreClrEmbedding::Initialize - CallV8Function delegate set successfully");
+	}
+
 	DBG("CoreClrEmbedding::Initialize - Completed");
 
     return S_OK;

@@ -243,6 +243,25 @@ char* CoreClrFunc::CopyV8StringBytes(Handle<v8::String> v8String)
 	return destinationBytes;
 }
 
+void CoreClrFunc::MarshalV8ExceptionToCLR(Handle<v8::Value> exception, void** marshalData)
+{
+    NanScope();
+
+    int payloadType;
+
+    if (exception->IsObject())
+    {
+        Handle<Value> stack = exception->ToObject()->Get(NanNew<v8::String>("stack"));
+
+        if (stack->IsString())
+        {
+        	MarshalV8ToCLR(stack, marshalData, &payloadType);
+        }
+    }
+
+    MarshalV8ToCLR(Handle<v8::String>::Cast(exception), marshalData, &payloadType);
+}
+
 void CoreClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata, void** marshalData, int* payloadType)
 {
 	if (jsdata->IsString())
@@ -253,7 +272,8 @@ void CoreClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata, void** marshalData, i
 
 	else if (jsdata->IsFunction())
 	{
-		// TODO: implement
+		*marshalData = new CoreClrNodejsFunc(Handle<v8::Function>::Cast(jsdata));
+		*payloadType = V8Type::PropertyTypeFunction;
 	}
 
 	else if (node::Buffer::HasInstance(jsdata))

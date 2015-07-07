@@ -33,6 +33,7 @@ typedef CoreClrGcHandle (*GetFuncFunction)(const char* assemblyFile, const char*
 typedef void (*SetDebugModeFunction)(const BOOL debugMode);
 typedef void (*FreeHandleFunction)(CoreClrGcHandle handle);
 typedef void (*FreeMarshalDataFunction)(void* marshalData, int marshalDataType);
+typedef void (*NodejsFuncCompleteFunction)(CoreClrGcHandle context, int taskStatus, void* result, int resultType);
 
 // TODO: use NaN for this
 #define StringToUTF16(input, output)\
@@ -251,8 +252,39 @@ class CoreClrFunc
 		static void FreeMarshalData(void* marshalData, int payloadType);
 		static void MarshalV8ToCLR(Handle<v8::Value> jsdata, void** marshalData, int* payloadType);
 		static Handle<v8::Value> MarshalCLRToV8(void* marshalData, int payloadType);
-		//static Handle<v8::Value> MarshalCLRToV8(MonoObject* netdata, MonoException** exc);
-		//static Handle<v8::Object> MarshalCLRExceptionToV8(MonoException* exception);
+		static void MarshalV8ExceptionToCLR(Handle<v8::Value> exception, void** marshalData);
+};
+
+class CoreClrNodejsFunc
+{
+	public:
+		Persistent<Function>* Func;
+
+		CoreClrNodejsFunc(Handle<Function> function);
+		~CoreClrNodejsFunc();
+
+		static void Call(void* payload, int payloadType, CoreClrNodejsFunc* functionContext, CoreClrGcHandle callbackContext, NodejsFuncCompleteFunction callbackFunction);
+		static void Release(CoreClrNodejsFunc* function);
+};
+
+class CoreClrNodejsFuncInvokeContext
+{
+	private:
+		uv_edge_async_t* uv_edge_async;
+
+	public:
+		void* Payload;
+		int PayloadType;
+		CoreClrNodejsFunc* FunctionContext;
+		CoreClrGcHandle CallbackContext;
+		NodejsFuncCompleteFunction CallbackFunction;
+
+		CoreClrNodejsFuncInvokeContext(void* payload, int payloadType, CoreClrNodejsFunc* functionContext, CoreClrGcHandle callbackContext, NodejsFuncCompleteFunction callbackFunction);
+		~CoreClrNodejsFuncInvokeContext();
+
+		void Invoke();
+		static void InvokeCallback(void* data);
+		void Complete(TaskStatus taskStatus, void* result, int resultType);
 };
 
 typedef struct v8ObjectData
@@ -309,5 +341,8 @@ typedef struct coreClrFuncWrap
 {
     CoreClrFunc* clrFunc;
 } CoreClrFuncWrap;
+
+typedef void (*CallV8FunctionFunction)(void* payload, int payloadType, CoreClrNodejsFunc* functionContext, CoreClrGcHandle callbackContext, NodejsFuncCompleteFunction callbackFunction);
+typedef void (*SetCallV8FunctionDelegateFunction)(CallV8FunctionFunction callV8Function, void** exception);
 
 #endif

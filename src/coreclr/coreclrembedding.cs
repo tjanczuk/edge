@@ -50,6 +50,9 @@ public enum V8Type
 	Exception = 13
 }
 
+public delegate void CallV8FunctionDelegate(IntPtr payload, int payloadType, IntPtr v8FunctionContext, IntPtr callbackContext, IntPtr callbackDelegate);
+public delegate void TaskCompleteDelegate(IntPtr result, int resultType, int taskState, IntPtr context);
+
 [SecurityCritical]
 public class CoreCLREmbedding
 {
@@ -68,8 +71,6 @@ public class CoreCLREmbedding
 	private static bool DebugMode = false;
 	private static long MinDateTimeTicks = 621355968000000000;
 	private static Dictionary<Type, List<Tuple<string, Func<object, object>>>> TypePropertyAccessors = new Dictionary<Type, List<Tuple<string, Func<object, object>>>>();
-
-	public delegate void TaskCompleteDelegate(IntPtr result, int resultType, int taskState, IntPtr context);
 
     [SecurityCritical]
 	public static IntPtr GetFunc(string assemblyFile, string typeName, string methodName, IntPtr exception)
@@ -224,6 +225,23 @@ public class CoreCLREmbedding
 	}
 
 	[SecurityCritical]
+	public static void SetCallV8FunctionDelegate(IntPtr callV8Function, IntPtr exception)
+	{
+		try
+		{
+			NodejsFuncInvokeContext.CallV8Function = Marshal.GetDelegateForFunctionPointer<CallV8FunctionDelegate>(callV8Function);
+		}
+
+		catch (Exception e)
+		{
+			DebugMessage("CoreCLREmbedding::SetCallV8FunctionDelegate (CLR) - Exception was thrown: {0}", e.Message);
+
+			V8Type v8type;
+			Marshal.WriteIntPtr(exception, MarshalCLRToV8(e, out v8type));
+		}
+	}
+
+	[SecurityCritical]
 	public static void FreeMarshalData(IntPtr marshalData, int v8Type)
 	{
 		switch ((V8Type)v8Type)
@@ -287,7 +305,7 @@ public class CoreCLREmbedding
 		}
 	}
 
-	private static IntPtr MarshalCLRToV8(object clrObject, out V8Type v8Type)
+	public static IntPtr MarshalCLRToV8(object clrObject, out V8Type v8Type)
 	{	
 		if (clrObject == null)
 		{
@@ -609,7 +627,7 @@ public class CoreCLREmbedding
 		throw new Exception("Unsupported CLR object type: " + clrObject.GetType().FullName);
 	}
 
-	private static object MarshalV8ToCLR(IntPtr v8Object, V8Type objectType)
+	public static object MarshalV8ToCLR(IntPtr v8Object, V8Type objectType)
 	{
 		switch (objectType) 
 		{
@@ -637,6 +655,10 @@ public class CoreCLREmbedding
 
 			case V8Type.UInt32:
 				return (uint) Marshal.ReadInt32(v8Object);
+
+			case V8Type.Function:
+				NodejsFunc nodejsFunc = new NodejsFunc(v8Object);
+				return nodejsFunc.GetFunc();
 
 			case V8Type.Array:
 				V8ArrayData arrayData = Marshal.PtrToStructure<V8ArrayData>(v8Object);
@@ -759,7 +781,7 @@ public class CoreCLREmbedding
 		return expando;
 	}
 
-	private static void DebugMessage(string message, params object[] parameters)
+	internal static void DebugMessage(string message, params object[] parameters)
 	{
 		if (DebugMode) 
 		{

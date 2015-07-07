@@ -55,7 +55,9 @@
                   'sources+': [
                     'src/coreclr/coreclrembedding.cpp',
                     'src/coreclr/coreclrfunc.cpp',
+                    'src/coreclr/coreclrnodejsfunc.cpp',
                     'src/coreclr/coreclrfuncinvokecontext.cpp',
+                    'src/coreclr/coreclrnodejsfuncinvokecontext.cpp',
                     'src/common/utils.cpp'
                   ]
                 }
