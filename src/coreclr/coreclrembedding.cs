@@ -8,6 +8,7 @@ using System.Dynamic;
 using System.Collections.Generic;
 using System.Collections;
 using System.Threading.Tasks;
+using System.IO;
 
 [StructLayout(LayoutKind.Sequential)]
 public struct V8ObjectData
@@ -78,6 +79,11 @@ public class CoreCLREmbedding
 		try
 		{
 			Marshal.WriteIntPtr(exception, IntPtr.Zero);
+
+			if (!Path.IsPathRooted(assemblyFile))
+			{
+				assemblyFile = Path.Combine(Directory.GetCurrentDirectory(), assemblyFile);
+			}
 
 			Assembly assembly = Assembly.LoadFile(assemblyFile);
 			DebugMessage("CoreCLREmbedding::GetFunc (CLR) - Assembly {0} loaded successfully", assemblyFile);
@@ -229,6 +235,7 @@ public class CoreCLREmbedding
 	{
 		try
 		{
+			Marshal.WriteIntPtr(exception, IntPtr.Zero);
 			NodejsFuncInvokeContext.CallV8Function = Marshal.GetDelegateForFunctionPointer<CallV8FunctionDelegate>(callV8Function);
 		}
 

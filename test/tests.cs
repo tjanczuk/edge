@@ -190,7 +190,7 @@ namespace Edge.Tests
             return result;
         }       
 
-        private WeakReference weakRefToNodejsFunc;
+        /*private WeakReference weakRefToNodejsFunc;
         public Task<object> InvokeBackAfterCLRCallHasFinished(dynamic input)
         {
             var trace = new List<string>();
@@ -238,7 +238,7 @@ namespace Edge.Tests
             var result = new TaskCompletionSource<object>();
             result.SetResult(succeed);
             return result.Task;
-        }
+        }*/
 
         public async Task<object> MarshalObjectHierarchy(dynamic input)
         {
