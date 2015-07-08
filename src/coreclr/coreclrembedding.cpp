@@ -72,7 +72,11 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
         LoadCoreClrAtPath(coreClrDirectory, &libCoreClr);
     }
 
-    // TODO: check the current directory
+    if (!libCoreClr)
+    {
+    	strncpy(&coreClrDirectory[0], currentDirectory, strlen(currentDirectory) + 1);
+    	LoadCoreClrAtPath(coreClrDirectory, &libCoreClr);
+    }
 
     if (!libCoreClr)
     {
@@ -86,7 +90,32 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
         LoadCoreClrAtPath(coreClrDirectory, &libCoreClr);
     }
 
-    // TODO: check the directories in the PATH variable if there's nothing in CORECLR_DIR or the bootstrapper directory
+    if (!libCoreClr)
+    {
+    	std::string pathEnvironmentVariable = getenv("PATH");
+#if EDGE_PLATFORM_WINDOWS
+    	char delimeter = ';';
+#else
+    	char delimeter = ':';
+#endif
+
+    	size_t previousIndex = 0;
+    	size_t currentIndex = pathEnvironmentVariable.find(delimeter);
+
+    	while (!libCoreClr && currentIndex != std::string::npos)
+    	{
+    		strncpy(&coreClrDirectory[0], pathEnvironmentVariable.substr(previousIndex, currentIndex - previousIndex).c_str(), currentIndex - previousIndex);
+    		coreClrDirectory[currentIndex - previousIndex] = '\0';
+
+    		LoadCoreClrAtPath(coreClrDirectory, &libCoreClr);
+
+    		if (!libCoreClr)
+    		{
+				previousIndex = currentIndex + 1;
+				currentIndex = pathEnvironmentVariable.find(delimeter, previousIndex);
+    		}
+    	}
+    }
 
     if (!libCoreClr)
     {
