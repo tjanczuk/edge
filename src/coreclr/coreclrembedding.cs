@@ -91,7 +91,8 @@ public class CoreCLREmbedding
 			ClrFuncReflectionWrap wrapper = ClrFuncReflectionWrap.Create(assembly, typeName, methodName);
 			DebugMessage("CoreCLREmbedding::GetFunc (CLR) - Method {0}.{1}() loaded successfully", typeName, methodName);
 
-			GCHandle wrapperHandle = GCHandle.Alloc(wrapper);
+			Func<object, Task<object>> wrapperFunc = new Func<object, Task<object>>(wrapper.Call);
+			GCHandle wrapperHandle = GCHandle.Alloc(wrapperFunc);
 
 			return GCHandle.ToIntPtr(wrapperHandle);
 		}
@@ -122,10 +123,10 @@ public class CoreCLREmbedding
 			DebugMessage("CoreCLREmbedding::CallFunc (CLR) - Starting");
 
 			GCHandle wrapperHandle = GCHandle.FromIntPtr(function);
-			ClrFuncReflectionWrap wrapper = (ClrFuncReflectionWrap)wrapperHandle.Target;
+			Func<object, Task<object>> wrapperFunc = (Func<object, Task<object>>)wrapperHandle.Target;
 
 			DebugMessage("CoreCLREmbedding::CallFunc (CLR) - Marshalling data of type {0} and calling the .NET method", ((V8Type)payloadType).ToString("G"));
-			Task<Object> functionTask = wrapper.Call(MarshalV8ToCLR(payload, (V8Type)payloadType));
+			Task<Object> functionTask = wrapperFunc(MarshalV8ToCLR(payload, (V8Type)payloadType));
 
 			if (functionTask.IsFaulted)
 			{
@@ -308,6 +309,7 @@ public class CoreCLREmbedding
 				break;
 
 			case V8Type.Null:
+			case V8Type.Function:
 				break;
 
 			default:
@@ -572,12 +574,17 @@ public class CoreCLREmbedding
 			return destinationPointer;
 		}
 
-		// TODO: we need a better test for this
-		else if (clrObject.GetType().Name.StartsWith("Func`"))
+		else if (clrObject.GetType().FullName.StartsWith("System.Func`"))
 		{
-			v8Type = V8Type.Null;
-			return IntPtr.Zero;
-			// TODO: implement
+			Func<object, Task<object>> funcObject = clrObject as Func<object, Task<object>>;
+
+			if (clrObject == null)
+			{
+				throw new Exception("Properties that return Func<> instances must return Func<object, Task<object>> instances");
+			}
+
+			v8Type = V8Type.Function;
+			return GCHandle.ToIntPtr(GCHandle.Alloc(funcObject));
 		}
 
 		else

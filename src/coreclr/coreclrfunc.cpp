@@ -470,6 +470,11 @@ Handle<v8::Value> CoreClrFunc::MarshalCLRToV8(void* marshalData, int payloadType
 		}
 	}
 
+	else if (payloadType == V8Type::PropertyTypeFunction)
+	{
+		return NanEscapeScope(InitializeInstance(marshalData));
+	}
+
 	else
 	{
 		throwV8Exception("Unsupported object type received from the CLR: %d", payloadType);
