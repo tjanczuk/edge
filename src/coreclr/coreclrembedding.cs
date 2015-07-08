@@ -703,6 +703,10 @@ public class CoreCLREmbedding
 
 				return buffer;
 
+			case V8Type.Exception:
+				string message = Marshal.PtrToStringAnsi(v8Object);
+				return new Exception(message);
+
 			default:
 				throw new Exception("Unsupported V8 object type: " + objectType + ".");
 		}

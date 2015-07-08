@@ -256,10 +256,11 @@ void CoreClrFunc::MarshalV8ExceptionToCLR(Handle<v8::Value> exception, void** ma
         if (stack->IsString())
         {
         	MarshalV8ToCLR(stack, marshalData, &payloadType);
+        	return;
         }
     }
 
-    MarshalV8ToCLR(Handle<v8::String>::Cast(exception), marshalData, &payloadType);
+    *marshalData = CopyV8StringBytes(Handle<v8::String>::Cast(exception));
 }
 
 void CoreClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata, void** marshalData, int* payloadType)

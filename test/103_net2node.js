@@ -158,11 +158,10 @@ describe('async call from .net to node.js', function () {
 	});		
 
 	it('successfuly marshals empty buffer', function (done) {
-		var func = edge.func(function () {/*
-			async (object input) => {
-				return new byte[] {};
-			}
-		*/});
+		var func = edge.func({
+			assemblyFile: edgeTestDll,
+			methodName: 'ReturnEmptyBuffer'
+		});
 
 		func(null, function (error, result) {
 			assert.ifError(error);

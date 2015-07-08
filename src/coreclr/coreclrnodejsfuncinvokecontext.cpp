@@ -96,17 +96,19 @@ void CoreClrNodejsFuncInvokeContext::InvokeCallback(void* data)
 	Handle<v8::Value> argv[] = { v8Payload, callback };
 	TryCatch tryCatch;
 
-	DBG("CoreClrNodejsFuncInvokeContext::InvokeCallback calling JavaScript function");
+	DBG("CoreClrNodejsFuncInvokeContext::InvokeCallback - Calling JavaScript function");
 	NanNew(*(context->FunctionContext->Func))->Call(NanGetCurrentContext()->Global(), 2, argv);
-	DBG("CoreClrNodejsFuncInvokeContext::InvokeCallback called JavaScript function");
+	DBG("CoreClrNodejsFuncInvokeContext::InvokeCallback - Called JavaScript function");
 
 	if (tryCatch.HasCaught())
 	{
-		DBG("CoreClrNodejsFuncInvokeContext::InvokeCallback caught JavaScript exception");
+		DBG("CoreClrNodejsFuncInvokeContext::InvokeCallback - Caught JavaScript exception");
 
-		void* clrExceptionData;
-		CoreClrFunc::MarshalV8ExceptionToCLR(tryCatch.Exception(), &clrExceptionData);
+		void* exceptionData;
+		CoreClrFunc::MarshalV8ExceptionToCLR(tryCatch.Exception(), &exceptionData);
 
-		context->Complete(TaskStatus::Faulted, clrExceptionData, V8Type::PropertyTypeException);
+		DBG("CoreClrNodejsFuncInvokeContext::InvokeCallback - Exception message is: %s", (char*)exceptionData);
+
+		context->Complete(TaskStatus::Faulted, exceptionData, V8Type::PropertyTypeException);
 	}
 }

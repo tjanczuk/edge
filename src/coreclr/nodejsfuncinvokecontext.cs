@@ -53,6 +53,8 @@ public class NodejsFuncInvokeContext
 
     public static void NodejsFuncComplete(IntPtr context, int taskStatus, IntPtr result, int resultType)
     {
+        CoreCLREmbedding.DebugMessage("NodejsFuncInvokeContext::NodejsFuncComplete (CLR) - Starting");
+
         GCHandle gcHandle = GCHandle.FromIntPtr(context);
         NodejsFuncInvokeContext actualContext = (NodejsFuncInvokeContext)gcHandle.Target;
 
@@ -61,14 +63,20 @@ public class NodejsFuncInvokeContext
         V8Type v8ResultType = (V8Type)resultType;
         object marshalledResult = CoreCLREmbedding.MarshalV8ToCLR(result, v8ResultType);
 
+        CoreCLREmbedding.DebugMessage("NodejsFuncInvokeContext::NodejsFuncComplete (CLR) - Marshalled result data back to the CLR");
+
         if (taskStatus == (int)TaskStatus.Faulted)
         {
             actualContext.TaskCompletionSource.SetException((Exception)marshalledResult);
+            CoreCLREmbedding.DebugMessage("NodejsFuncInvokeContext::NodejsFuncComplete (CLR) - Set the exception received from Node.js: {0}", ((Exception)marshalledResult).Message);
         }
 
         else
         {
             actualContext.TaskCompletionSource.SetResult(marshalledResult);
+            CoreCLREmbedding.DebugMessage("NodejsFuncInvokeContext::NodejsFuncComplete (CLR) - Set result data");
         }
+
+        CoreCLREmbedding.DebugMessage("NodejsFuncInvokeContext::NodejsFuncComplete (CLR) - Finished");
     }
 };
