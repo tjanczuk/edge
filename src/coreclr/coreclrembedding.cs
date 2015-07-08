@@ -186,20 +186,43 @@ public class CoreCLREmbedding
 
 		V8Type v8Type;
 		TaskState actualState = (TaskState)state;
-		IntPtr resultObject;
+		IntPtr resultObject = IntPtr.Zero;
+		TaskStatus taskStatus;
 
 		if (task.IsFaulted)
 		{
-			resultObject = MarshalCLRToV8(task.Exception, out v8Type);
+			taskStatus = TaskStatus.Faulted;
+
+			try
+			{
+				resultObject = MarshalCLRToV8(task.Exception, out v8Type);
+			}
+
+			catch (Exception e)
+			{
+				taskStatus = TaskStatus.Faulted;
+				resultObject = MarshalCLRToV8(e, out v8Type);
+			}
 		}
 
 		else
 		{
-			resultObject = MarshalCLRToV8(task.Result, out v8Type);
+			taskStatus = TaskStatus.RanToCompletion;
+
+			try
+			{
+				resultObject = MarshalCLRToV8(task.Result, out v8Type);
+			}
+
+			catch (Exception e)
+			{
+				taskStatus = TaskStatus.Faulted;
+				resultObject = MarshalCLRToV8(e, out v8Type);
+			}
 		}
 
 		DebugMessage("CoreCLREmbedding::TaskCompleted (CLR) - Invoking unmanaged callback");
-		actualState.Callback(resultObject, (int)v8Type, (int)task.Status, actualState.Context);
+		actualState.Callback(resultObject, (int)v8Type, (int)taskStatus, actualState.Context);
 	}
 
 	[SecurityCritical]
