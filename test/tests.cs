@@ -130,7 +130,13 @@ namespace Edge.Tests
         public Task<object> NetExceptionTaskStart(dynamic input)
         {
             throw new Exception("Test .NET exception");
-        }                   
+        }    
+
+        public async Task<object> DelayedReturn(dynamic input)
+        {
+            await Task.Delay(1000);
+            return null;
+        }
 
         public Task<object> NetExceptionCLRThread(dynamic input)
         {

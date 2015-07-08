@@ -118,7 +118,9 @@ Handle<v8::Value> CoreClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value>
 	else if (callbackOrSync->IsBoolean())
 	{
 		DBG("CoreClrFunc::Call - Task was expected to run synchronously, but did not run to completion");
-		throwV8Exception("Task was expected to run synchronously, but did not run to completion");
+		throwV8Exception("The JavaScript function was called synchronously "
+            "but the underlying CLR function returned without completing the Task. Call the "
+            "JavaScript function asynchronously.");
 	}
 
 	else
