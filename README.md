@@ -128,7 +128,7 @@ If you are writing a Node.js application, this section explains how you include 
 
 ### What you need
 
-Edge.js runs on Windows, Linux, and MacOS and requires Node.js 0.8 or later, as well as .NET Framework 4.5. or Mono 3.4.0. 
+Edge.js runs on Windows, Linux, and MacOS and requires Node.js 0.8 or later, as well as .NET Framework 4.5, Mono 3.4.0, or Microsoft's CoreCLR. 
 
 #### Windows
 
@@ -142,7 +142,7 @@ Edge.js runs on Windows, Linux, and MacOS and requires Node.js 0.8 or later, as 
 #### Linux
 
 * Node.js 0.8.x or later (developed and tested with v0.10.26 x64)  
-* Mono 3.4.0 x64  
+* Mono 3.4.0 x64 or Microsoft's CoreCLR
 * Check out [Ubuntu 12.04 setup instructions](#building-on-linux)
 
 ![image](https://cloud.githubusercontent.com/assets/822369/2808077/03f92874-cd0e-11e3-88ea-79f67b8b1d49.png)
@@ -150,7 +150,7 @@ Edge.js runs on Windows, Linux, and MacOS and requires Node.js 0.8 or later, as 
 #### MacOS  
 
 * Node.js 0.8.x or later (developed and tested with v0.10.26 x64)  
-* Mono 3.4.0 x64
+* Mono 3.4.0 x64 or Microsoft's CoreCLR
 * Check out [Mac OS setup instructions](#building-on-osx)  
 
 ![image](https://cloud.githubusercontent.com/assets/822369/2808046/8f4ce378-cd0b-11e3-95dc-ef0842c28821.png)
@@ -1240,7 +1240,7 @@ export EDGE_NATIVE=/Users/tomek/edge/build/Debug/edge.node
 
 ### Building on Linux 
 
-These instructions were tested on Ubuntu 12.04 x64 and Debian Wheezy x64. High level, you must have Node.js x64 and Mono x64 installed on the machine before you can install Edge.js. There are two ways of getting there.
+These instructions were tested on Ubuntu 12.04 x64 and Debian Wheezy x64. High level, you must have Node.js x64 and either Mono x64 or Microsoft's CoreCLR (or both!) installed on the machine before you can install Edge.js. There are two ways of getting there.
 
 ### Debian, starting from a clean VM (i.e. taking the high road)
 
@@ -1255,9 +1255,10 @@ This will do the following:
 
 * Download Node.js v0.10.26 sources, build, and install Node.js x64
 * Download Mono 3.4.0 sources, build, and install Mono x64
+* Download and install Microsoft's CoreCLR, version 1.0.0-beta6-12120
 * Download and install node-gyp and mocha
 * Download Edge.js sources and build x64 release
-* Run Edge.js tests
+* Run Edge.js tests using both Mono and CoreCLR
 
 This process takes about 15 minutes on a Debian Wheezy x64 running on a 4 core with 16GB RAM. If successful, your machine will have all the prerequisites to `npm install edge`.
 
@@ -1274,9 +1275,10 @@ This will do the following:
 
 * Download Node.js v0.10.26 sources, build, and install Node.js x64  
 * Download Mono 3.4.0 sources, build, and install Mono x64  
+* Download and install Microsoft's CoreCLR, version 1.0.0-beta6-12120
 * Download and install node-gyp and mocha  
 * Download Edge.js sources and build x64 release  
-* Run Edge.js tests  
+* Run Edge.js tests using both Mono and CoreCLR
 
 This process takes about 25 minutes on a Ubuntu 12.04 x64 VM running on a 2 core VM with 4GB RAM within Fusion on a MacBook Pro. If successful, your machine will have all the prerequisites to `npm install edge`. 
 
@@ -1298,6 +1300,33 @@ To build a debug build instead of release, you need to:
 node-gyp configure build -debug
 export EDGE_NATIVE=/home/tomek/edge/build/Debug/edge.node
 ```
+
+### Using CoreCLR
+
+If you have only CoreCLR installed on your system and not Mono, you can run Edge with no changes.  However, if you have BOTH runtimes installed, Edge will automatically use Mono unless directed otherwise.  To use CoreCLR in a dual-runtime entironment, set the `EDGE_USE_CORECLR=1` environment variable when starting node, i.e.
+
+```bash
+EDGE_USE_CORECLR=1 node sample.js
+```
+
+Edge will try to find the CLR runtime in the following locations:
+
+ * The path in the `CORECLR_DIR` environment variable, if provided
+ * The current directory
+ * The directory containing `edge.node`
+ * Directories in the `PATH` environment variable
+  
+If you've used `dnvm install` and `dnvm use` to set your preferred version of the CLR, you don't have to supply any additional parameters or environment variables when starting node.  However, if the CLR is another location or you want to use a version of the CLR other than the default that you've set, the best way to specify that is through the `CORECLR_DIR` environment variable, i.e.
+
+```bash
+EDGE_USE_CORECLR=1 CORECLR_DIR=/home/user/.dnx/runtimes/dnx-coreclr-linux-x64.1.0.0-beta6-11944/bin node sample.js
+```
+
+#### CoreCLR gotchas
+
+Because CoreCLR is still under active development, there are a few features of Edge that are not yet fully implemented:
+
+ * Specifying .NET code in the JavaScript source - Because the Roslyn C#/VB.NET compiler has not yet been released on CoreCLR, Edge cannot compile .NET code on the fly from comments or strings in JavaScript.  Instead, you must pre-compile your .NET code into assemblies and reference those assemblies, classes, and methods when calling `edge.func()`.  This feature gap will be resolved when Microsoft makes the compiler bits available.
 
 ## Scripting Node.js from CLR
 
