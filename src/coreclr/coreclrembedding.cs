@@ -495,65 +495,49 @@ public class CoreCLREmbedding
 			return destinationPointer;
 		}
 
-		else if (clrObject is ExpandoObject)
+		else if (clrObject is IDictionary || clrObject is ExpandoObject)
 		{
-			// TODO: merge with IDictionary logic below
 			v8Type = V8Type.Object;
-			V8ObjectData objectData = new V8ObjectData();
-			IDictionary<string, object> objectDictionary = (IDictionary<string, object>)clrObject;
-			IntPtr[] propertyNames = new IntPtr[objectDictionary.Keys.Count];
-			int[] propertyTypes = new int[objectDictionary.Keys.Count];
-			IntPtr[] propertyValues = new IntPtr[objectDictionary.Keys.Count];
-			int pointerSize = Marshal.SizeOf(typeof(IntPtr));
-			int counter = 0;
-			V8Type propertyType;
 
-			objectData.propertiesCount = objectDictionary.Keys.Count;
-			objectData.propertyNames = Marshal.AllocHGlobal(pointerSize * objectDictionary.Keys.Count);
-			objectData.propertyTypes = Marshal.AllocHGlobal(sizeof(int) * objectDictionary.Keys.Count);
-			objectData.propertyValues = Marshal.AllocHGlobal(pointerSize * objectDictionary.Keys.Count);
+			IEnumerable keys;
+			int keyCount;
+			Func<object, object> getValue;
 
-			foreach (string key in objectDictionary.Keys)
+			if (clrObject is ExpandoObject)
 			{
-				propertyNames[counter] = Marshal.StringToHGlobalAnsi(key);
-				propertyValues[counter] = MarshalCLRToV8(objectDictionary[key], out propertyType);
-				propertyTypes[counter] = (int)propertyType;
+				IDictionary<string, object> objectDictionary = (IDictionary<string, object>)clrObject;
 
-				counter++;
+				keys = objectDictionary.Keys;
+				keyCount = objectDictionary.Keys.Count;
+				getValue = (index) => objectDictionary[index.ToString()];
 			}
 
-			Marshal.Copy(propertyNames, 0, objectData.propertyNames, propertyNames.Length);
-			Marshal.Copy(propertyTypes, 0, objectData.propertyTypes, propertyTypes.Length);
-			Marshal.Copy(propertyValues, 0, objectData.propertyValues, propertyValues.Length);
+			else
+			{
+				IDictionary objectDictionary = (IDictionary)clrObject;
 
-			IntPtr destinationPointer = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(V8ObjectData)));
-			Marshal.StructureToPtr<V8ObjectData>(objectData, destinationPointer, false);
-
-			return destinationPointer;
-		}
-
-		else if (clrObject is IDictionary)
-		{
-			v8Type = V8Type.Object;
+				keys = objectDictionary.Keys;
+				keyCount = objectDictionary.Keys.Count;
+				getValue = (index) => objectDictionary[index];
+			}
 
 			V8ObjectData objectData = new V8ObjectData();
-			IDictionary objectDictionary = (IDictionary)clrObject;
-			IntPtr[] propertyNames = new IntPtr[objectDictionary.Keys.Count];
-			int[] propertyTypes = new int[objectDictionary.Keys.Count];
-			IntPtr[] propertyValues = new IntPtr[objectDictionary.Keys.Count];
+			IntPtr[] propertyNames = new IntPtr[keyCount];
+			int[] propertyTypes = new int[keyCount];
+			IntPtr[] propertyValues = new IntPtr[keyCount];
 			int pointerSize = Marshal.SizeOf(typeof(IntPtr));
 			int counter = 0;
 			V8Type propertyType;
 
-			objectData.propertiesCount = objectDictionary.Keys.Count;
-			objectData.propertyNames = Marshal.AllocHGlobal(pointerSize * objectDictionary.Keys.Count);
-			objectData.propertyTypes = Marshal.AllocHGlobal(sizeof(int) * objectDictionary.Keys.Count);
-			objectData.propertyValues = Marshal.AllocHGlobal(pointerSize * objectDictionary.Keys.Count);
+			objectData.propertiesCount = keyCount;
+			objectData.propertyNames = Marshal.AllocHGlobal(pointerSize * keyCount);
+			objectData.propertyTypes = Marshal.AllocHGlobal(sizeof(int) * keyCount);
+			objectData.propertyValues = Marshal.AllocHGlobal(pointerSize * keyCount);
 
-			foreach (object key in objectDictionary.Keys)
+			foreach (object key in keys)
 			{
 				propertyNames[counter] = Marshal.StringToHGlobalAnsi(key.ToString());
-				propertyValues[counter] = MarshalCLRToV8(objectDictionary[key], out propertyType);
+				propertyValues[counter] = MarshalCLRToV8(getValue(key), out propertyType);
 				propertyTypes[counter] = (int)propertyType;
 
 				counter++;

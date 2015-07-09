@@ -80,7 +80,6 @@ void CoreClrFuncInvokeContext::InvokeCallback(void* data)
 		callbackData = CoreClrFunc::MarshalCLRToV8(context->resultData, context->resultType);
 	}
 
-	// TODO: pass errors if provided
 	Handle<Value> argv[] = { errors, callbackData };
 	int argc = 2;
 
