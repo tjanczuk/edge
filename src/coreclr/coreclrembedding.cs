@@ -689,18 +689,17 @@ public class CoreCLREmbedding
 				V8ArrayData arrayData = Marshal.PtrToStructure<V8ArrayData>(v8Object);
 				int[] itemTypes = new int[arrayData.arrayLength];
 				IntPtr[] itemValues = new IntPtr[arrayData.arrayLength];
-				// TODO: use an array instead of a list
-				List<object> array = new List<object>();
+				object[] array = new object[arrayData.arrayLength];
 
 				Marshal.Copy(arrayData.itemTypes, itemTypes, 0, arrayData.arrayLength);
 				Marshal.Copy(arrayData.itemValues, itemValues, 0, arrayData.arrayLength);
 
 				for (int i = 0; i < arrayData.arrayLength; i++)
 				{
-					array.Add(MarshalV8ToCLR(itemValues[i], (V8Type)itemTypes[i]));
+					array[i] = MarshalV8ToCLR(itemValues[i], (V8Type)itemTypes[i]);
 				}
 
-				return array.ToArray();
+				return array;
 
 			case V8Type.Buffer:
 				V8BufferData bufferData = Marshal.PtrToStructure<V8BufferData>(v8Object);
