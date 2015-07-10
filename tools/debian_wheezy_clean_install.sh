@@ -7,7 +7,7 @@ sudo -u ${THE_USER} mkdir /home/${THE_USER}/tmp
 
 # install prerequisities
 
-apt-get -y install curl g++ pkg-config libgdiplus libunwind8 libssl-dev unzip
+apt-get -y install curl g++ pkg-config libgdiplus libunwind8 libssl-dev unzip make
 
 # download and build Node.js
 
@@ -29,7 +29,7 @@ npm install mocha -g
 sudo -u ${THE_USER} curl http://download.mono-project.com/sources/mono/mono-4.0.1.44.tar.bz2 > mono-4.0.1.44.tar.bz2
 sudo -u ${THE_USER} tar -xvf mono-4.0.1.44.tar.bz2
 # sudo -u ${THE_USER} curl https://raw.githubusercontent.com/tjanczuk/edge/master/tools/Microsoft.Portable.Common.targets > ./mono-3.4.0/mcs/tools/xbuild/targets/Microsoft.Portable.Common.targets
-cd mono-4.0.1.44
+cd mono-4.0.1
 # see http://stackoverflow.com/questions/15627951/mono-dllnotfound-error
 # sudo -u ${THE_USER} bash -c 'sed -i "s/\@prefix\@\/lib\///g" ./data/config.in'
 sudo -u ${THE_USER} bash -c './configure --prefix=/usr/local --with-glib=embedded --enable-nls=no'
