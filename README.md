@@ -1248,7 +1248,7 @@ If you have a fresh Debian Wheezy x64 installation, the most convenient way of i
 
 ```bash
 export USERNAME=YourUserNameHere
-sudo bash -c 'bash <(wget -qO- https://raw.githubusercontent.com/tjanczuk/edge/master/tools/debian_wheezy_clean_install.sh)'
+sudo bash -c 'bash <(wget -qO- https://raw.githubusercontent.com/medicomp/edge/master/tools/debian_wheezy_clean_install.sh)'
 ```
 
 This will do the following:
@@ -1268,7 +1268,7 @@ This process takes about 15 minutes on a Debian Wheezy x64 running on a 4 core w
 If you have a fresh Ubuntu 12.04 x64 installation, the most convenient way of installing Edge.js with all prerequisites is by running:
 
 ```bash
-sudo bash -c 'bash <(wget -qO- https://raw.githubusercontent.com/tjanczuk/edge/master/tools/ubuntu_12.04_clean_install.sh)'
+sudo bash -c 'bash <(wget -qO- https://raw.githubusercontent.com/medicomp/edge/master/tools/ubuntu_12.04_clean_install.sh)'
 ```
 
 This will do the following:
@@ -1286,7 +1286,7 @@ This process takes about 25 minutes on a Ubuntu 12.04 x64 VM running on a 2 core
 
 This method is adequate if you already have a Mono x64 or Node.js x64 install on the machine and need to incrementally add Edge to it. 
 
-Read through the [install script](https://raw.githubusercontent.com/tjanczuk/edge/mono/tools/ubuntu_12.04_clean_install.sh) and cherry pick the steps you need. Here are some gotchas:
+Read through the [install script](https://raw.githubusercontent.com/medicomp/edge/mono/tools/ubuntu_12.04_clean_install.sh) and cherry pick the steps you need. Here are some gotchas:
 
 * The Mono 3.4.0 source code tarball misses one file which the install script manually adds. For background on the missing file see [here](http://stackoverflow.com/questions/22844569/build-error-mono-3-4-0-centos).  
 * If you need to build Mono, make sure to run `ldconfig` afterwards, otherwise the garbage collection libraries may not load.  
