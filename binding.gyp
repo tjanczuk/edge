@@ -44,12 +44,14 @@
             'sources+': [
               'src/common/edge.cpp'
             ],
+            'cflags+': [
+              '-std=c++11'
+            ],
             'conditions': [
               [
                 '"<!(echo -n `which dnx`)"!=""',
                 {
                   'cflags+': [
-                    '-std=c++11',
                     '-DHAVE_CORECLR'
                   ],
                   'sources+': [
