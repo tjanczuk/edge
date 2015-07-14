@@ -28,10 +28,7 @@ npm install mocha -g
 
 sudo -u ${THE_USER} curl http://download.mono-project.com/sources/mono/mono-4.0.1.44.tar.bz2 > mono-4.0.1.44.tar.bz2
 sudo -u ${THE_USER} tar -xvf mono-4.0.1.44.tar.bz2
-# sudo -u ${THE_USER} curl https://raw.githubusercontent.com/tjanczuk/edge/master/tools/Microsoft.Portable.Common.targets > ./mono-3.4.0/mcs/tools/xbuild/targets/Microsoft.Portable.Common.targets
 cd mono-4.0.1
-# see http://stackoverflow.com/questions/15627951/mono-dllnotfound-error
-# sudo -u ${THE_USER} bash -c 'sed -i "s/\@prefix\@\/lib\///g" ./data/config.in'
 sudo -u ${THE_USER} bash -c './configure --prefix=/usr/local --with-glib=embedded --enable-nls=no'
 sudo -u ${THE_USER} make
 make install
@@ -40,7 +37,7 @@ cd ..
 
 # download and install CoreCLR
 
-sudo -u ${THE_USER} curl -sSL https://raw.githubusercontent.com/aspnet/Home/dev/dnvminstall.sh | DNX_BRANCH=dev sh && source ~/.dnx/dnvm/dnvm.sh
+curl -sSL https://raw.githubusercontent.com/aspnet/Home/dev/dnvminstall.sh | DNX_BRANCH=dev sh && source ~/.dnx/dnvm/dnvm.sh
 dnvm install 1.0.0-beta6-12120 -r coreclr -u
 dnvm use 1.0.0-beta6-12120 -r coreclr
 
@@ -49,6 +46,6 @@ dnvm use 1.0.0-beta6-12120 -r coreclr
 sudo -u ${THE_USER} curl https://codeload.github.com/medicomp/edge/zip/master > edge.js.zip
 sudo -u ${THE_USER} unzip edge.js.zip 
 cd edge-master/
-sudo -u ${THE_USER} npm install
+npm install --unsafe-perm
 sudo -u ${THE_USER} npm test
 EDGE_USE_CORECLR=1 sudo -u ${THE_USER} npm test
