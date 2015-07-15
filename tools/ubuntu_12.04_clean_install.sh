@@ -49,3 +49,4 @@ cd edge-master/
 npm install --unsafe-perm
 sudo -u ${THE_USER} npm test
 EDGE_USE_CORECLR=1 sudo -u ${THE_USER} npm test
+chown -R ${THE_USER} $HOME/.npm
