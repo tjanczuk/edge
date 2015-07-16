@@ -48,5 +48,5 @@ sudo -u ${THE_USER} unzip edge.js.zip
 cd edge-master/
 npm install --unsafe-perm
 sudo -u ${THE_USER} npm test
-EDGE_USE_CORECLR=1 sudo -u ${THE_USER} npm test
+sudo -u ${THE_USER} EDGE_USE_CORECLR=1 PATH=$PATH npm test
 chown -R ${THE_USER} $HOME/.npm
