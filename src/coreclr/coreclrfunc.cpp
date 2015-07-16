@@ -179,7 +179,7 @@ NAN_METHOD(CoreClrFunc::Initialize)
 			DBG("CoreClrFunc::Initialize - Error loading function, V8 exception being thrown");
 			throwV8Exception(exception);
 
-			NanEscapeScope(NanUndefined());
+			result = NanUndefined();
 		}
 	}
 

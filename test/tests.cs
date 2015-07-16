@@ -305,14 +305,9 @@ namespace Edge.Tests
         public async Task<object> ReturnLambdaThatThrowsAsyncException(dynamic input)
         {
             return (Func<object,Task<object>>)((i) => { 
-                Task<object> task = new Task<object>(() =>
-                    {
-                        throw new Exception("Test .NET exception");
-                    });
-
-                task.Start();
-
-                return task; 
+                return Task.Delay(200).ContinueWith(new Func<Task, object>((antecedant) => {
+                    throw new Exception("Test .NET exception");
+                }));
             });
         }
 
