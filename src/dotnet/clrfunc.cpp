@@ -181,7 +181,7 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(System::Object^ netdata)
     }
     else if (type == System::Int16::typeid)
     {
-        jsdata = NanNew<v8::Integer>((int)netdata);
+        jsdata = NanNew<v8::Integer>((short)netdata);
     }
     else if (type == System::Int64::typeid)
     {
