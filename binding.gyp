@@ -44,9 +44,6 @@
             'sources+': [
               'src/common/edge.cpp'
             ],
-            'cflags+': [
-              '-std=c++11'
-            ],
             'conditions': [
               [
                 '"<!(echo -n `which dnx`)"!=""',

@@ -1,10 +1,6 @@
 #include "edge.h"
 #include <dlfcn.h>
 #include <limits.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string>
-#include <string.h>
 #include <unistd.h>
 #include <set>
 #include <dirent.h>
@@ -22,15 +18,46 @@ const char* LIBCORECLR_NAME = "libcoreclr.dylib";
 const char* LIBCORECLR_NAME = "libcoreclr.so";
 #endif
 
-typedef HRESULT (*GetCLRRuntimeHostFunction)(REFIID id, IUnknown** host);
-typedef HRESULT (*PAL_InitializeCoreCLRFunction)(const char *szExePath, const char *szCoreCLRPath, bool fStayInPAL);
+typedef HRESULT (*coreclr_create_delegateFunction)(
+		void* hostHandle,
+		unsigned int domainId,
+		const char* assemblyName,
+		const char* typeName,
+		const char* methodName,
+		void** delegate);
+typedef HRESULT (*coreclr_initializeFunction)(
+		const char *exePath,
+		const char *appDomainFriendlyName,
+		int propertyCount,
+		const char** propertyKeys,
+		const char** propertyValues,
+		void** hostHandle,
+		unsigned int* domainId);
 
-DWORD appDomainId;
+unsigned int appDomainId;
+void* hostHandle;
 GetFuncFunction getFunc;
 CallFuncFunction callFunc;
 ContinueTaskFunction continueTask;
 FreeHandleFunction freeHandle;
 FreeMarshalDataFunction freeMarshalData;
+
+#define CREATE_DELEGATE(functionName, functionPointer)\
+	result = createDelegate(\
+			hostHandle,\
+			appDomainId,\
+			"CoreCLREmbedding",\
+			"CoreCLREmbedding",\
+			functionName,\
+			(void**) functionPointer);\
+	\
+	if (FAILED(result))\
+	{\
+		throwV8Exception("Call to coreclr_create_delegate() for %s failed with a return code of 0x%x.", functionName, result);\
+		return result;\
+	}\
+	\
+	DBG("CoreClrEmbedding::Initialize - CoreCLREmbedding.%s() loaded successfully", functionName);\
 
 HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 {
@@ -133,245 +160,85 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 
     DBG("CoreClrEmbedding::Initialize - Assembly search path is %s", assemblySearchDirectories.c_str());
 
-    ICLRRuntimeHost2* runtimeHost = NULL;
-
-    PAL_InitializeCoreCLRFunction initializeCoreCLR = (PAL_InitializeCoreCLRFunction) dlsym(libCoreClr, "PAL_InitializeCoreCLR");
+    coreclr_initializeFunction initializeCoreCLR = (coreclr_initializeFunction) dlsym(libCoreClr, "coreclr_initialize");
 
     if (!initializeCoreCLR)
     {
-    	throwV8Exception("Error loading the PAL_InitializeCoreCLR function from %s: %s.", LIBCORECLR_NAME, dlerror());
+    	throwV8Exception("Error loading the coreclr_initialize function from %s: %s.", LIBCORECLR_NAME, dlerror());
         return E_FAIL;
     }
 
-    GetCLRRuntimeHostFunction getCLRRuntimeHost = (GetCLRRuntimeHostFunction) dlsym(libCoreClr, "GetCLRRuntimeHost");
+    coreclr_create_delegateFunction createDelegate = (coreclr_create_delegateFunction) dlsym(libCoreClr, "coreclr_create_delegate");
 
-    if (!getCLRRuntimeHost)
+    if (!createDelegate)
     {
-    	throwV8Exception("Error loading the GetCLRRuntimeHost function from %s: %s.", LIBCORECLR_NAME, dlerror());
+    	throwV8Exception("Error loading the coreclr_create_delegate function from %s: %s.", LIBCORECLR_NAME, dlerror());
     	return E_FAIL;
     }
 
-    REFIID clrRuntimeHostGuid = (REFIID) dlsym(libCoreClr, "IID_ICLRRuntimeHost2");
-
-    if (!clrRuntimeHostGuid)
-    {
-    	throwV8Exception("Error loading the IID_ICLRRuntimeHost2 GUID from %s: %s.", LIBCORECLR_NAME, dlerror());
-    	return E_FAIL;
-    }
-
-    std::string coreClrDllPath(&coreClrDirectory[0]);
-
-    coreClrDllPath.append("/");
-    coreClrDllPath.append(LIBCORECLR_NAME);
-
-    DBG("CoreClrEmbedding::Initialize - Calling PAL_InitializeCoreCLR()");
-    result = initializeCoreCLR(bootstrapper, coreClrDllPath.c_str(), true);
-
-    if (FAILED(result))
-    {
-    	throwV8Exception("Call to PAL_InitializeCoreCLR() failed with a return code of 0x%x.", result);
-        return result;
-    }
-
-    DBG("CoreClrEmbedding::Initialize - CoreCLR initialized successfully");
-    result = getCLRRuntimeHost(clrRuntimeHostGuid, (void**) &runtimeHost);
-
-    if (FAILED(result))
-    {
-    	throwV8Exception("Call to GetCLRRuntimeHost() failed with a return code of 0x%x.", result);
-        return result;
-    }
-
-    DBG("CoreClrEmbedding::Initialize - Got the runtime host successfully");
-    result = runtimeHost->SetStartupFlags((STARTUP_FLAGS) (STARTUP_LOADER_OPTIMIZATION_SINGLE_DOMAIN | STARTUP_SINGLE_APPDOMAIN));
-
-    if (FAILED(result))
-    {
-    	throwV8Exception("Call to ICLRRuntimeHost2::SetStartupFlags() failed with a return code of 0x%x.", result);
-        return result;
-    }
-
-    DBG("CoreClrEmbedding::Initialize - Set runtime host startup flags successfully");
-    result = runtimeHost->Start();
-
-    if (FAILED(result))
-    {
-    	throwV8Exception("Call to ICLRRuntimeHost2::Start() failed with a return code of 0x%x.", result);
-        return result;
-    }
-
-    DBG("CoreClrEmbedding::Initialize - Runtime host started successfully");
-
-    LPCWSTR propertyKeys[] = {
-    	u"TRUSTED_PLATFORM_ASSEMBLIES",
-    	u"APP_PATHS",
-    	u"APP_NI_PATHS",
-    	u"NATIVE_DLL_SEARCH_DIRECTORIES",
-    	u"AppDomainCompatSwitch"
+    const char* propertyKeys[] = {
+    	"TRUSTED_PLATFORM_ASSEMBLIES",
+    	"APP_PATHS",
+    	"APP_NI_PATHS",
+    	"NATIVE_DLL_SEARCH_DIRECTORIES",
+    	"AppDomainCompatSwitch"
     };
 
     std::string tpaList;
     AddToTpaList(coreClrDirectory, &tpaList);
 
-    std::u16string utf16TpaList;
-    StringToUTF16(tpaList, utf16TpaList);
-
     std::string appPaths(&currentDirectory[0]);
     appPaths.append(":");
     appPaths.append(edgeNodePath);
 
-    std::u16string utf16AppPaths;
-    StringToUTF16(appPaths, utf16AppPaths);
-
-    std::u16string utf16AssemblySearchDirectories;
-    StringToUTF16(assemblySearchDirectories, utf16AssemblySearchDirectories);
-
-    LPCWSTR propertyValues[] = {
-    	utf16TpaList.c_str(),
-        utf16AppPaths.c_str(),
-        utf16AppPaths.c_str(),
-        utf16AssemblySearchDirectories.c_str(),
-        u"UseLatestBehaviorWhenTFMNotSpecified"
+    const char* propertyValues[] = {
+    	tpaList.c_str(),
+        appPaths.c_str(),
+        appPaths.c_str(),
+        assemblySearchDirectories.c_str(),
+        "UseLatestBehaviorWhenTFMNotSpecified"
     };
 
-    result = runtimeHost->CreateAppDomainWithManager(
-    	u"Edge",
-        APPDOMAIN_ENABLE_PLATFORM_SPECIFIC_APPS |
-            APPDOMAIN_ENABLE_PINVOKE_AND_CLASSIC_COMINTEROP |
-            APPDOMAIN_DISABLE_TRANSPARENCY_ENFORCEMENT |
-            APPDOMAIN_ENABLE_ASSEMBLY_LOADFILE,
-        NULL,
-        NULL,
-        sizeof(propertyKeys) / sizeof(propertyKeys[0]),
-        &propertyKeys[0],
-        &propertyValues[0],
-        &appDomainId);
+    DBG("CoreClrEmbedding::Initialize - Calling coreclr_initialize()");
+	result = initializeCoreCLR(
+			bootstrapper,
+			"Edge",
+			sizeof(propertyKeys) / sizeof(propertyKeys[0]),
+			&propertyKeys[0],
+			&propertyValues[0],
+			&hostHandle,
+			&appDomainId);
 
-    if (FAILED(result))
-    {
-    	throwV8Exception("Call to ICLRRuntimeHost2::CreateAppDomainWithManager() failed with a return code of 0x%x.", result);
-        return result;
-    }
+	if (FAILED(result))
+	{
+		throwV8Exception("Call to coreclr_initialize() failed with a return code of 0x%x.", result);
+		return result;
+	}
 
+	DBG("CoreClrEmbedding::Initialize - CoreCLR initialized successfully");
     DBG("CoreClrEmbedding::Initialize - App domain created successfully (app domain ID: %d)", appDomainId);
 
-    result = runtimeHost->CreateDelegate(
-    		appDomainId,
-    		u"CoreCLREmbedding",
-    		u"CoreCLREmbedding",
-    		u"GetFunc",
-    		(INT_PTR*) &getFunc);
-
-    if (FAILED(result))
-    {
-    	throwV8Exception("Call to ICLRRuntimeHost2::CreateDelegate() for GetFunc failed with a return code of 0x%x.", result);
-        return result;
-    }
-
-    DBG("CoreClrEmbedding::Initialize - CoreCLREmbedding.GetFunc() loaded successfully");
-
-	result = runtimeHost->CreateDelegate(
-				appDomainId,
-				u"CoreCLREmbedding",
-				u"CoreCLREmbedding",
-				u"CallFunc",
-				(INT_PTR*) &callFunc);
-
-	if (FAILED(result))
-	{
-		throwV8Exception("Call to ICLRRuntimeHost2::CreateDelegate() for CallFunc failed with a return code of 0x%x.", result);
-		return result;
-	}
-
-	DBG("CoreClrEmbedding::Initialize - CoreCLREmbedding.CallFunc() loaded successfully");
-
-	result = runtimeHost->CreateDelegate(
-				appDomainId,
-				u"CoreCLREmbedding",
-				u"CoreCLREmbedding",
-				u"ContinueTask",
-				(INT_PTR*) &continueTask);
-
-	if (FAILED(result))
-	{
-		throwV8Exception("Call to ICLRRuntimeHost2::CreateDelegate() for ContinueTask failed with a return code of 0x%x.", result);
-		return result;
-	}
-
-	DBG("CoreClrEmbedding::Initialize - CoreCLREmbedding.ContinueTask() loaded successfully");
-
-	result = runtimeHost->CreateDelegate(
-				appDomainId,
-				u"CoreCLREmbedding",
-				u"CoreCLREmbedding",
-				u"FreeHandle",
-				(INT_PTR*) &freeHandle);
-
-	if (FAILED(result))
-	{
-		throwV8Exception("Call to ICLRRuntimeHost2::CreateDelegate() for FreeHandle failed with a return code of 0x%x.", result);
-		return result;
-	}
-
-	DBG("CoreClrEmbedding::Initialize - CoreCLREmbedding.FreeHandle() loaded successfully");
-
-	result = runtimeHost->CreateDelegate(
-				appDomainId,
-				u"CoreCLREmbedding",
-				u"CoreCLREmbedding",
-				u"FreeMarshalData",
-				(INT_PTR*) &freeMarshalData);
-
-	if (FAILED(result))
-	{
-		throwV8Exception("Call to ICLRRuntimeHost2::CreateDelegate() for FreeMarshalData failed with a return code of 0x%x.", result);
-		return result;
-	}
-
-	DBG("CoreClrEmbedding::Initialize - CoreCLREmbedding.FreeMarshalData() loaded successfully");
-
     SetDebugModeFunction setDebugMode;
-    result = runtimeHost->CreateDelegate(
-        		appDomainId,
-        		u"CoreCLREmbedding",
-        		u"CoreCLREmbedding",
-        		u"SetDebugMode",
-        		(INT_PTR*) &setDebugMode);
+    SetCallV8FunctionDelegateFunction setCallV8Function;
 
-	if (FAILED(result))
-	{
-		throwV8Exception("Call to ICLRRuntimeHost2::CreateDelegate() for SetDebugMode failed with a return code of 0x%x.", result);
-		return result;
-	}
+    CREATE_DELEGATE("GetFunc", &getFunc);
+    CREATE_DELEGATE("CallFunc", &callFunc);
+    CREATE_DELEGATE("ContinueTask", &continueTask);
+    CREATE_DELEGATE("FreeHandle", &freeHandle);
+    CREATE_DELEGATE("FreeMarshalData", &freeMarshalData);
+    CREATE_DELEGATE("SetDebugMode", &setDebugMode);
+    CREATE_DELEGATE("SetCallV8FunctionDelegate", &setCallV8Function);
 
-	DBG("CoreClrEmbedding::Initialize - CoreCLREmbedding.SetDebugMode() loaded successfully");
-
-	setDebugMode(debugMode);
+    setDebugMode(debugMode);
 	DBG("CoreClrEmbedding::Initialize - Debug mode set successfully");
 
-	SetCallV8FunctionDelegateFunction setCallV8FunctionDelegate;
-	result = runtimeHost->CreateDelegate(
-				appDomainId,
-				u"CoreCLREmbedding",
-				u"CoreCLREmbedding",
-				u"SetCallV8FunctionDelegate",
-				(INT_PTR*) &setCallV8FunctionDelegate);
-
-	if (FAILED(result))
-	{
-		throwV8Exception("Call to ICLRRuntimeHost2::CreateDelegate() for SetCallV8FunctionDelegate failed with a return code of 0x%x.", result);
-		return result;
-	}
-
-	DBG("CoreClrEmbedding::Initialize - CoreCLREmbedding.SetCallV8FunctionDelegate() loaded successfully");
-
 	CoreClrGcHandle exception = NULL;
-	setCallV8FunctionDelegate(CoreClrNodejsFunc::Call, &exception);
+	setCallV8Function(CoreClrNodejsFunc::Call, &exception);
 
 	if (exception)
 	{
-		Handle<v8::Value> v8Exception = CoreClrFunc::MarshalCLRToV8(exception, V8Type::PropertyTypeException);
-		FreeMarshalData(exception, V8Type::PropertyTypeException);
+		Handle<v8::Value> v8Exception = CoreClrFunc::MarshalCLRToV8(exception, V8TypeException);
+		FreeMarshalData(exception, V8TypeException);
 
 		throwV8Exception(v8Exception);
 	}
@@ -395,8 +262,8 @@ CoreClrGcHandle CoreClrEmbedding::GetClrFuncReflectionWrapFunc(const char* assem
 
 	if (exception)
 	{
-		*v8Exception = CoreClrFunc::MarshalCLRToV8(exception, V8Type::PropertyTypeException);
-		FreeMarshalData(exception, V8Type::PropertyTypeException);
+		*v8Exception = CoreClrFunc::MarshalCLRToV8(exception, V8TypeException);
+		FreeMarshalData(exception, V8TypeException);
 
 		return NULL;
 	}

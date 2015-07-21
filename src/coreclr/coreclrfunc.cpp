@@ -84,9 +84,9 @@ Handle<v8::Value> CoreClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value>
 	DBG("CoreClrFunc::Call - Freeing the data marshalled to the CLR");
 	FreeMarshalData(marshalData, payloadType);
 
-	if (taskState == TaskStatus::RanToCompletion || taskState == TaskStatus::Faulted)
+	if (taskState == TaskStatusRanToCompletion || taskState == TaskStatusFaulted)
 	{
-		if (taskState == TaskStatus::RanToCompletion)
+		if (taskState == TaskStatusRanToCompletion)
 		{
 			DBG("CoreClrFunc::Call - Task ran synchronously, marshalling CLR data to V8");
 		}
@@ -96,9 +96,9 @@ Handle<v8::Value> CoreClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value>
 			DBG("CoreClrFunc::Call - Task threw an exception, marshalling CLR exception data to V8");
 		}
 
-		if (callbackOrSync->IsBoolean() || taskState == TaskStatus::Faulted)
+		if (callbackOrSync->IsBoolean() || taskState == TaskStatusFaulted)
 		{
-			if (taskState == TaskStatus::RanToCompletion)
+			if (taskState == TaskStatusRanToCompletion)
 			{
 				return NanEscapeScope(CoreClrFunc::MarshalCLRToV8(result, resultType));
 			}
@@ -137,7 +137,7 @@ Handle<v8::Value> CoreClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value>
 
 		if (exception)
 		{
-			CoreClrFuncInvokeContext::TaskComplete(exception, V8Type::PropertyTypeException, TaskStatus::Faulted, invokeContext);
+			CoreClrFuncInvokeContext::TaskComplete(exception, V8TypeException, TaskStatusFaulted, invokeContext);
 		}
 	}
 
@@ -178,8 +178,6 @@ NAN_METHOD(CoreClrFunc::Initialize)
 		{
 			DBG("CoreClrFunc::Initialize - Error loading function, V8 exception being thrown");
 			throwV8Exception(exception);
-
-			result = NanUndefined();
 		}
 	}
 
@@ -198,35 +196,35 @@ void CoreClrFunc::FreeMarshalData(void* marshalData, int payloadType)
 {
 	switch (payloadType)
 	{
-		case V8Type::PropertyTypeString:
+		case V8TypeString:
 			delete ((char*)marshalData);
 			break;
 
-		case V8Type::PropertyTypeObject:
+		case V8TypeObject:
 			delete ((V8ObjectData*)marshalData);
 			break;
 
-		case V8Type::PropertyTypeBoolean:
+		case V8TypeBoolean:
 			delete ((bool*)marshalData);
 			break;
 
-		case V8Type::PropertyTypeNumber:
-		case V8Type::PropertyTypeDate:
+		case V8TypeNumber:
+		case V8TypeDate:
 			delete ((double*)marshalData);
 			break;
 
-		case V8Type::PropertyTypeInt32:
+		case V8TypeInt32:
 			delete ((int32_t*)marshalData);
 			break;
 
-		case V8Type::PropertyTypeUInt32:
+		case V8TypeUInt32:
 			delete ((uint32_t*)marshalData);
 			break;
 
-		case V8Type::PropertyTypeNull:
+		case V8TypeNull:
 			break;
 
-		case V8Type::PropertyTypeArray:
+		case V8TypeArray:
 			delete ((V8ArrayData*)marshalData);
 			break;
 	}
@@ -270,13 +268,13 @@ void CoreClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata, void** marshalData, i
 	if (jsdata->IsString())
 	{
 		*marshalData = CopyV8StringBytes(Handle<v8::String>::Cast(jsdata));
-		*payloadType = V8Type::PropertyTypeString;
+		*payloadType = V8TypeString;
 	}
 
 	else if (jsdata->IsFunction())
 	{
 		*marshalData = new CoreClrNodejsFunc(Handle<v8::Function>::Cast(jsdata));
-		*payloadType = V8Type::PropertyTypeFunction;
+		*payloadType = V8TypeFunction;
 	}
 
 	else if (node::Buffer::HasInstance(jsdata))
@@ -290,7 +288,7 @@ void CoreClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata, void** marshalData, i
 		memcpy(bufferData->buffer, node::Buffer::Data(jsBuffer), bufferData->bufferLength);
 
 		*marshalData = bufferData;
-		*payloadType = V8Type::PropertyTypeBuffer;
+		*payloadType = V8TypeBuffer;
 	}
 
 	else if (jsdata->IsArray())
@@ -308,7 +306,7 @@ void CoreClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata, void** marshalData, i
 		}
 
 		*marshalData = arrayData;
-		*payloadType = V8Type::PropertyTypeArray;
+		*payloadType = V8TypeArray;
 	}
 
 	else if (jsdata->IsDate())
@@ -318,7 +316,7 @@ void CoreClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata, void** marshalData, i
 
 		*ticks = jsdate->NumberValue();
 		*marshalData = ticks;
-		*payloadType = V8Type::PropertyTypeDate;
+		*payloadType = V8TypeDate;
 	}
 
 	else if (jsdata->IsBoolean())
@@ -327,7 +325,7 @@ void CoreClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata, void** marshalData, i
 		*value = jsdata->BooleanValue();
 
 		*marshalData = value;
-		*payloadType = V8Type::PropertyTypeBoolean;
+		*payloadType = V8TypeBoolean;
 	}
 
 	else if (jsdata->IsInt32())
@@ -336,7 +334,7 @@ void CoreClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata, void** marshalData, i
 		*value = jsdata->Int32Value();
 
 		*marshalData = value;
-		*payloadType = V8Type::PropertyTypeInt32;
+		*payloadType = V8TypeInt32;
 	}
 
 	else if (jsdata->IsUint32())
@@ -345,7 +343,7 @@ void CoreClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata, void** marshalData, i
 		*value = jsdata->Uint32Value();
 
 		*marshalData = value;
-		*payloadType = V8Type::PropertyTypeUInt32;
+		*payloadType = V8TypeUInt32;
 	}
 
 	else if (jsdata->IsNumber())
@@ -354,12 +352,12 @@ void CoreClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata, void** marshalData, i
 		*value = jsdata->NumberValue();
 
 		*marshalData = value;
-		*payloadType = V8Type::PropertyTypeNumber;
+		*payloadType = V8TypeNumber;
 	}
 
 	else if (jsdata->IsUndefined() || jsdata->IsNull())
 	{
-		*payloadType = V8Type::PropertyTypeNull;
+		*payloadType = V8TypeNull;
 	}
 
 	else if (jsdata->IsObject())
@@ -383,7 +381,7 @@ void CoreClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata, void** marshalData, i
 		}
 
 		*marshalData = objectData;
-		*payloadType = V8Type::PropertyTypeObject;
+		*payloadType = V8TypeObject;
 	}
 }
 
@@ -391,33 +389,33 @@ Handle<v8::Value> CoreClrFunc::MarshalCLRToV8(void* marshalData, int payloadType
 {
 	NanEscapableScope();
 
-	if (payloadType == V8Type::PropertyTypeString)
+	if (payloadType == V8TypeString)
 	{
 		return NanEscapeScope(NanNew<v8::String>((char*) marshalData));
 	}
 
-	else if (payloadType == V8Type::PropertyTypeInt32)
+	else if (payloadType == V8TypeInt32)
 	{
 		return NanEscapeScope(NanNew<v8::Integer>(*(int*) marshalData));
 	}
 
-	else if (payloadType == V8Type::PropertyTypeNumber)
+	else if (payloadType == V8TypeNumber)
 	{
 		return NanEscapeScope(NanNew<v8::Number>(*(double*) marshalData));
 	}
 
-	else if (payloadType == V8Type::PropertyTypeDate)
+	else if (payloadType == V8TypeDate)
 	{
 		return NanEscapeScope(NanNew<v8::Date>(*(double*) marshalData));
 	}
 
-	else if (payloadType == V8Type::PropertyTypeBoolean)
+	else if (payloadType == V8TypeBoolean)
 	{
 		bool value = (*(int*) marshalData) != 0;
 		return NanEscapeScope(NanNew<v8::Boolean>(value));
 	}
 
-	else if (payloadType == V8Type::PropertyTypeArray)
+	else if (payloadType == V8TypeArray)
 	{
 		V8ArrayData* arrayData = (V8ArrayData*) marshalData;
 		Handle<v8::Array> result = NanNew<v8::Array>();
@@ -430,7 +428,7 @@ Handle<v8::Value> CoreClrFunc::MarshalCLRToV8(void* marshalData, int payloadType
 		return NanEscapeScope(result);
 	}
 
-	else if (payloadType == V8Type::PropertyTypeObject || payloadType == V8Type::PropertyTypeException)
+	else if (payloadType == V8TypeObject || payloadType == V8TypeException)
 	{
 		V8ObjectData* objectData = (V8ObjectData*) marshalData;
 		Handle<v8::Object> result = NanNew<v8::Object>();
@@ -440,7 +438,7 @@ Handle<v8::Value> CoreClrFunc::MarshalCLRToV8(void* marshalData, int payloadType
 			result->Set(NanNew<v8::String>(objectData->propertyNames[i]), MarshalCLRToV8(objectData->propertyData[i], objectData->propertyTypes[i]));
 		}
 
-		if (payloadType == V8Type::PropertyTypeException)
+		if (payloadType == V8TypeException)
 		{
 			Handle<v8::String> name = Handle<v8::String>::Cast(result->Get(NanNew<v8::String>("Name")));
 			Handle<v8::String> message = Handle<v8::String>::Cast(result->Get(NanNew<v8::String>("Message")));
@@ -453,12 +451,12 @@ Handle<v8::Value> CoreClrFunc::MarshalCLRToV8(void* marshalData, int payloadType
 		return NanEscapeScope(result);
 	}
 
-	else if (payloadType == V8Type::PropertyTypeNull)
+	else if (payloadType == V8TypeNull)
 	{
 		return NanEscapeScope(NanNull());
 	}
 
-	else if (payloadType == V8Type::PropertyTypeBuffer)
+	else if (payloadType == V8TypeBuffer)
 	{
 		V8BufferData* bufferData = (V8BufferData*) marshalData;
 
@@ -473,7 +471,7 @@ Handle<v8::Value> CoreClrFunc::MarshalCLRToV8(void* marshalData, int payloadType
 		}
 	}
 
-	else if (payloadType == V8Type::PropertyTypeFunction)
+	else if (payloadType == V8TypeFunction)
 	{
 		return NanEscapeScope(InitializeInstance(marshalData));
 	}

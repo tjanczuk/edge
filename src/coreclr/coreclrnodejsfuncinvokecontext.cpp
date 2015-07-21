@@ -13,7 +13,7 @@ NAN_METHOD(coreClrV8FuncCallback)
     	void* clrExceptionData;
     	CoreClrFunc::MarshalV8ExceptionToCLR(args[0], &clrExceptionData);
 
-        context->Complete(TaskStatus::Faulted, clrExceptionData, V8Type::PropertyTypeException);
+        context->Complete(TaskStatusFaulted, clrExceptionData, V8TypeException);
     }
 
     else
@@ -22,7 +22,7 @@ NAN_METHOD(coreClrV8FuncCallback)
     	int payloadType;
 
         CoreClrFunc::MarshalV8ToCLR(args[1], &marshalData, &payloadType);
-        context->Complete(TaskStatus::RanToCompletion, marshalData, payloadType);
+        context->Complete(TaskStatusRanToCompletion, marshalData, payloadType);
     }
 
     NanReturnValue(NanUndefined());
@@ -109,6 +109,6 @@ void CoreClrNodejsFuncInvokeContext::InvokeCallback(void* data)
 
 		DBG("CoreClrNodejsFuncInvokeContext::InvokeCallback - Exception message is: %s", (char*)exceptionData);
 
-		context->Complete(TaskStatus::Faulted, exceptionData, V8Type::PropertyTypeException);
+		context->Complete(TaskStatusFaulted, exceptionData, V8TypeException);
 	}
 }

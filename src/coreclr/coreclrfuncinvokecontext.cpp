@@ -70,7 +70,7 @@ void CoreClrFuncInvokeContext::InvokeCallback(void* data)
 	v8::Handle<v8::Value> callbackData = NanNull();
 	v8::Handle<v8::Value> errors = NanNull();
 
-	if (context->taskState == TaskStatus::Faulted)
+	if (context->taskState == TaskStatusFaulted)
 	{
 		errors = CoreClrFunc::MarshalCLRToV8(context->resultData, context->resultType);
 	}
