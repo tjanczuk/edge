@@ -55,6 +55,7 @@ CoreClrNodejsFuncInvokeContext::~CoreClrNodejsFuncInvokeContext()
 
 void CoreClrNodejsFuncInvokeContext::Complete(TaskStatus taskStatus, void* result, int resultType)
 {
+	DBG("CoreClrNodejsFuncInvokeContext::Complete");
 	CallbackFunction(CallbackContext, taskStatus, result, resultType);
 }
 
