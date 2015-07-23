@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Collections;
 using System.Threading.Tasks;
 using System.IO;
+using System.Runtime.Loader;
 
 [StructLayout(LayoutKind.Sequential)]
 public struct V8ObjectData
@@ -69,6 +70,26 @@ public class CoreCLREmbedding
 		}
 	}
 
+    private class FileAssemblyLoadContext : AssemblyLoadContext
+    {
+        [SecuritySafeCritical]
+        protected override Assembly Load(AssemblyName assemblyName)
+        {
+            return Assembly.Load(assemblyName);
+        }
+
+        public Assembly LoadFrom(string assemblyPath)
+        {
+            if (!File.Exists(assemblyPath))
+            {
+                throw new FileNotFoundException("Assembly file not found.", assemblyPath);
+            }
+
+            return LoadFromAssemblyPath(assemblyPath);
+        }
+    }
+
+    private static FileAssemblyLoadContext AssemblyLoadContext = new FileAssemblyLoadContext();
 	private static bool DebugMode = false;
 	private static long MinDateTimeTicks = 621355968000000000;
 	private static Dictionary<Type, List<Tuple<string, Func<object, object>>>> TypePropertyAccessors = new Dictionary<Type, List<Tuple<string, Func<object, object>>>>();
@@ -85,7 +106,7 @@ public class CoreCLREmbedding
 				assemblyFile = Path.Combine(Directory.GetCurrentDirectory(), assemblyFile);
 			}
 
-			Assembly assembly = Assembly.LoadFile(assemblyFile);
+			Assembly assembly = AssemblyLoadContext.LoadFrom(assemblyFile);
 			DebugMessage("CoreCLREmbedding::GetFunc (CLR) - Assembly {0} loaded successfully", assemblyFile);
 
 			ClrFuncReflectionWrap wrapper = ClrFuncReflectionWrap.Create(assembly, typeName, methodName);

@@ -17,46 +17,7 @@
 {
   'targets': [
     {
-      'target_name': 'install_coreclr',
-      'type': 'none',
-      'conditions': [
-        [
-          'OS!="win"',
-          {
-            'variables': {
-              'dnx_root': '<!(readlink -m "$(which dnx)/../../../../")'
-            },
-            'actions': [
-	          {
-	            'action_name': 'install_mono_clr',
-	            'inputs': [],
-	            'outputs': ['<(dnx_root)/runtimes/dnx-mono-linux-x64.1.0.0-beta7-12255/bin/libcoreclr.so'],
-	            'action': [
-	              'bash',
-	              '-c',
-	              'source <(dnx_root)/dnvm/dnvm.sh && dnvm install 1.0.0-beta7-12255 -r mono -u && chmod 755 <(dnx_root)/runtimes/dnx-mono-linux-x64.1.0.0-beta7-12255/bin/dnu',
-	            ]
-	          },
-	          {
-	            'action_name': 'install_coreclr',
-	            'inputs': [],
-	            'outputs': ['<(dnx_root)/runtimes/dnx-coreclr-linux-x64.1.0.0-beta7-12255/bin/libcoreclr.so'],
-	            'action': [
-	              'bash',
-	              '-c',
-	              'source <(dnx_root)/dnvm/dnvm.sh && dnvm install 1.0.0-beta7-12255 -r coreclr -u && chmod 755 <(dnx_root)/runtimes/dnx-coreclr-linux-x64.1.0.0-beta7-12255/bin/dnu',
-	            ]
-	          }
-	        ]
-          }
-        ]
-      ]
-    },
-    {
       'target_name': 'edge',
-      'dependencies': [
-        'install_coreclr'
-      ],
       'include_dirs': [
         "<!(node -e \"require('nan')\")"
       ],
@@ -94,11 +55,11 @@
                     '-DHAVE_CORECLR'
                   ],
                   'sources+': [
-                    'src/coreclr/coreclrembedding.cpp',
-                    'src/coreclr/coreclrfunc.cpp',
-                    'src/coreclr/coreclrnodejsfunc.cpp',
-                    'src/coreclr/coreclrfuncinvokecontext.cpp',
-                    'src/coreclr/coreclrnodejsfuncinvokecontext.cpp',
+                    'src/CoreCLREmbedding/coreclrembedding.cpp',
+                    'src/CoreCLREmbedding/coreclrfunc.cpp',
+                    'src/CoreCLREmbedding/coreclrnodejsfunc.cpp',
+                    'src/CoreCLREmbedding/coreclrfuncinvokecontext.cpp',
+                    'src/CoreCLREmbedding/coreclrnodejsfuncinvokecontext.cpp',
                     'src/common/utils.cpp'
                   ]
                 }
@@ -222,44 +183,39 @@
                   'actions+': [
                     {
                       'action_name': 'restore_packages',
-                      'inputs': [],
+                      'inputs': [
+                        'src/CoreCLREmbedding/project.json'
+                      ],
                       'outputs': [
-                        'src/coreclr/packages/'
+                        'src/CoreCLREmbedding/project.lock.json'
                       ],
                       'action': [
                         'bash',
                         '-c',
-                        'cd src/coreclr && <(dnx_root)/runtimes/dnx-mono-linux-x64.1.0.0-beta7-12255/bin/dnu restore'
+                        'cd src/CoreCLREmbedding && dnu restore'
                       ]
                     },
                     {
                       'action_name': 'compile_coreclr_embed',
                       'inputs': [
-                        'src/coreclr/*.cs'
+                        'src/CoreCLREmbedding/*.cs',
+                        'src/common/*.cs'
                       ],
                       'outputs': [
-                        'build/$(BUILDTYPE)/CoreCLREmbedding.dll'
+                        'src/CoreCLREmbedding/bin/$(BUILDTYPE)/dnxcore50/CoreCLREmbedding.dll'
                       ],
                       'action': [
-                        'mcs',
-                        '/nostdlib',
-                        '/noconfig',
-                        '/unsafe',
-                        '/r:<!(dirname `which dnx`)/System.Console.dll',
-                        '/r:<!(dirname `which dnx`)/System.Runtime.dll',
-                        '/r:<!(dirname `which dnx`)/System.Dynamic.Runtime.dll',
-                        '/r:<!(dirname `which dnx`)/System.ObjectModel.dll',
-                        '/r:<!(dirname `which dnx`)/System.Private.Uri.dll',
-                        '/r:<!(dirname `which dnx`)/System.IO.FileSystem.dll',
-                        '/r:<!(dirname `which dnx`)/System.Linq.dll',
-                        '/r:<!(dirname `which dnx`)/System.Linq.Expressions.dll',
-                        '/r:<!(dirname `which dnx`)/System.Reflection.dll',
-                        '/r:<!(dirname `which dnx`)/mscorlib.dll',
-                        '-sdk:4.5',
-                        '-target:library',
-                        '-out:build/$(BUILDTYPE)/CoreCLREmbedding.dll',
-                        'src/coreclr/*.cs',
-                        'src/common/*.cs'
+                        'bash',
+                        '-c',
+                        'cd src/CoreCLREmbedding && dnu build --configuration $(BUILDTYPE)'
+                      ]
+                    }
+                  ],
+                  'copies+': [
+                    {
+                      'destination': '<(module_root_dir)/build/$(BUILDTYPE)',
+                      'files': [
+                        '<(module_root_dir)/src/CoreCLREmbedding/bin/$(BUILDTYPE)/dnxcore50/CoreCLREmbedding.dll'
                       ]
                     }
                   ]

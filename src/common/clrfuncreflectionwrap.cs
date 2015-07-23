@@ -13,7 +13,7 @@ public class ClrFuncReflectionWrap
 
         if (startupType == null)
         {
-            throw new TypeLoadException("Type not found: " + typeName);
+            throw new TypeLoadException("Could not load type '" + typeName + "'");
         }
 
         ClrFuncReflectionWrap wrap = new ClrFuncReflectionWrap();

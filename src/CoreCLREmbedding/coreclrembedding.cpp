@@ -143,6 +143,8 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
         return E_FAIL;
     }
 
+    DBG("CoreClrEmbedding::Initialize - PAL_InitializeCoreCLR function loaded successfully from %s", LIBCORECLR_NAME);
+
     GetCLRRuntimeHostFunction getCLRRuntimeHost = (GetCLRRuntimeHostFunction) dlsym(libCoreClr, "GetCLRRuntimeHost");
 
     if (!getCLRRuntimeHost)
@@ -151,6 +153,8 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
     	return E_FAIL;
     }
 
+    DBG("CoreClrEmbedding::Initialize - GetCLRRuntimeHost function loaded successfully from %s", LIBCORECLR_NAME);
+
     REFIID clrRuntimeHostGuid = (REFIID) dlsym(libCoreClr, "IID_ICLRRuntimeHost2");
 
     if (!clrRuntimeHostGuid)
@@ -158,6 +162,8 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
     	throwV8Exception("Error loading the IID_ICLRRuntimeHost2 GUID from %s: %s.", LIBCORECLR_NAME, dlerror());
     	return E_FAIL;
     }
+
+    DBG("CoreClrEmbedding::Initialize - IID_ICLRRuntimeHost2 GUID loaded successfully from %s", LIBCORECLR_NAME);
 
     std::string coreClrDllPath(&coreClrDirectory[0]);
 
