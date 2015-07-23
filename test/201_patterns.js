@@ -1,12 +1,13 @@
 var edge = require('../lib/edge.js'), assert = require('assert'), path = require('path');
 
-var edgeTestDll = path.join(__dirname, 'Edge.Tests.dll');
+var edgeTestDll = path.join(__dirname, process.env.EDGE_USE_CORECLR ? 'Edge.Tests.CoreClr.dll' : 'Edge.Tests.dll');
 
 describe('call patterns', function () {
 
     it('sync call to exported .NET lambda', function () {
         var func = edge.func({
             assemblyFile: edgeTestDll,
+            typeName: 'Edge.Tests.Startup',
             methodName: 'ReturnAsyncLambda'
         });
 
@@ -19,6 +20,7 @@ describe('call patterns', function () {
     it('async call to exported .NET lambda', function (done) {
         var func = edge.func({
             assemblyFile: edgeTestDll,
+            typeName: 'Edge.Tests.Startup',
             methodName: 'ReturnAsyncLambda'
         });
 
@@ -34,6 +36,7 @@ describe('call patterns', function () {
     it('call exported .NET lambda with closure over CLR state', function () {
         var func = edge.func({
             assemblyFile: edgeTestDll,
+            typeName: 'Edge.Tests.Startup',
             methodName: 'ReturnLambdaWithClosureOverState'
         });
 
@@ -46,6 +49,7 @@ describe('call patterns', function () {
     it('successfuly marshals .net exception thrown on V8 thread from exported CLR lambda', function () {
         var func = edge.func({
             assemblyFile: edgeTestDll,
+            typeName: 'Edge.Tests.Startup',
             methodName: 'ReturnLambdaThatThrowsException'
         });
 
@@ -66,6 +70,7 @@ describe('call patterns', function () {
     it('successfuly marshals .net exception thrown on CLR thread from exported CLR lambda', function (done) {
         var func = edge.func({
             assemblyFile: edgeTestDll,
+            typeName: 'Edge.Tests.Startup',
             methodName: 'ReturnLambdaThatThrowsAsyncException'
         });
 
@@ -82,6 +87,7 @@ describe('call patterns', function () {
     it('large number of concurrent callbacks from C# to JavaScript (issue #39)', function (done) {
         var edgetest = edge.func({
             assemblyFile: edgeTestDll,
+            typeName: 'Edge.Tests.Startup',
             methodName: 'LargeNumberOfConcurrentCallbacks'
         });
 
@@ -112,6 +118,7 @@ describe('call patterns', function () {
 
         var callout = edge.func({
             assemblyFile: edgeTestDll,
+            typeName: 'Edge.Tests.Startup',
             methodName: 'CallbackToNodejs'
         });
 
@@ -135,6 +142,7 @@ describe('call patterns', function () {
     it('call JS func exported to .NET as a result of calling a JS func from .NET', function (done) {
         var callout = edge.func({
             assemblyFile: edgeTestDll,
+            typeName: 'Edge.Tests.Startup',
             methodName: 'DoubleLayerCallbackToNodejs'
         });
 
@@ -155,6 +163,7 @@ describe('call patterns', function () {
     it('exception when marshaling CLR data to V8 when calling exported JS function', function (done) {
         var callout = edge.func({
             assemblyFile: edgeTestDll,
+            typeName: 'Edge.Tests.Startup',
             methodName: 'ThrowExceptionMarshallingForCallback'
         });
 
@@ -173,6 +182,7 @@ describe('call patterns', function () {
     it('exception when marshaling CLR data to V8 when completing a synchronous call from JS to .NET', function () {
         var callout = edge.func({
             assemblyFile: edgeTestDll,
+            typeName: 'Edge.Tests.Startup',
             methodName: 'ThrowExceptionMarshallingForReturn'
         });
 
@@ -191,6 +201,7 @@ describe('call patterns', function () {
     it('exception when marshaling CLR data to V8 when completing an asynchronous call from JS to .NET', function (done) {
         var callout = edge.func({
             assemblyFile: edgeTestDll,
+            typeName: 'Edge.Tests.Startup',
             methodName: 'ThrowExceptionMarshallingForAsyncReturn'
         });
 

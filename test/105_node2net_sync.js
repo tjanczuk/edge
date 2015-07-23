@@ -1,13 +1,14 @@
 var edge = require('../lib/edge.js'), assert = require('assert')
     , path = require('path');
 
-var edgeTestDll = path.join(__dirname, 'Edge.Tests.dll');
+var edgeTestDll = path.join(__dirname, process.env.EDGE_USE_CORECLR ? 'Edge.Tests.CoreClr.dll' : 'Edge.Tests.dll');
 
 describe('sync call from node.js to .net', function () {
 
     it('succeeds for hello world', function () {
         var func = edge.func({
             assemblyFile: edgeTestDll,
+            typeName: 'Edge.Tests.Startup',
             methodName: 'Invoke'
         });
         var result = func('Node.js', true);
@@ -18,6 +19,7 @@ describe('sync call from node.js to .net', function () {
         // create the func
         var func = edge.func({
             assemblyFile: edgeTestDll,
+            typeName: 'Edge.Tests.Startup',
             methodName: 'Invoke'
         });
 
@@ -36,6 +38,7 @@ describe('sync call from node.js to .net', function () {
     it('successfuly marshals data from node.js to .net', function () {
         var func = edge.func({
             assemblyFile: edgeTestDll,
+            typeName: 'Edge.Tests.Startup',
             methodName: 'MarshalIn'
         });
         var payload = {
@@ -57,6 +60,7 @@ describe('sync call from node.js to .net', function () {
     it('successfuly marshals .net exception thrown on v8 thread from .net to node.js', function () {
         var func = edge.func({
             assemblyFile: edgeTestDll,
+            typeName: 'Edge.Tests.Startup',
             methodName: 'NetExceptionTaskStart'
         });
         assert.throws(
@@ -74,6 +78,7 @@ describe('sync call from node.js to .net', function () {
     it('fails if C# method does not complete synchronously', function () {
         var func = edge.func({
             assemblyFile: edgeTestDll,
+            typeName: 'Edge.Tests.Startup',
             methodName: 'DelayedReturn'
         });
         assert.throws(
