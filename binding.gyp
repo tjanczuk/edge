@@ -17,7 +17,46 @@
 {
   'targets': [
     {
+      'target_name': 'install_coreclr',
+      'type': 'none',
+      'conditions': [
+        [
+          'OS!="win"',
+          {
+            'variables': {
+              'dnx_root': '<!(readlink -m "$(which dnx)/../../../../")'
+            },
+            'actions': [
+	          {
+	            'action_name': 'install_mono_clr',
+	            'inputs': [],
+	            'outputs': ['<(dnx_root)/runtimes/dnx-mono-linux-x64.1.0.0-beta7-12255/bin/libcoreclr.so'],
+	            'action': [
+	              'bash',
+	              '-c',
+	              'source <(dnx_root)/dnvm/dnvm.sh && dnvm install 1.0.0-beta7-12255 -r mono -u && chmod 755 <(dnx_root)/runtimes/dnx-mono-linux-x64.1.0.0-beta7-12255/bin/dnu',
+	            ]
+	          },
+	          {
+	            'action_name': 'install_coreclr',
+	            'inputs': [],
+	            'outputs': ['<(dnx_root)/runtimes/dnx-coreclr-linux-x64.1.0.0-beta7-12255/bin/libcoreclr.so'],
+	            'action': [
+	              'bash',
+	              '-c',
+	              'source <(dnx_root)/dnvm/dnvm.sh && dnvm install 1.0.0-beta7-12255 -r coreclr -u && chmod 755 <(dnx_root)/runtimes/dnx-coreclr-linux-x64.1.0.0-beta7-12255/bin/dnu',
+	            ]
+	          }
+	        ]
+          }
+        ]
+      ]
+    },
+    {
       'target_name': 'edge',
+      'dependencies': [
+        'install_coreclr'
+      ],
       'include_dirs': [
         "<!(node -e \"require('nan')\")"
       ],
@@ -203,7 +242,7 @@
                       ],
                       'outputs': [
                         'src/CoreCLREmbedding/bin/$(BUILDTYPE)/dnxcore50/CoreCLREmbedding.dll'
-                      ],
+                      ],                        
                       'action': [
                         'bash',
                         '-c',
