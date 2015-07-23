@@ -9,14 +9,7 @@ public class NodejsFuncInvokeContext
 {
     private NodejsFunc functionContext;
     private object payload;
-    private static IntPtr NodejsFuncCompleteCallback;
     private static NodejsFuncCompleteDelegate NodeJsFuncCompleteInstance;
-
-    static NodejsFuncInvokeContext()
-    {
-        NodeJsFuncCompleteInstance = new NodejsFuncCompleteDelegate(NodejsFuncComplete);
-        NodejsFuncCompleteCallback = Marshal.GetFunctionPointerForDelegate<NodejsFuncCompleteDelegate>(NodeJsFuncCompleteInstance);
-    }
 
     internal static CallV8FunctionDelegate CallV8Function
     {
@@ -50,7 +43,7 @@ public class NodejsFuncInvokeContext
         CoreCLREmbedding.DebugMessage("NodejsFuncInvokeContext::CallFunc (CLR) - Getting a GCHandle for this context object");
 
         CoreCLREmbedding.DebugMessage("NodejsFuncInvokeContext::CallFunc (CLR) - Invoking the unmanaged V8 function to invoke the Node.js function on the V8 thread");
-        CallV8Function(v8Payload, (int)v8PayloadType, functionContext.Context, callbackContext, NodejsFuncCompleteCallback);
+        CallV8Function(v8Payload, (int)v8PayloadType, functionContext.Context, callbackContext, Marshal.GetFunctionPointerForDelegate<NodejsFuncCompleteDelegate>(NodejsFuncComplete));
     }      
 
     public static void NodejsFuncComplete(IntPtr context, int taskStatus, IntPtr result, int resultType)
