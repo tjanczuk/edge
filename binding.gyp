@@ -17,7 +17,46 @@
 {
   'targets': [
     {
+      'target_name': 'install_coreclr',
+      'type': 'none',
+      'conditions': [
+        [
+          'OS!="win"',
+          {
+            'variables': {
+              'dnx_root': '<!(readlink -m "$(which dnx)/../../../../")'
+            },
+            'actions': [
+	          {
+	            'action_name': 'install_mono_clr',
+	            'inputs': [],
+	            'outputs': ['<(dnx_root)/runtimes/dnx-mono-linux-x64.1.0.0-beta7-12255/bin/libcoreclr.so'],
+	            'action': [
+	              'bash',
+	              '-c',
+	              'source <(dnx_root)/dnvm/dnvm.sh && dnvm install 1.0.0-beta7-12255 -r mono -u && chmod 755 <(dnx_root)/runtimes/dnx-mono-linux-x64.1.0.0-beta7-12255/bin/dnu',
+	            ]
+	          },
+	          {
+	            'action_name': 'install_coreclr',
+	            'inputs': [],
+	            'outputs': ['<(dnx_root)/runtimes/dnx-coreclr-linux-x64.1.0.0-beta7-12255/bin/libcoreclr.so'],
+	            'action': [
+	              'bash',
+	              '-c',
+	              'source <(dnx_root)/dnvm/dnvm.sh && dnvm install 1.0.0-beta7-12255 -r coreclr -u && chmod 755 <(dnx_root)/runtimes/dnx-coreclr-linux-x64.1.0.0-beta7-12255/bin/dnu',
+	            ]
+	          }
+	        ]
+          }
+        ]
+      ]
+    },
+    {
       'target_name': 'edge',
+      'dependencies': [
+        'install_coreclr'
+      ],
       'include_dirs': [
         "<!(node -e \"require('nan')\")"
       ],
@@ -165,29 +204,13 @@
                       'outputs': [
                         'src/mono/monoembedding.exe'
                       ],
-                      'conditions': [
-                        [
-                          'OS=="win"',
-                          {
-                            'action': [
-                              'csc',
-                              '-target:exe',
-                              '-out:build/$(BUILDTYPE)/MonoEmbedding.exe',
-                              'src/mono/*cs',
-                              'src/common/*.cs'
-                            ]
-                          },
-                          {
-                            'action': [
-                              'dmcs',
-                              '-sdk:4.5',
-                              '-target:exe',
-                              '-out:build/$(BUILDTYPE)/MonoEmbedding.exe',
-                              'src/mono/*.cs',
-                              'src/common/*.cs'
-                            ]
-                          }
-                        ]
+                      'action': [
+                        'dmcs',
+                        '-sdk:4.5',
+                        '-target:exe',
+                        '-out:build/$(BUILDTYPE)/MonoEmbedding.exe',
+                        'src/mono/*.cs',
+                        'src/common/*.cs'
                       ]
                     }
                   ]
@@ -198,6 +221,18 @@
                 {
                   'actions+': [
                     {
+                      'action_name': 'restore_packages',
+                      'inputs': [],
+                      'outputs': [
+                        'src/coreclr/packages/'
+                      ],
+                      'action': [
+                        'bash',
+                        '-c',
+                        'cd src/coreclr && <(dnx_root)/runtimes/dnx-mono-linux-x64.1.0.0-beta7-12255/bin/dnu restore'
+                      ]
+                    },
+                    {
                       'action_name': 'compile_coreclr_embed',
                       'inputs': [
                         'src/coreclr/*.cs'
@@ -205,43 +240,26 @@
                       'outputs': [
                         'build/$(BUILDTYPE)/CoreCLREmbedding.dll'
                       ],
-                      'conditions': [
-                        [
-                          'OS=="win"',
-                          {
-                            'action': [
-                              'csc',
-                              '-unsafe'
-                              '-target:library',
-                              '-out:build/$(BUILDTYPE)/CoreCLREmbedding.dll',
-                              'src/coreclr/*.cs',
-                              'src/common/*.cs'
-                            ]
-                          },
-                          {
-                            'action': [
-                              'mcs',
-                              '/nostdlib',
-                              '/noconfig',
-                              '/unsafe',
-                              '/r:<!(dirname `which dnx`)/System.Console.dll',
-                              '/r:<!(dirname `which dnx`)/System.Runtime.dll',
-                              '/r:<!(dirname `which dnx`)/System.Dynamic.Runtime.dll',
-                              '/r:<!(dirname `which dnx`)/System.ObjectModel.dll',
-                              '/r:<!(dirname `which dnx`)/System.Private.Uri.dll',
-                              '/r:<!(dirname `which dnx`)/System.IO.FileSystem.dll',
-                              '/r:<!(dirname `which dnx`)/System.Linq.dll',
-                              '/r:<!(dirname `which dnx`)/System.Linq.Expressions.dll',
-                              '/r:<!(dirname `which dnx`)/System.Reflection.dll',
-                              '/r:<!(dirname `which dnx`)/mscorlib.dll',
-                              '-sdk:4.5',
-                              '-target:library',
-                              '-out:build/$(BUILDTYPE)/CoreCLREmbedding.dll',
-                              'src/coreclr/*.cs',
-                              'src/common/*.cs'
-                            ]
-                          }
-                        ]
+                      'action': [
+                        'mcs',
+                        '/nostdlib',
+                        '/noconfig',
+                        '/unsafe',
+                        '/r:<!(dirname `which dnx`)/System.Console.dll',
+                        '/r:<!(dirname `which dnx`)/System.Runtime.dll',
+                        '/r:<!(dirname `which dnx`)/System.Dynamic.Runtime.dll',
+                        '/r:<!(dirname `which dnx`)/System.ObjectModel.dll',
+                        '/r:<!(dirname `which dnx`)/System.Private.Uri.dll',
+                        '/r:<!(dirname `which dnx`)/System.IO.FileSystem.dll',
+                        '/r:<!(dirname `which dnx`)/System.Linq.dll',
+                        '/r:<!(dirname `which dnx`)/System.Linq.Expressions.dll',
+                        '/r:<!(dirname `which dnx`)/System.Reflection.dll',
+                        '/r:<!(dirname `which dnx`)/mscorlib.dll',
+                        '-sdk:4.5',
+                        '-target:library',
+                        '-out:build/$(BUILDTYPE)/CoreCLREmbedding.dll',
+                        'src/coreclr/*.cs',
+                        'src/common/*.cs'
                       ]
                     }
                   ]

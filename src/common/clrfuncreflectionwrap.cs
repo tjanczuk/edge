@@ -9,7 +9,13 @@ public class ClrFuncReflectionWrap
 
     public static ClrFuncReflectionWrap Create(Assembly assembly, String typeName, String methodName)
     {
-        Type startupType = assembly.GetType(typeName, true, true);
+        Type startupType = assembly.GetType(typeName);
+
+        if (startupType == null)
+        {
+            throw new TypeLoadException("Type not found: " + typeName);
+        }
+
         ClrFuncReflectionWrap wrap = new ClrFuncReflectionWrap();
         wrap.instance = System.Activator.CreateInstance(startupType);
         wrap.invokeMethod = startupType.GetMethod(methodName, BindingFlags.Instance | BindingFlags.Public);
