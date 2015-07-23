@@ -38,11 +38,11 @@ cd ..
 # download and install CoreCLR
 
 curl -sSL https://raw.githubusercontent.com/aspnet/Home/dev/dnvminstall.sh | DNX_BRANCH=dev sh && source ~/.dnx/dnvm/dnvm.sh
+dnvm install latest -r coreclr -u -p
 
-dnvm install latest -r coreclr -u
 CLR_VERSION=$(dnvm list | grep " \*" | grep -oE '[0-9][^ ]+')
-
-dnvm install latest -r mono -u
+chmod 775 $DNX_USER_HOME/runtimes/dnx-coreclr-linux-x64.$CLR_VERSION/bin/dnx
+chmod 775 $DNX_USER_HOME/runtimes/dnx-coreclr-linux-x64.$CLR_VERSION/bin/dnu
 
 # download and build Edge.js
 

@@ -35,8 +35,12 @@ curl -sSL https://raw.githubusercontent.com/aspnet/Home/dev/dnvminstall.sh | DNX
 
 su ${THE_USER} -l -s /bin/bash -c "source .dnx/dnvm/dnvm.sh && dnvm install 1.0.0-beta7-12274 -r coreclr -u -a edge-coreclr"
 
-# TODO: remove this once Mono is no longer necessary for dnu restore and dnu build
-su ${THE_USER} -l -s /bin/bash -c "source .dnx/dnvm/dnvm.sh && dnvm install 1.0.0-beta7-12274 -r mono -u -a edge-mono"
+curl -sSL https://raw.githubusercontent.com/aspnet/Home/dev/dnvminstall.sh | DNX_BRANCH=dev sh && source ~/.dnx/dnvm/dnvm.sh
+dnvm install latest -r coreclr -u -p
+
+CLR_VERSION=$(dnvm list | grep " \*" | grep -oE '[0-9][^ ]+')
+chmod 775 $DNX_USER_HOME/runtimes/dnx-coreclr-linux-x64.$CLR_VERSION/bin/dnx
+chmod 775 $DNX_USER_HOME/runtimes/dnx-coreclr-linux-x64.$CLR_VERSION/bin/dnu
 
 # download and build Edge.js
 
