@@ -5,7 +5,7 @@
 #endif
 
 #ifdef HAVE_CORECLR
-#include "../coreclr/edge.h"
+#include "../CoreCLREmbedding/edge.h"
 #endif
 #ifdef HAVE_MONO
 #include "../mono/edge.h"
