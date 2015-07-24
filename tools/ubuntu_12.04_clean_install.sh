@@ -38,11 +38,12 @@ cd ..
 # download and install CoreCLR
 
 curl -sSL https://raw.githubusercontent.com/aspnet/Home/dev/dnvminstall.sh | DNX_BRANCH=dev sh && source ~/.dnx/dnvm/dnvm.sh
-dnvm install latest -r coreclr -u -p
 
+dnvm install latest -r coreclr -u
 CLR_VERSION=$(dnvm list | grep " \*" | grep -oE '[0-9][^ ]+')
-chmod 775 $DNX_USER_HOME/runtimes/dnx-coreclr-linux-x64.$CLR_VERSION/bin/dnx
-chmod 775 $DNX_USER_HOME/runtimes/dnx-coreclr-linux-x64.$CLR_VERSION/bin/dnu
+
+# TODO: remove this once Mono is no longer necessary for dnu restore and dnu build
+dnvm install latest -r mono -u
 
 # download and build Edge.js
 
@@ -50,6 +51,9 @@ sudo -u ${THE_USER} curl https://codeload.github.com/medicomp/edge/zip/master > 
 sudo -u ${THE_USER} unzip edge.js.zip 
 cd edge-master/
 npm install --unsafe-perm
+
+dnvm use $CLR_VERSION -r coreclr
+
 sudo -u ${THE_USER} npm test
 sudo -u ${THE_USER} EDGE_USE_CORECLR=1 PATH=$PATH npm test
 chown -R ${THE_USER} $HOME/.npm
