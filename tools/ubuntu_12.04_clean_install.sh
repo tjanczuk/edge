@@ -29,29 +29,23 @@ cd ..
 npm install node-gyp -g
 npm install mocha -g
 
-# download and install CoreCLR
+su ${THE_USER} -l -s /bin/bash -c "source .dnx/dnvm/dnvm.sh && dnvm install 1.0.0-beta7-12274 -r coreclr -u -a edge-coreclr"
 
 curl -sSL https://raw.githubusercontent.com/aspnet/Home/dev/dnvminstall.sh | DNX_BRANCH=dev sudo -u ${THE_USER} sh
 
 su ${THE_USER} -l -s /bin/bash -c "source .dnx/dnvm/dnvm.sh && dnvm install 1.0.0-beta7-12274 -r coreclr -u -a edge-coreclr"
 
-curl -sSL https://raw.githubusercontent.com/aspnet/Home/dev/dnvminstall.sh | DNX_BRANCH=dev sh && source ~/.dnx/dnvm/dnvm.sh
-
-dnvm install latest -r coreclr -u
-CLR_VERSION=$(dnvm list | grep " \*" | grep -oE '[0-9][^ ]+')
-
 # TODO: remove this once Mono is no longer necessary for dnu restore and dnu build
-dnvm install latest -r mono -u
+su ${THE_USER} -l -s /bin/bash -c "source .dnx/dnvm/dnvm.sh && dnvm install 1.0.0-beta7-12274 -r mono -u -a edge-mono"
 
 # download and build Edge.js
 
 sudo -u ${THE_USER} curl https://codeload.github.com/medicomp/edge/zip/master > edge.js.zip
 sudo -u ${THE_USER} unzip edge.js.zip 
 cd edge-master/
-npm install --unsafe-perm
+EDGE_DIRECTORY=$(pwd)
 
-dnvm use $CLR_VERSION -r coreclr
+su ${THE_USER} -l -s /bin/bash -c "source ~/.dnx/dnvm/dnvm.sh && dnvm use edge-mono && cd $EDGE_DIRECTORY && npm install"
 
-sudo -u ${THE_USER} npm test
-sudo -u ${THE_USER} EDGE_USE_CORECLR=1 PATH=$PATH npm test
-chown -R ${THE_USER} $HOME/.npm
+su ${THE_USER} -l -s /bin/bash -c "cd $EDGE_DIRECTORY && npm test"
+su ${THE_USER} -l -s /bin/bash -c "source ~/.dnx/dnvm/dnvm.sh && dnvm use edge-coreclr && cd $EDGE_DIRECTORY && EDGE_USE_CORECLR=1 npm test"
