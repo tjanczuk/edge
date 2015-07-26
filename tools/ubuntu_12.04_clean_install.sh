@@ -3,11 +3,16 @@
 THE_USER=${SUDO_USER:-${USERNAME:-guest}}
 
 set -e
-sudo -u ${THE_USER} mkdir ~/tmp
 
-# install prerequisities
+# install prerequisities and Mono x64
+if [ ! -e /etc/apt/sources.list.d/mono-xamarin.list ]
+then
+    apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
+    echo "deb http://download.mono-project.com/repo/debian wheezy main" | tee /etc/apt/sources.list.d/mono-xamarin.list
+    apt-get update
+fi
 
-apt-get -y install curl g++ pkg-config libgdiplus libunwind8 libssl-dev unzip make
+apt-get -y install curl g++ pkg-config libgdiplus libunwind8 libssl-dev unzip make mono-complete
 
 # download and build Node.js
 
@@ -24,36 +29,23 @@ cd ..
 npm install node-gyp -g
 npm install mocha -g
 
-# download and build Mono x64
-
-sudo -u ${THE_USER} curl http://download.mono-project.com/sources/mono/mono-4.0.1.44.tar.bz2 > mono-4.0.1.44.tar.bz2
-sudo -u ${THE_USER} tar -xvf mono-4.0.1.44.tar.bz2
-cd mono-4.0.1
-sudo -u ${THE_USER} bash -c './configure --prefix=/usr/local --with-glib=embedded --enable-nls=no'
-sudo -u ${THE_USER} make
-make install
-ldconfig
-cd ..
-
 # download and install CoreCLR
 
-curl -sSL https://raw.githubusercontent.com/aspnet/Home/dev/dnvminstall.sh | DNX_BRANCH=dev sh && source ~/.dnx/dnvm/dnvm.sh
+curl -sSL https://raw.githubusercontent.com/aspnet/Home/dev/dnvminstall.sh | DNX_BRANCH=dev sudo -u ${THE_USER} sh
 
-dnvm install latest -r coreclr -u
-CLR_VERSION=$(dnvm list | grep " \*" | grep -oE '[0-9][^ ]+')
+su ${THE_USER} -l -s /bin/bash -c "source .dnx/dnvm/dnvm.sh && dnvm install 1.0.0-beta7-12274 -r coreclr -u -a edge-coreclr"
 
 # TODO: remove this once Mono is no longer necessary for dnu restore and dnu build
-dnvm install latest -r mono -u
+su ${THE_USER} -l -s /bin/bash -c "source .dnx/dnvm/dnvm.sh && dnvm install 1.0.0-beta7-12274 -r mono -u -a edge-mono"
 
 # download and build Edge.js
 
 sudo -u ${THE_USER} curl https://codeload.github.com/medicomp/edge/zip/master > edge.js.zip
 sudo -u ${THE_USER} unzip edge.js.zip 
 cd edge-master/
-npm install --unsafe-perm
+EDGE_DIRECTORY=$(pwd)
 
-dnvm use $CLR_VERSION -r coreclr
+su ${THE_USER} -l -s /bin/bash -c "source ~/.dnx/dnvm/dnvm.sh && dnvm use edge-mono && cd $EDGE_DIRECTORY && npm install"
 
-sudo -u ${THE_USER} npm test
-sudo -u ${THE_USER} EDGE_USE_CORECLR=1 PATH=$PATH npm test
-chown -R ${THE_USER} $HOME/.npm
+su ${THE_USER} -l -s /bin/bash -c "cd $EDGE_DIRECTORY && npm test"
+su ${THE_USER} -l -s /bin/bash -c "source ~/.dnx/dnvm/dnvm.sh && dnvm use edge-coreclr && cd $EDGE_DIRECTORY && EDGE_USE_CORECLR=1 npm test"
