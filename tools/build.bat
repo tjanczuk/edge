@@ -38,7 +38,7 @@ set DESTDIR=%DESTDIRROOT%\%1\%3
 if exist "%DESTDIR%\node.exe" goto gyp
 if not exist "%DESTDIR%\NUL" mkdir "%DESTDIR%"
 echo Downloading node.exe %2 %3...
-node %SELF%\download.js %2 %3 "%DESTDIR%"
+node "%SELF%\download.js" %2 %3 "%DESTDIR%"
 if %ERRORLEVEL% neq 0 (
     echo Cannot download node.exe %2 v%3
     exit /b -1

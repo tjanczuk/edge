@@ -28,8 +28,11 @@
         [
           'OS=="win"',
           {
+            'cflags+': [
+              '-DHAVE_NATIVECLR'
+            ],
             'sources+': [
-              'src/dotnet/edge.cpp',
+              'src/common/edge.cpp',
               'src/dotnet/utils.cpp',
               'src/dotnet/clrfunc.cpp',
               'src/dotnet/clrfuncinvokecontext.cpp',
@@ -51,9 +54,6 @@
               [
                 '"<!(echo -n `which dnx`)"!=""',
                 {
-                  'cflags+': [
-                    '-DHAVE_CORECLR'
-                  ],
                   'sources+': [
                     'src/CoreCLREmbedding/coreclrembedding.cpp',
                     'src/CoreCLREmbedding/coreclrfunc.cpp',
@@ -89,7 +89,7 @@
 
                   },
                   'cflags+': [
-                    '-DHAVE_MONO'
+                    '-DHAVE_NATIVECLR'
                   ]
                 }
               ]
@@ -109,7 +109,8 @@
               'ExceptionHandling': '0',
               'AdditionalOptions': [
                 '/clr',
-                '/wd4506'
+                '/wd4506',
+                '/DHAVE_NATIVECLR'
               ]
             },
             'VCLinkerTool': {
@@ -130,7 +131,8 @@
               'ExceptionHandling': '0',
               'AdditionalOptions': [
                 '/clr',
-                '/wd4506'
+                '/wd4506',
+                '/DHAVE_NATIVECLR'
               ]
             },
             'VCLinkerTool': {
