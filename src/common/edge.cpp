@@ -78,6 +78,10 @@ bool HasEnvironmentVariable(const char* variableName)
 }
 
 #pragma unmanaged
-NODE_MODULE(edge, init);
+#ifdef HAVE_CORECLR
+NODE_MODULE(edge_coreclr, init);
+#else
+NODE_MODULE(edge_nativeclr, init);
+#endif
 
 // vim: ts=4 sw=4 et:

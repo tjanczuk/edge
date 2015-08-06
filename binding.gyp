@@ -17,7 +17,7 @@
 {
   'targets': [
     {
-      'target_name': 'edge.coreclr',
+      'target_name': 'edge_coreclr',
       'include_dirs': [
         "<!(node -e \"require('nan')\")"
       ],
@@ -91,7 +91,7 @@
       }
     },
     {
-      'target_name': 'edge.nativeclr',
+      'target_name': 'edge_nativeclr',
       'include_dirs': [
         "<!(node -e \"require('nan')\")"
       ],
@@ -223,8 +223,8 @@
           {
             'type': 'none',
             'dependencies': [
-              'edge.nativeclr',
-              'edge.coreclr'
+              'edge_nativeclr',
+              'edge_coreclr'
             ],
             'conditions': [
               [
