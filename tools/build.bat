@@ -61,7 +61,7 @@ if %ERRORLEVEL% neq 0 (
 )
 
 echo %DESTDIR%
-copy /y .\build\%FLAVOR%\edge.node "%DESTDIR%"
+copy /y .\build\%FLAVOR%\edge.*.node "%DESTDIR%"
 if %ERRORLEVEL% neq 0 (
     echo Error copying edge.node %FLAVOR% for node.js %2 v%3
     exit /b -1

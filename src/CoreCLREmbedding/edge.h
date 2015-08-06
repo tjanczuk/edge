@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <uchar.h>
 
+#ifndef EDGE_PLATFORM_WINDOWS
 typedef int BOOL;
 typedef const char16_t* LPCTSTR;
 typedef LPCTSTR LPCWSTR;
@@ -26,6 +27,10 @@ typedef const char* LPCSTR;
 typedef uint32_t DWORD;
 typedef void IUnknown;
 typedef HRESULT (FExecuteInAppDomainCallback)(void *cookie);
+const HRESULT S_OK = 0;
+const HRESULT E_FAIL = -1;
+#endif
+
 typedef void* CoreClrGcHandle;
 
 typedef void (*CallFuncFunction)(CoreClrGcHandle functionHandle, void* payload, int payloadType, int* taskState, void** result, int* resultType);
@@ -171,9 +176,6 @@ class ICLRRuntimeHost2
             /* [in] */ STARTUP_FLAGS dwFlags) = 0;
 };
 
-const HRESULT S_OK = 0;
-const HRESULT E_FAIL = -1;
-
 typedef enum v8Type
 {
     PropertyTypeFunction = 1,
@@ -226,6 +228,8 @@ class CoreClrEmbedding
         static bool LoadCoreClrAtPath(const char* loadPath, void** ppLibCoreClr);
         static void GetPathToBootstrapper(char* bootstrapper, size_t bufferSize);
         static void AddToTpaList(std::string directoryPath, std::string* tpaList);
+        static void* LoadSymbol(void* library, const char* symbolName);
+        static char* GetLoadError();
 
     public:
         static CoreClrGcHandle GetClrFuncReflectionWrapFunc(const char* assemblyFile, const char* typeName, const char* methodName, v8::Handle<v8::Value>* exception);

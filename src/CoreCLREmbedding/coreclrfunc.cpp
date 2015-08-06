@@ -234,7 +234,11 @@ char* CoreClrFunc::CopyV8StringBytes(Handle<v8::String> v8String)
 {
 	String::Utf8Value utf8String(v8String);
 	char* sourceBytes = *utf8String;
+#ifdef EDGE_PLATFORM_WINDOWS
+	size_t sourceLength = strlen(sourceBytes);
+#else
 	int sourceLength = strlen(sourceBytes);
+#endif
 	char* destinationBytes = new char[sourceLength + 1];
 
 	strncpy(destinationBytes, sourceBytes, sourceLength);

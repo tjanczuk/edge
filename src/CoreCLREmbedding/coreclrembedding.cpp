@@ -1,16 +1,18 @@
 #include "edge.h"
-#include <dlfcn.h>
 #include <limits.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string>
-#include <string.h>
-#include <unistd.h>
 #include <set>
-#include <dirent.h>
-#include <dlfcn.h>
 #include <sys/stat.h>
+
+#ifndef EDGE_PLATFORM_WINDOWS
+#include <dlfcn.h>
+#include <unistd.h>
 #include <libgen.h>
+#include <dirent.h>
+#else
+#include <direct.h>
+#include <shlwapi.h>
+#include <intsafe.h>
+#endif
 
 #if PLATFORM_DARWIN
 #include <libproc.h>
@@ -18,6 +20,8 @@
 
 #ifdef PLATFORM_DARWIN
 const char* LIBCORECLR_NAME = "libcoreclr.dylib";
+#elif defined(EDGE_PLATFORM_WINDOWS)
+const char* LIBCORECLR_NAME = "coreclr.dll";
 #else
 const char* LIBCORECLR_NAME = "libcoreclr.so";
 #endif
@@ -42,18 +46,27 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
     HRESULT result = S_OK;
     char currentDirectory[PATH_MAX];
 
-    if (!getcwd(&currentDirectory[0], PATH_MAX))
+    if (!_getcwd(&currentDirectory[0], PATH_MAX))
     {
     	NanThrowError("Unable to get the current directory.");
         return E_FAIL;
     }
 
-    Dl_info dlInfo;
 	char edgeNodePath[PATH_MAX];
+
+#ifdef EDGE_PLATFORM_WINDOWS
+    HMODULE moduleHandle = NULL;
+
+    GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCSTR) &CoreClrEmbedding::Initialize, &moduleHandle);
+    GetModuleFileName(moduleHandle, edgeNodePath, PATH_MAX);
+    PathRemoveFileSpec(edgeNodePath);
+#else
+    Dl_info dlInfo;
 
 	dladdr((void*)&CoreClrEmbedding::Initialize, &dlInfo);
 	strcpy(edgeNodePath, dlInfo.dli_fname);
 	strcpy(edgeNodePath, dirname(edgeNodePath));
+#endif
 
     void* libCoreClr = NULL;
     char bootstrapper[PATH_MAX];
@@ -414,6 +427,7 @@ CoreClrGcHandle CoreClrEmbedding::GetClrFuncReflectionWrapFunc(const char* assem
 	}
 }
 
+#ifdef EDGE_PLATFORM_WINDOWS
 void CoreClrEmbedding::AddToTpaList(std::string directoryPath, std::string* tpaList)
 {
     const char * const tpaExtensions[] = {
@@ -423,7 +437,69 @@ void CoreClrEmbedding::AddToTpaList(std::string directoryPath, std::string* tpaL
         ".exe"
     };
 
+    WIN32_FIND_DATA directoryEntry;
+    HANDLE directory = FindFirstFile(directoryPath.c_str(), &directoryEntry);
+
+    if (directory == INVALID_HANDLE_VALUE)
+    {
+        return;
+    }
+
+    std::set<std::string> addedAssemblies;
+
+    // Walk the directory for each extension separately so that we first get files with .ni.dll extension,
+    // then files with .dll extension, etc.
+    for (int extensionIndex = 0; extensionIndex < sizeof(tpaExtensions) / sizeof(tpaExtensions[0]); extensionIndex++)
+    {
+        const char* currentExtension = tpaExtensions[extensionIndex];
+        size_t currentExtensionLength = strlen(currentExtension);
+
+        // For all entries in the directory
+        do
+        {
+            std::string filename(directoryEntry.cFileName);
+
+            // Check if the extension matches the one we are looking for
+            size_t extensionPosition = filename.length() - currentExtensionLength;
+
+            if ((extensionPosition <= 0) || (filename.compare(extensionPosition, currentExtensionLength, currentExtension) != 0))
+            {
+                continue;
+            }
+
+            std::string filenameWithoutExtension(filename.substr(0, extensionPosition));
+
+            // Make sure if we have an assembly with multiple extensions present,
+            // we insert only one version of it.
+            if (addedAssemblies.find(filenameWithoutExtension) == addedAssemblies.end())
+            {
+                addedAssemblies.insert(filenameWithoutExtension);
+
+                tpaList->append(directoryPath);
+                tpaList->append("/");
+                tpaList->append(filename);
+                tpaList->append(":");
+            }
+        }
+        while (FindNextFile(directory, &directoryEntry) != NULL);
+
+        // Rewind the directory stream to be able to iterate over it for the next extension
+        directory = FindFirstFile(directoryPath.c_str(), &directoryEntry);
+    }
+
+    FindClose(directory);
+}
+#else
+void CoreClrEmbedding::AddToTpaList(std::string directoryPath, std::string* tpaList)
+{
+    const char * const tpaExtensions[] = {
+        ".ni.dll",
+        ".dll",
+        ".ni.exe",
+        ".exe"
+    };
     DIR* directory = opendir(directoryPath.c_str());
+    struct dirent* directoryEntry;
     std::set<std::string> addedAssemblies;
 
     // Walk the directory for each extension separately so that we first get files with .ni.dll extension,
@@ -432,8 +508,6 @@ void CoreClrEmbedding::AddToTpaList(std::string directoryPath, std::string* tpaL
     {
         const char* currentExtension = tpaExtensions[extensionIndex];
         int currentExtensionLength = strlen(currentExtension);
-
-        struct dirent* directoryEntry;
 
         // For all entries in the directory
         while ((directoryEntry = readdir(directory)) != NULL)
@@ -504,12 +578,17 @@ void CoreClrEmbedding::AddToTpaList(std::string directoryPath, std::string* tpaL
 
     closedir(directory);
 }
+#endif
 
 void CoreClrEmbedding::FreeCoreClr(void** libCoreClr)
 {
     if (libCoreClr)
     {
+#ifdef EDGE_PLATFORM_WINDOWS
+        FreeLibrary((HMODULE) libCoreClr);
+#else
         dlclose(libCoreClr);
+#endif
         libCoreClr = NULL;
     }
 }
@@ -523,11 +602,15 @@ bool CoreClrEmbedding::LoadCoreClrAtPath(const char* loadPath, void** libCoreClr
     coreClrDllPath.append("/");
     coreClrDllPath.append(LIBCORECLR_NAME);
 
+#ifdef EDGE_PLATFORM_WINDOWS
+    *libCoreClrPointer = LoadLibrary(coreClrDllPath.c_str());
+#else
     *libCoreClrPointer = dlopen(coreClrDllPath.c_str(), RTLD_NOW | RTLD_GLOBAL);
+#endif
 
     if (*libCoreClrPointer == NULL )
     {
-        DBG("CoreClrEmbedding::LoadCoreClrAtPath - Errors loading %s from %s: %s", LIBCORECLR_NAME, loadPath, dlerror());
+        DBG("CoreClrEmbedding::LoadCoreClrAtPath - Errors loading %s from %s: %s", LIBCORECLR_NAME, loadPath, GetLoadError());
     }
 
     else
@@ -538,10 +621,36 @@ bool CoreClrEmbedding::LoadCoreClrAtPath(const char* loadPath, void** libCoreClr
     return *libCoreClrPointer != NULL;
 }
 
+void* CoreClrEmbedding::LoadSymbol(void* library, const char* symbolName)
+{
+#ifdef EDGE_PLATFORM_WINDOWS
+    return GetProcAddress((HMODULE) library, symbolName);
+#else
+    return dlsym(library, symbolName);
+#endif
+}
+
+char* CoreClrEmbedding::GetLoadError()
+{
+#ifdef EDGE_PLATFORM_WINDOWS
+    LPVOID message;
+    FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR) &message, 0, NULL);
+
+    return (char*) message;
+#else
+    return dlerror();
+#endif
+}
+
 void CoreClrEmbedding::GetPathToBootstrapper(char* pathToBootstrapper, size_t bufferSize)
 {
 #ifdef PLATFORM_DARWIN
     ssize_t pathLength = proc_pidpath(getpid(), pathToBootstrapper, bufferSize);
+#elif defined(EDGE_PLATFORM_WINDOWS)
+    DWORD dwBufferSize;
+    SIZETToDWord(bufferSize, &dwBufferSize);
+
+    size_t pathLength = GetModuleFileName(GetModuleHandle(NULL), pathToBootstrapper, dwBufferSize);
 #else
     ssize_t pathLength = readlink("/proc/self/exe", pathToBootstrapper, bufferSize);
 #endif
