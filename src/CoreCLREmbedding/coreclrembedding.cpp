@@ -79,9 +79,19 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 
     if (coreClrEnvironmentVariable)
     {
-    	DBG("CoreClrEmbedding::Initialize - Trying to load %s from the path specified in the CORECLR_DIR environment variable: %s", LIBCORECLR_NAME, coreClrEnvironmentVariable);
+        if (coreClrEnvironmentVariable[0] == '"')
+        {
+            strncpy(&coreClrDirectory[0], &coreClrEnvironmentVariable[1], strlen(coreClrEnvironmentVariable) - 2);
+            coreClrDirectory[strlen(coreClrEnvironmentVariable) - 2] = '\0';
+        }
 
-    	strncpy(&coreClrDirectory[0], coreClrEnvironmentVariable, strlen(coreClrEnvironmentVariable) + 1);
+        else
+        {
+            strncpy(&coreClrDirectory[0], coreClrEnvironmentVariable, strlen(coreClrEnvironmentVariable) + 1);
+        }
+
+    	DBG("CoreClrEmbedding::Initialize - Trying to load %s from the path specified in the CORECLR_DIR environment variable: %s", LIBCORECLR_NAME, coreClrDirectory);
+
         LoadCoreClrAtPath(coreClrDirectory, &libCoreClr);
     }
 
@@ -94,7 +104,11 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
     if (!libCoreClr)
     {
         // Try to load CoreCLR from application path
+#ifdef EDGE_PLATFORM_WINDOWS
+        char* lastSlash = strrchr(&bootstrapper[0], '\\');
+#else
         char* lastSlash = strrchr(&bootstrapper[0], '/');
+#endif
 
         assert(lastSlash);
         strncpy(&coreClrDirectory[0], &bootstrapper[0], lastSlash - &bootstrapper[0]);
@@ -476,7 +490,11 @@ void CoreClrEmbedding::AddToTpaList(std::string directoryPath, std::string* tpaL
                 addedAssemblies.insert(filenameWithoutExtension);
 
                 tpaList->append(directoryPath);
+#ifdef EDGE_PLATFORM_WINDOWS
+                tpaList->append("\\");
+#else
                 tpaList->append("/");
+#endif
                 tpaList->append(filename);
                 tpaList->append(":");
             }
@@ -525,7 +543,11 @@ void CoreClrEmbedding::AddToTpaList(std::string directoryPath, std::string* tpaL
                         std::string fullFilename;
 
                         fullFilename.append(directoryPath);
+#ifdef EDGE_PLATFORM_WINDOWS
+                        fullFilename.append("\\");
+#else
                         fullFilename.append("/");
+#endif
                         fullFilename.append(directoryEntry->d_name);
 
                         struct stat fileInfo;
@@ -566,7 +588,11 @@ void CoreClrEmbedding::AddToTpaList(std::string directoryPath, std::string* tpaL
                 addedAssemblies.insert(filenameWithoutExtension);
 
                 tpaList->append(directoryPath);
+#ifdef EDGE_PLATFORM_WINDOWS
+                tpaList->append("\\");
+#else
                 tpaList->append("/");
+#endif
                 tpaList->append(filename);
                 tpaList->append(":");
             }
@@ -599,7 +625,11 @@ bool CoreClrEmbedding::LoadCoreClrAtPath(const char* loadPath, void** libCoreClr
 
     DBG("CoreClrEmbedding::LoadCoreClrAtPath - Trying to load %s from %s", LIBCORECLR_NAME, loadPath);
 
+#ifdef EDGE_PLATFORM_WINDOWS
+    coreClrDllPath.append("\\");
+#else
     coreClrDllPath.append("/");
+#endif
     coreClrDllPath.append(LIBCORECLR_NAME);
 
 #ifdef EDGE_PLATFORM_WINDOWS
