@@ -191,19 +191,19 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 
     DBG("CoreClrEmbedding::Initialize - Assembly search path is %s", assemblySearchDirectories.c_str());
 
-    coreclr_initializeFunction initializeCoreCLR = (coreclr_initializeFunction) dlsym(libCoreClr, "coreclr_initialize");
+    coreclr_initializeFunction initializeCoreCLR = (coreclr_initializeFunction) LoadSymbol(libCoreClr, "coreclr_initialize");
 
     if (!initializeCoreCLR)
     {
-    	throwV8Exception("Error loading the coreclr_initialize function from %s: %s.", LIBCORECLR_NAME, dlerror());
+    	throwV8Exception("Error loading the coreclr_initialize function from %s: %s.", LIBCORECLR_NAME, GetLoadError());
         return E_FAIL;
     }
 
-    coreclr_create_delegateFunction createDelegate = (coreclr_create_delegateFunction) dlsym(libCoreClr, "coreclr_create_delegate");
+    coreclr_create_delegateFunction createDelegate = (coreclr_create_delegateFunction) LoadSymbol(libCoreClr, "coreclr_create_delegate");
 
     if (!createDelegate)
     {
-    	throwV8Exception("Error loading the coreclr_create_delegate function from %s: %s.", LIBCORECLR_NAME, dlerror());
+    	throwV8Exception("Error loading the coreclr_create_delegate function from %s: %s.", LIBCORECLR_NAME, GetLoadError());
     	return E_FAIL;
     }
 
@@ -505,7 +505,7 @@ bool CoreClrEmbedding::LoadCoreClrAtPath(const char* loadPath, void** libCoreClr
 
     if (*libCoreClrPointer == NULL )
     {
-        DBG("CoreClrEmbedding::LoadCoreClrAtPath - Errors loading %s from %s: %s", LIBCORECLR_NAME, loadPath, GetLoadError());
+        DBG("CoreClrEmbedding::LoadCoreClrAtPath - Errors loading %s from %s (error code %d): %s", LIBCORECLR_NAME, loadPath, GetLastError(), GetLoadError());
     }
 
     else

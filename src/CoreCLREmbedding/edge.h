@@ -18,6 +18,8 @@ typedef int BOOL;
 #define HRESULT_CODE(status) ((status) & 0xFFFF)
 
 typedef int32_t HRESULT;
+#endif
+
 typedef void* CoreClrGcHandle;
 
 typedef void (*CallFuncFunction)(
