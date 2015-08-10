@@ -103,14 +103,14 @@ public:
 
 typedef enum taskStatus
 {
-    Created = 0,
-    WaitingForActivation = 1,
-    WaitingToRun = 2,
-    Running = 3,
-    WaitingForChildrenToComplete = 4,
-    RanToCompletion = 5,
-    Canceled = 6,
-    Faulted = 7
+    TaskStatusCreated = 0,
+    TaskStatusWaitingForActivation = 1,
+    TaskStatusWaitingToRun = 2,
+    TaskStatusRunning = 3,
+    TaskStatusWaitingForChildrenToComplete = 4,
+    TaskStatusRanToCompletion = 5,
+    TaskStatusCanceled = 6,
+    TaskStatusFaulted = 7
 } TaskStatus;
 
 Handle<Value> throwV8Exception(Handle<Value> exception);

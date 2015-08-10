@@ -7,17 +7,18 @@
 #include <assert.h>
 #include <string>
 #include <stdio.h>
-#include <uchar.h>
 
 #ifndef EDGE_PLATFORM_WINDOWS
+#include <uchar.h>
+
 typedef int BOOL;
 typedef const char16_t* LPCTSTR;
 typedef LPCTSTR LPCWSTR;
+typedef LPCTSTR LPWSTR;
 typedef int* INT_PTR;
 typedef unsigned long ULONG;
 typedef double ULONGLONG;
 
-#define _T(str) str
 #define SUCCEEDED(status) ((HRESULT)(status) >= 0)
 #define FAILED(status) ((HRESULT)(status) < 0)
 #define HRESULT_CODE(status) ((status) & 0xFFFF)
@@ -26,11 +27,28 @@ typedef int32_t HRESULT;
 typedef const char* LPCSTR;
 typedef uint32_t DWORD;
 typedef void IUnknown;
-typedef HRESULT (FExecuteInAppDomainCallback)(void *cookie);
+
 const HRESULT S_OK = 0;
 const HRESULT E_FAIL = -1;
+
+struct IID
+{
+    unsigned long Data1;
+    unsigned short Data2;
+    unsigned short Data3;
+    unsigned char Data4[8];
+};
+
+typedef IID* REFIID;
 #endif
 
+#ifdef EDGE_PLATFORM_WINDOWS
+#define _u(stringLiteral) L ##stringLiteral
+#else
+#define _u(stringLiteral) u ##stringLiteral
+#endif
+
+typedef HRESULT (FExecuteInAppDomainCallback)(void *cookie);
 typedef void* CoreClrGcHandle;
 
 typedef void (*CallFuncFunction)(CoreClrGcHandle functionHandle, void* payload, int payloadType, int* taskState, void** result, int* resultType);
@@ -40,27 +58,29 @@ typedef void (*FreeHandleFunction)(CoreClrGcHandle handle);
 typedef void (*FreeMarshalDataFunction)(void* marshalData, int marshalDataType);
 typedef void (*NodejsFuncCompleteFunction)(CoreClrGcHandle context, int taskStatus, void* result, int resultType);
 
-// TODO: use NaN for this
+#ifdef EDGE_PLATFORM_WINDOWS
 #define StringToUTF16(input, output)\
 {\
-	char16_t c16str[3] = u"\0";\
+    int len;\
+    int slength = (int)input.length() + 1;\
+    len = MultiByteToWideChar(CP_ACP, 0, input.c_str(), slength, 0, 0); \
+    output = new wchar_t[len];\
+    MultiByteToWideChar(CP_ACP, 0, input.c_str(), slength, output, len);\
+};
+#else
+#define StringToUTF16(input, output)\
+{\
+	char16_t c16str[3] = _u("\0");\
 	mbstate_t mbs;\
 	for (const auto& it: input)\
 	{\
 		memset (&mbs, 0, sizeof (mbs));\
-		memmove(c16str, u"\0\0\0", 3);\
+		memmove(c16str, _u("\0\0\0"), 3);\
 		mbrtoc16(c16str, &it, 3, &mbs);\
 		output.append(std::u16string(c16str));\
 	}\
 };
-
-struct IID
-{
-    unsigned long Data1;
-    unsigned short Data2;
-    unsigned short Data3;
-    unsigned char Data4[8];
-};
+#endif
 
 typedef enum _STARTUP_FLAGS
 {
@@ -98,8 +118,6 @@ typedef enum _APPDOMAIN_SECURITY_FLAGS
     APPDOMAIN_ENABLE_ASSEMBLY_LOADFILE = 0x80,
     APPDOMAIN_DISABLE_TRANSPARENCY_ENFORCEMENT = 0x100
 } APPDOMAIN_SECURITY_FLAGS;
-
-typedef IID* REFIID;
 
 class ICLRRuntimeHost2 
 {

@@ -84,9 +84,9 @@ Handle<v8::Value> CoreClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value>
 	DBG("CoreClrFunc::Call - Freeing the data marshalled to the CLR");
 	FreeMarshalData(marshalData, payloadType);
 
-	if (taskState == TaskStatus::RanToCompletion || taskState == TaskStatus::Faulted)
+	if (taskState == TaskStatus::TaskStatusRanToCompletion || taskState == TaskStatus::TaskStatusFaulted)
 	{
-		if (taskState == TaskStatus::RanToCompletion)
+		if (taskState == TaskStatus::TaskStatusRanToCompletion)
 		{
 			DBG("CoreClrFunc::Call - Task ran synchronously, marshalling CLR data to V8");
 		}
@@ -96,9 +96,9 @@ Handle<v8::Value> CoreClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value>
 			DBG("CoreClrFunc::Call - Task threw an exception, marshalling CLR exception data to V8");
 		}
 
-		if (callbackOrSync->IsBoolean() || taskState == TaskStatus::Faulted)
+		if (callbackOrSync->IsBoolean() || taskState == TaskStatus::TaskStatusFaulted)
 		{
-			if (taskState == TaskStatus::RanToCompletion)
+			if (taskState == TaskStatus::TaskStatusRanToCompletion)
 			{
 				return NanEscapeScope(CoreClrFunc::MarshalCLRToV8(result, resultType));
 			}
@@ -137,7 +137,7 @@ Handle<v8::Value> CoreClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value>
 
 		if (exception)
 		{
-			CoreClrFuncInvokeContext::TaskComplete(exception, V8Type::PropertyTypeException, TaskStatus::Faulted, invokeContext);
+			CoreClrFuncInvokeContext::TaskComplete(exception, V8Type::PropertyTypeException, TaskStatus::TaskStatusFaulted, invokeContext);
 		}
 	}
 

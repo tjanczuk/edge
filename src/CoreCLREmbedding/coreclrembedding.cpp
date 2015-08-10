@@ -26,7 +26,7 @@ const char* LIBCORECLR_NAME = "coreclr.dll";
 const char* LIBCORECLR_NAME = "libcoreclr.so";
 #endif
 
-typedef HRESULT (*GetCLRRuntimeHostFunction)(REFIID id, IUnknown** host);
+typedef HRESULT (*GetCLRRuntimeHostFunction)(void* id, IUnknown** host);
 typedef HRESULT (*PAL_InitializeCoreCLRFunction)(const char *szExePath, const char *szCoreCLRPath, bool fStayInPAL);
 
 DWORD appDomainId;
@@ -162,31 +162,31 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 
     ICLRRuntimeHost2* runtimeHost = NULL;
 
-    PAL_InitializeCoreCLRFunction initializeCoreCLR = (PAL_InitializeCoreCLRFunction) dlsym(libCoreClr, "PAL_InitializeCoreCLR");
+    PAL_InitializeCoreCLRFunction initializeCoreCLR = (PAL_InitializeCoreCLRFunction) LoadSymbol(libCoreClr, "PAL_InitializeCoreCLR");
 
     if (!initializeCoreCLR)
     {
-    	throwV8Exception("Error loading the PAL_InitializeCoreCLR function from %s: %s.", LIBCORECLR_NAME, dlerror());
+    	throwV8Exception("Error loading the PAL_InitializeCoreCLR function from %s: %s.", LIBCORECLR_NAME, GetLoadError());
         return E_FAIL;
     }
 
     DBG("CoreClrEmbedding::Initialize - PAL_InitializeCoreCLR function loaded successfully from %s", LIBCORECLR_NAME);
 
-    GetCLRRuntimeHostFunction getCLRRuntimeHost = (GetCLRRuntimeHostFunction) dlsym(libCoreClr, "GetCLRRuntimeHost");
+    GetCLRRuntimeHostFunction getCLRRuntimeHost = (GetCLRRuntimeHostFunction) LoadSymbol(libCoreClr, "GetCLRRuntimeHost");
 
     if (!getCLRRuntimeHost)
     {
-    	throwV8Exception("Error loading the GetCLRRuntimeHost function from %s: %s.", LIBCORECLR_NAME, dlerror());
+    	throwV8Exception("Error loading the GetCLRRuntimeHost function from %s: %s.", LIBCORECLR_NAME, GetLoadError());
     	return E_FAIL;
     }
 
     DBG("CoreClrEmbedding::Initialize - GetCLRRuntimeHost function loaded successfully from %s", LIBCORECLR_NAME);
 
-    REFIID clrRuntimeHostGuid = (REFIID) dlsym(libCoreClr, "IID_ICLRRuntimeHost2");
+    void* clrRuntimeHostGuid = LoadSymbol(libCoreClr, "IID_ICLRRuntimeHost2");
 
     if (!clrRuntimeHostGuid)
     {
-    	throwV8Exception("Error loading the IID_ICLRRuntimeHost2 GUID from %s: %s.", LIBCORECLR_NAME, dlerror());
+    	throwV8Exception("Error loading the IID_ICLRRuntimeHost2 GUID from %s: %s.", LIBCORECLR_NAME, GetLoadError());
     	return E_FAIL;
     }
 
@@ -207,7 +207,7 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
     }
 
     DBG("CoreClrEmbedding::Initialize - CoreCLR initialized successfully");
-    result = getCLRRuntimeHost(clrRuntimeHostGuid, (void**) &runtimeHost);
+    result = getCLRRuntimeHost(clrRuntimeHostGuid, (IUnknown**) &runtimeHost);
 
     if (FAILED(result))
     {
@@ -236,39 +236,43 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
     DBG("CoreClrEmbedding::Initialize - Runtime host started successfully");
 
     LPCWSTR propertyKeys[] = {
-    	u"TRUSTED_PLATFORM_ASSEMBLIES",
-    	u"APP_PATHS",
-    	u"APP_NI_PATHS",
-    	u"NATIVE_DLL_SEARCH_DIRECTORIES",
-    	u"AppDomainCompatSwitch"
+    	_u("TRUSTED_PLATFORM_ASSEMBLIES"),
+    	_u("APP_PATHS"),
+    	_u("APP_NI_PATHS"),
+    	_u("NATIVE_DLL_SEARCH_DIRECTORIES"),
+    	_u("AppDomainCompatSwitch")
     };
 
     std::string tpaList;
     AddToTpaList(coreClrDirectory, &tpaList);
 
-    std::u16string utf16TpaList;
+    LPWSTR utf16TpaList;
     StringToUTF16(tpaList, utf16TpaList);
 
     std::string appPaths(&currentDirectory[0]);
     appPaths.append(":");
     appPaths.append(edgeNodePath);
 
-    std::u16string utf16AppPaths;
+    LPWSTR utf16AppPaths;
     StringToUTF16(appPaths, utf16AppPaths);
 
-    std::u16string utf16AssemblySearchDirectories;
+    LPWSTR utf16AssemblySearchDirectories;
     StringToUTF16(assemblySearchDirectories, utf16AssemblySearchDirectories);
 
     LPCWSTR propertyValues[] = {
-    	utf16TpaList.c_str(),
-        utf16AppPaths.c_str(),
-        utf16AppPaths.c_str(),
-        utf16AssemblySearchDirectories.c_str(),
-        u"UseLatestBehaviorWhenTFMNotSpecified"
+    	utf16TpaList,
+        utf16AppPaths,
+        utf16AppPaths,
+        utf16AssemblySearchDirectories,
+        _u("UseLatestBehaviorWhenTFMNotSpecified")
     };
 
+    delete utf16TpaList;
+    delete utf16AppPaths;
+    delete utf16AssemblySearchDirectories;
+
     result = runtimeHost->CreateAppDomainWithManager(
-    	u"Edge",
+    	_u("Edge"),
         APPDOMAIN_ENABLE_PLATFORM_SPECIFIC_APPS |
             APPDOMAIN_ENABLE_PINVOKE_AND_CLASSIC_COMINTEROP |
             APPDOMAIN_DISABLE_TRANSPARENCY_ENFORCEMENT |
@@ -290,9 +294,9 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 
     result = runtimeHost->CreateDelegate(
     		appDomainId,
-    		u"CoreCLREmbedding",
-    		u"CoreCLREmbedding",
-    		u"GetFunc",
+    		_u("CoreCLREmbedding"),
+    		_u("CoreCLREmbedding"),
+    		_u("GetFunc"),
     		(INT_PTR*) &getFunc);
 
     if (FAILED(result))
@@ -305,9 +309,9 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 
 	result = runtimeHost->CreateDelegate(
 				appDomainId,
-				u"CoreCLREmbedding",
-				u"CoreCLREmbedding",
-				u"CallFunc",
+				_u("CoreCLREmbedding"),
+				_u("CoreCLREmbedding"),
+				_u("CallFunc"),
 				(INT_PTR*) &callFunc);
 
 	if (FAILED(result))
@@ -320,9 +324,9 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 
 	result = runtimeHost->CreateDelegate(
 				appDomainId,
-				u"CoreCLREmbedding",
-				u"CoreCLREmbedding",
-				u"ContinueTask",
+				_u("CoreCLREmbedding"),
+				_u("CoreCLREmbedding"),
+				_u("ContinueTask"),
 				(INT_PTR*) &continueTask);
 
 	if (FAILED(result))
@@ -335,9 +339,9 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 
 	result = runtimeHost->CreateDelegate(
 				appDomainId,
-				u"CoreCLREmbedding",
-				u"CoreCLREmbedding",
-				u"FreeHandle",
+				_u("CoreCLREmbedding"),
+				_u("CoreCLREmbedding"),
+				_u("FreeHandle"),
 				(INT_PTR*) &freeHandle);
 
 	if (FAILED(result))
@@ -350,9 +354,9 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 
 	result = runtimeHost->CreateDelegate(
 				appDomainId,
-				u"CoreCLREmbedding",
-				u"CoreCLREmbedding",
-				u"FreeMarshalData",
+				_u("CoreCLREmbedding"),
+				_u("CoreCLREmbedding"),
+				_u("FreeMarshalData"),
 				(INT_PTR*) &freeMarshalData);
 
 	if (FAILED(result))
@@ -366,9 +370,9 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
     SetDebugModeFunction setDebugMode;
     result = runtimeHost->CreateDelegate(
         		appDomainId,
-        		u"CoreCLREmbedding",
-        		u"CoreCLREmbedding",
-        		u"SetDebugMode",
+        		_u("CoreCLREmbedding"),
+        		_u("CoreCLREmbedding"),
+        		_u("SetDebugMode"),
         		(INT_PTR*) &setDebugMode);
 
 	if (FAILED(result))
@@ -385,9 +389,9 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 	SetCallV8FunctionDelegateFunction setCallV8FunctionDelegate;
 	result = runtimeHost->CreateDelegate(
 				appDomainId,
-				u"CoreCLREmbedding",
-				u"CoreCLREmbedding",
-				u"SetCallV8FunctionDelegate",
+				_u("CoreCLREmbedding"),
+				_u("CoreCLREmbedding"),
+				_u("SetCallV8FunctionDelegate"),
 				(INT_PTR*) &setCallV8FunctionDelegate);
 
 	if (FAILED(result))
