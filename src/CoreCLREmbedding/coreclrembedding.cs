@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Collections;
 using System.Threading.Tasks;
 using System.IO;
+using System.Runtime.Loader;
 
 [StructLayout(LayoutKind.Sequential)]
 public struct V8ObjectData
@@ -313,8 +314,8 @@ public class CoreCLREmbedding
 				for (int i = 0; i < objectData.propertiesCount; i++)
 				{
 					int propertyType = Marshal.ReadInt32(objectData.propertyTypes, i * sizeof(int));
-					IntPtr propertyValue = Marshal.ReadIntPtr(objectData.propertyValues, i * Marshal.SizeOf(typeof(IntPtr)));
-					IntPtr propertyName = Marshal.ReadIntPtr(objectData.propertyNames, i * Marshal.SizeOf(typeof(IntPtr)));
+                    IntPtr propertyValue = Marshal.ReadIntPtr(objectData.propertyValues, i * Marshal.SizeOf<IntPtr>());
+                    IntPtr propertyName = Marshal.ReadIntPtr(objectData.propertyNames, i * Marshal.SizeOf<IntPtr>());
 
 					FreeMarshalData(propertyValue, propertyType);
 					Marshal.FreeHGlobal(propertyName);
@@ -333,7 +334,7 @@ public class CoreCLREmbedding
 				for (int i = 0; i < arrayData.arrayLength; i++)
 				{
 					int itemType = Marshal.ReadInt32(arrayData.itemTypes, i * sizeof(int));
-					IntPtr itemValue = Marshal.ReadIntPtr(arrayData.itemValues, i * Marshal.SizeOf(typeof(IntPtr)));
+                    IntPtr itemValue = Marshal.ReadIntPtr(arrayData.itemValues, i * Marshal.SizeOf<IntPtr>());
 
 					FreeMarshalData(itemValue, itemType);
 				}
@@ -510,7 +511,7 @@ public class CoreCLREmbedding
 
 			Marshal.Copy(buffer, 0, bufferData.buffer, bufferData.bufferLength);
 
-			IntPtr destinationPointer = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(V8BufferData)));
+            IntPtr destinationPointer = Marshal.AllocHGlobal(Marshal.SizeOf<V8BufferData>());
 			Marshal.StructureToPtr<V8BufferData>(bufferData, destinationPointer, false);
 
 			return destinationPointer;
@@ -546,7 +547,7 @@ public class CoreCLREmbedding
 			IntPtr[] propertyNames = new IntPtr[keyCount];
 			int[] propertyTypes = new int[keyCount];
 			IntPtr[] propertyValues = new IntPtr[keyCount];
-			int pointerSize = Marshal.SizeOf(typeof(IntPtr));
+            int pointerSize = Marshal.SizeOf<IntPtr>();
 			int counter = 0;
 			V8Type propertyType;
 
@@ -568,7 +569,7 @@ public class CoreCLREmbedding
 			Marshal.Copy(propertyTypes, 0, objectData.propertyTypes, propertyTypes.Length);
 			Marshal.Copy(propertyValues, 0, objectData.propertyValues, propertyValues.Length);
 
-			IntPtr destinationPointer = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(V8ObjectData)));
+            IntPtr destinationPointer = Marshal.AllocHGlobal(Marshal.SizeOf<V8ObjectData>());
 			Marshal.StructureToPtr<V8ObjectData>(objectData, destinationPointer, false);
 
 			return destinationPointer;
@@ -591,12 +592,12 @@ public class CoreCLREmbedding
 
 			arrayData.arrayLength = itemValues.Count;
 			arrayData.itemTypes = Marshal.AllocHGlobal(sizeof(int) * arrayData.arrayLength);
-			arrayData.itemValues = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(IntPtr)) * arrayData.arrayLength);
+            arrayData.itemValues = Marshal.AllocHGlobal(Marshal.SizeOf<IntPtr>() * arrayData.arrayLength);
 
 			Marshal.Copy(itemTypes.ToArray(), 0, arrayData.itemTypes, arrayData.arrayLength);
 			Marshal.Copy(itemValues.ToArray(), 0, arrayData.itemValues, arrayData.arrayLength);
 
-			IntPtr destinationPointer = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(V8ArrayData)));
+            IntPtr destinationPointer = Marshal.AllocHGlobal(Marshal.SizeOf<V8ArrayData>());
 			Marshal.StructureToPtr<V8ArrayData>(arrayData, destinationPointer, false);
 
 			return destinationPointer;
@@ -644,7 +645,7 @@ public class CoreCLREmbedding
 			IntPtr[] propertyNames = new IntPtr[propertyAccessors.Count];
 			int[] propertyTypes = new int[propertyAccessors.Count];
 			IntPtr[] propertyValues = new IntPtr[propertyAccessors.Count];
-			int pointerSize = Marshal.SizeOf(typeof(IntPtr));
+            int pointerSize = Marshal.SizeOf<IntPtr>();
 			int counter = 0;
 			V8Type propertyType;
 
@@ -666,7 +667,7 @@ public class CoreCLREmbedding
 			Marshal.Copy(propertyTypes, 0, objectData.propertyTypes, propertyTypes.Length);
 			Marshal.Copy(propertyValues, 0, objectData.propertyValues, propertyValues.Length);
 
-			IntPtr destinationPointer = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(V8ObjectData)));
+            IntPtr destinationPointer = Marshal.AllocHGlobal(Marshal.SizeOf<V8ObjectData>());
 			Marshal.StructureToPtr<V8ObjectData>(objectData, destinationPointer, false);
 
 			return destinationPointer;
@@ -767,7 +768,7 @@ public class CoreCLREmbedding
 
 		catch (NullReferenceException)
 		{
-			throw new AccessViolationException();
+            throw new Exception("Access violation.");
 		}
 	}
 
@@ -802,7 +803,7 @@ public class CoreCLREmbedding
 
 		catch (NullReferenceException)
 		{
-			throw new AccessViolationException();
+            throw new Exception("Access violation.");
 		}
 	}
 

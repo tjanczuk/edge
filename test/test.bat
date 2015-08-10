@@ -7,5 +7,10 @@ call "%~dp0\build.bat"
 if %ERRORLEVEL% NEQ 0 exit /b -1;
 pushd "%~dp0\.."
 "%NODEEXE%" "%APPDATA%\npm\node_modules\mocha\bin\mocha" -R spec
+set EDGE_USE_CORECLR=1
+set EDGE_DEBUG=1
+"%NODEEXE%" "%APPDATA%\npm\node_modules\mocha\bin\mocha" -R spec
+set EDGE_USE_CORECLR=
+set EDGE_DEBUG=
 popd
 echo Finished running tests using node.js: %NODEEXE%

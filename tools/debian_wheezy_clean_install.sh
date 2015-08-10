@@ -38,8 +38,11 @@ cd ..
 # download and install CoreCLR
 
 curl -sSL https://raw.githubusercontent.com/aspnet/Home/dev/dnvminstall.sh | DNX_BRANCH=dev sh && source ~/.dnx/dnvm/dnvm.sh
-dnvm install 1.0.0-beta6-12120 -r coreclr -u
-dnvm use 1.0.0-beta6-12120 -r coreclr
+
+dnvm install latest -r coreclr -u
+CLR_VERSION=$(dnvm list | grep " \*" | grep -oE '[0-9][^ ]+')
+
+dnvm install latest -r mono -u
 
 # download and build Edge.js
 
@@ -47,6 +50,9 @@ sudo -u ${THE_USER} curl https://codeload.github.com/medicomp/edge/zip/master > 
 sudo -u ${THE_USER} unzip edge.js.zip 
 cd edge-master/
 npm install --unsafe-perm
+
+dnvm use $CLR_VERSION -r coreclr
+
 sudo -u ${THE_USER} npm test
 sudo -u ${THE_USER} EDGE_USE_CORECLR=1 PATH=$PATH npm test
 chown -R ${THE_USER} $HOME/.npm

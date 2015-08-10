@@ -1,12 +1,16 @@
 var edge = require('../lib/edge.js'), assert = require('assert')
     , path = require('path');
 
-var edgeTestDll = path.join(__dirname, 'Edge.Tests.dll');
+var edgeTestDll = path.join(__dirname, process.env.EDGE_USE_CORECLR ? 'Edge.Tests.CoreClr.dll' : 'Edge.Tests.dll');
 
 describe('async call from node.js to .net', function () {
 
     it('succeeds for hello world', function (done) {
-        var func = edge.func(edgeTestDll);
+        var func = edge.func({
+        	assemblyFile: edgeTestDll,
+        	typeName: 'Edge.Tests.Startup',
+        	methodName: 'Invoke'
+        });
         func('Node.js', function (error, result) {
             assert.ifError(error);
             assert.equal(result, '.NET welcomes Node.js');
@@ -17,6 +21,7 @@ describe('async call from node.js to .net', function () {
     it('successfuly marshals data from node.js to .net', function (done) {
         var func = edge.func({
             assemblyFile: edgeTestDll,
+            typeName: 'Edge.Tests.Startup',
             methodName: 'MarshalIn'
         });
         var payload = {
@@ -41,6 +46,7 @@ describe('async call from node.js to .net', function () {
     it('successfuly marshals data from .net to node.js', function (done) {
         var func = edge.func({
             assemblyFile: edgeTestDll,
+            typeName: 'Edge.Tests.Startup',
             methodName: 'MarshalBack'
         });
         func(null, function (error, result) {
@@ -71,6 +77,7 @@ describe('async call from node.js to .net', function () {
     it('successfuly marshals .net exception thrown on v8 thread from .net to node.js', function () {
         var func = edge.func({
             assemblyFile: edgeTestDll,
+            typeName: 'Edge.Tests.Startup',
             methodName: 'NetExceptionTaskStart'
         });
         assert.throws(
@@ -88,6 +95,7 @@ describe('async call from node.js to .net', function () {
     it('successfuly marshals .net exception thrown on CLR thread from .net to node.js', function (done) {
         var func = edge.func({
             assemblyFile: edgeTestDll,
+            typeName: 'Edge.Tests.Startup',
             methodName: 'NetExceptionCLRThread'
         });
         func(null, function (error, result) {
@@ -102,6 +110,7 @@ describe('async call from node.js to .net', function () {
     it('successfuly marshals structured .net exception from .net to node.js', function (done) {
         var func = edge.func({
         	assemblyFile: edgeTestDll,
+        	typeName: 'Edge.Tests.Startup',
         	methodName: 'NetStructuredExceptionCLRThread'
         });
 
@@ -121,6 +130,7 @@ describe('async call from node.js to .net', function () {
     it('successfuly marshals empty buffer', function (done) {
         var func = edge.func({
         	assemblyFile: edgeTestDll,
+        	typeName: 'Edge.Tests.Startup',
         	methodName: 'MarshalEmptyBuffer'
         });
 
@@ -134,6 +144,7 @@ describe('async call from node.js to .net', function () {
     it('successfuly roundtrips unicode characters', function (done) {
         var func = edge.func({
         	assemblyFile: edgeTestDll,
+        	typeName: 'Edge.Tests.Startup',
         	methodName: 'ReturnInput'
         });
 
@@ -148,6 +159,7 @@ describe('async call from node.js to .net', function () {
     it('successfuly roundtrips empty string', function (done) {
         var func = edge.func({
         	assemblyFile: edgeTestDll,
+        	typeName: 'Edge.Tests.Startup',
         	methodName: 'ReturnInput'
         });
 

@@ -6,6 +6,7 @@ lib-cov
 *.out
 *.pid
 *.gz
+*.lock.json
 
 pids
 logs
@@ -29,5 +30,10 @@ Sample105.*
 .DS_Store
 *.sublime-project
 *.sublime-workspace
+
+.cproject
+.project
+.metadata/
+.settings/
 
 adhoc/

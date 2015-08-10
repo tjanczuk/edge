@@ -10,10 +10,12 @@ public class NodejsFuncInvokeContext
     private NodejsFunc functionContext;
     private object payload;
     private static IntPtr NodejsFuncCompleteCallback;
+    private static NodejsFuncCompleteDelegate NodeJsFuncCompleteInstance;
 
     static NodejsFuncInvokeContext()
     {
-        NodejsFuncCompleteCallback = Marshal.GetFunctionPointerForDelegate<NodejsFuncCompleteDelegate>(NodejsFuncComplete);
+        NodeJsFuncCompleteInstance = new NodejsFuncCompleteDelegate(NodejsFuncComplete);
+        NodejsFuncCompleteCallback = Marshal.GetFunctionPointerForDelegate<NodejsFuncCompleteDelegate>(NodeJsFuncCompleteInstance);
     }
 
     internal static CallV8FunctionDelegate CallV8Function

@@ -1210,11 +1210,22 @@ Prerequisities:
 First build Mono x64:
 
 ```bash
-brew install https://raw.githubusercontent.com/tjanczuk/edge/master/tools/mono64.rb
+brew install https://raw.githubusercontent.com/medicomp/edge/master/tools/mono64.rb
 
 # at this point I fried an omelette on the lid of my Mac Book Air which was running hot 
 # for about 15 minutes, compiling and installing Mono 64bit; 
 # it was delicious (the omelette, not the MacBook)
+```
+
+Then install CoreCLR:
+
+```bash
+brew tap aspnet/dnx
+brew update
+brew install dnvm
+source dnvm.sh
+dnvm install 1.0.0-beta6-12120 -r coreclr -u
+dnvm use 1.0.0-beta6-12120 -r coreclr
 ```
 
 Then install and build Edge.js:
@@ -1255,7 +1266,7 @@ This will do the following:
 
 * Download Node.js v0.10.26 sources, build, and install Node.js x64
 * Download Mono 3.4.0 sources, build, and install Mono x64
-* Download and install Microsoft's CoreCLR, version 1.0.0-beta6-12120
+* Download and install the latest version of Microsoft's CoreCLR
 * Download and install node-gyp and mocha
 * Download Edge.js sources and build x64 release
 * Run Edge.js tests using both Mono and CoreCLR
@@ -1275,7 +1286,7 @@ This will do the following:
 
 * Download Node.js v0.10.26 sources, build, and install Node.js x64  
 * Download Mono 3.4.0 sources, build, and install Mono x64  
-* Download and install Microsoft's CoreCLR, version 1.0.0-beta6-12120
+* Download and install the latest version of Microsoft's CoreCLR
 * Download and install node-gyp and mocha  
 * Download Edge.js sources and build x64 release  
 * Run Edge.js tests using both Mono and CoreCLR
