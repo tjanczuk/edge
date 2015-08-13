@@ -22,7 +22,8 @@ Handle<Value> throwV8Exception(const char* format, ...)
 	Handle<v8::Object> exception = NanNew<v8::Object>();
 	exception->SetPrototype(v8::Exception::Error(NanNew<v8::String>(message)));
 
-	NanThrowError(exception);
+	Handle<v8::Value> exceptionValue = exception;
+	NanThrowError(exceptionValue);
 
 	return NanEscapeScope(exception);
 }
