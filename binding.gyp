@@ -95,9 +95,8 @@
       'include_dirs': [
         "<!(node -e \"require('nan')\")"
       ],
-      'sources': [
-        'src/common/v8synchronizationcontext.cpp',
-        'src/common/edge.cpp'
+      'cflags+': [
+        '-DHAVE_NATIVECLR'
       ],
       'conditions': [
         [
@@ -111,27 +110,13 @@
               'src/dotnet/nodejsfuncinvokecontext.cpp',
               'src/dotnet/persistentdisposecontext.cpp',
               'src/dotnet/clrfuncreflectionwrap.cpp',
-              'src/dotnet/clractioncontext.cpp'
+              'src/dotnet/clractioncontext.cpp',
+              'src/common/v8synchronizationcontext.cpp',
+              'src/common/edge.cpp'
             ]
           },
           {
             'conditions': [
-              [
-                '"<!(echo -n `which dnx`)"!=""',
-                {
-                  'sources+': [
-                    'src/CoreCLREmbedding/coreclrembedding.cpp',
-                    'src/CoreCLREmbedding/coreclrfunc.cpp',
-                    'src/CoreCLREmbedding/coreclrnodejsfunc.cpp',
-                    'src/CoreCLREmbedding/coreclrfuncinvokecontext.cpp',
-                    'src/CoreCLREmbedding/coreclrnodejsfuncinvokecontext.cpp',
-                    'src/common/utils.cpp'
-                  ],
-                  'cflags+': [
-                    '-DHAVE_CORECLR'
-                  ]
-                }
-              ],
               [
                 '"<!(echo -n `which mono`)"!=""',
                 {
@@ -145,7 +130,9 @@
                     'src/mono/nodejsfunc.cpp',
                     'src/mono/nodejsfuncinvokecontext.cpp',
                     'src/mono/utils.cpp',
-                    'src/common/utils.cpp'
+                    'src/common/utils.cpp',
+                    'src/common/v8synchronizationcontext.cpp',
+                    'src/common/edge.cpp'
                   ],
                   'include_dirs': [
                     '<!@(pkg-config mono-2 --cflags-only-I | sed s/-I//g)'
@@ -154,11 +141,7 @@
                     'libraries': [
                       '<!@(pkg-config mono-2 --libs)'
                     ],
-
-                  },
-                  'cflags+': [
-                    '-DHAVE_NATIVECLR'
-                  ]
+                  }
                 }
               ]
             ]
@@ -265,7 +248,7 @@
                         'src/mono/*.cs'
                       ],
                       'outputs': [
-                        'src/mono/monoembedding.exe'
+                        'build/$(BUILDTYPE)/monoembedding.exe'
                       ],
                       'action': [
                         'dmcs',

@@ -34,7 +34,9 @@ NAN_METHOD(initializeClrFunc)
 #endif
 }
 
+#ifdef EDGE_PLATFORM_WINDOWS
 #pragma unmanaged
+#endif
 void init(Handle<Object> target)
 {
     debugMode = HasEnvironmentVariable("EDGE_DEBUG");
@@ -67,7 +69,9 @@ void init(Handle<Object> target)
     NODE_SET_METHOD(target, "initializeClrFunc", initializeClrFunc);
 }
 
+#ifdef EDGE_PLATFORM_WINDOWS
 #pragma unmanaged
+#endif
 bool HasEnvironmentVariable(const char* variableName)
 {
 #ifdef EDGE_PLATFORM_WINDOWS
@@ -77,7 +81,9 @@ bool HasEnvironmentVariable(const char* variableName)
 #endif
 }
 
+#ifdef EDGE_PLATFORM_WINDOWS
 #pragma unmanaged
+#endif
 #ifdef HAVE_CORECLR
 NODE_MODULE(edge_coreclr, init);
 #else

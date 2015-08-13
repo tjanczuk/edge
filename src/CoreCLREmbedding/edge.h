@@ -18,6 +18,9 @@ typedef int BOOL;
 #define HRESULT_CODE(status) ((status) & 0xFFFF)
 
 typedef int32_t HRESULT;
+
+const HRESULT S_OK = 0;
+const HRESULT E_FAIL = -1;
 #endif
 
 typedef void* CoreClrGcHandle;

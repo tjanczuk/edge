@@ -77,7 +77,11 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
     HRESULT result = S_OK;
     char currentDirectory[PATH_MAX];
 
+#ifdef EDGE_PLATFORM_WINDOWS
     if (!_getcwd(&currentDirectory[0], PATH_MAX))
+#else
+    if (!getcwd(&currentDirectory[0], PATH_MAX))
+#endif
     {
     	NanThrowError("Unable to get the current directory.");
         return E_FAIL;
@@ -534,7 +538,7 @@ bool CoreClrEmbedding::LoadCoreClrAtPath(const char* loadPath, void** libCoreClr
 
     if (*libCoreClrPointer == NULL )
     {
-        DBG("CoreClrEmbedding::LoadCoreClrAtPath - Errors loading %s from %s (error code %d): %s", LIBCORECLR_NAME, loadPath, GetLastError(), GetLoadError());
+        DBG("CoreClrEmbedding::LoadCoreClrAtPath - Errors loading %s from %s: %s", LIBCORECLR_NAME, loadPath, GetLoadError());
     }
 
     else
