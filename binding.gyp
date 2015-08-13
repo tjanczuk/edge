@@ -26,7 +26,7 @@
       ],
       'conditions': [
         [
-          '"<!(node -e "var whereis = require(\'./tools/whereis\'); console.log(whereis(\'dnx.exe\'));")"!=""',
+          '"<!(node -e "var whereis = require(\'./tools/whereis\'); console.log(whereis(\'dnx.exe\', \'dnx\'));")"!=""',
           {
             'sources+': [
               'src/common/v8synchronizationcontext.cpp',
@@ -214,15 +214,46 @@
     },
     {
       'target_name': 'build_managed',
+      'type': 'none',
+      'dependencies': [
+        'edge_nativeclr',
+        'edge_coreclr'
+      ],
       'conditions': [
         [
-          'OS!="win"',
+          'OS=="win"',
           {
-            'type': 'none',
-            'dependencies': [
-              'edge_nativeclr',
-              'edge_coreclr'
-            ],
+            'conditions': [
+              [
+                '"<!(node -e "var whereis = require(\'./tools/whereis\'); console.log(whereis(\'dnx.exe\'));")"!=""',
+                {
+                  'actions+': [
+                    {
+                      'action_name': 'compile_coreclr_embed',
+                      'inputs': [
+                        'src/CoreCLREmbedding/project.json'
+                      ],
+                      'outputs': [
+                        'src/CoreCLREmbedding/bin/Release/dnxcore50/CoreCLREmbedding.dll'
+                      ],                        
+                      'action': [
+                        'cd "<(module_root_dir)\\src\\CoreCLREmbedding" & dnu restore & cd "<(module_root_dir)\\src\\CoreCLREmbedding" & dnu build --configuration Release & copy "<(module_root_dir)\\src\\CoreCLREmbedding\\bin\\Release\\dnxcore50\\CoreCLREmbedding.dll" "<(module_root_dir)\\build\\Release"'
+                      ]
+                    }
+                  ],
+                  'copies+': [
+                    {
+                      'destination': '<(module_root_dir)\\build\\Release',
+                      'files': [
+                        '<(module_root_dir)\\src\\CoreCLREmbedding\\bin\\Release\\dnxcore50\\CoreCLREmbedding.dll'
+                      ]
+                    }
+                  ]
+                }
+              ]
+            ]
+          },
+          {
             'conditions': [
               [
                 '"<!(echo -n `which mono`)"!=""',

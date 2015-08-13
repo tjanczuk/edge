@@ -99,6 +99,8 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 	strcpy(edgeNodePath, dirname(edgeNodePath));
 #endif
 
+    DBG("CoreClrEmbedding::Initialize - edge.node path is %s", edgeNodePath);
+
     void* libCoreClr = NULL;
     char bootstrapper[PATH_MAX];
 
@@ -199,6 +201,7 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
         return E_FAIL;
     }
 
+    DBG("CoreClrEmbedding::Initialize - coreclr_initialize loaded successfully");
     coreclr_create_delegateFunction createDelegate = (coreclr_create_delegateFunction) LoadSymbol(libCoreClr, "coreclr_create_delegate");
 
     if (!createDelegate)
@@ -206,6 +209,8 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
     	throwV8Exception("Error loading the coreclr_create_delegate function from %s: %s.", LIBCORECLR_NAME, GetLoadError());
     	return E_FAIL;
     }
+
+    DBG("CoreClrEmbedding::Initialize - coreclr_create_delegate loaded successfully");
 
     const char* propertyKeys[] = {
     	"TRUSTED_PLATFORM_ASSEMBLIES",
@@ -219,8 +224,14 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
     AddToTpaList(coreClrDirectory, &tpaList);
 
     std::string appPaths(&currentDirectory[0]);
+#if EDGE_PLATFORM_WINDOWS
+    appPaths.append(";");
+#else
     appPaths.append(":");
+#endif
     appPaths.append(edgeNodePath);
+
+    DBG("CoreClrEmbedding::Initialize - Using %s as the app path value", appPaths.c_str());
 
     const char* propertyValues[] = {
     	tpaList.c_str(),
@@ -316,13 +327,18 @@ void CoreClrEmbedding::AddToTpaList(std::string directoryPath, std::string* tpaL
         ".exe"
     };
 
-    WIN32_FIND_DATA directoryEntry;
-    HANDLE directory = FindFirstFile(directoryPath.c_str(), &directoryEntry);
+    std::string directoryPathWithFilter(directoryPath);
+    directoryPathWithFilter.append("\\*");
 
-    if (directory == INVALID_HANDLE_VALUE)
+    WIN32_FIND_DATA directoryEntry;
+    HANDLE fileHandle = FindFirstFile(directoryPathWithFilter.c_str(), &directoryEntry);
+
+    if (fileHandle == INVALID_HANDLE_VALUE)
     {
         return;
     }
+
+    DBG("CoreClrEmbedding::AddToTpaList - Searching %s for assemblies to add to the TPA list", directoryPath.c_str());
 
     std::set<std::string> addedAssemblies;
 
@@ -336,6 +352,11 @@ void CoreClrEmbedding::AddToTpaList(std::string directoryPath, std::string* tpaL
         // For all entries in the directory
         do
         {
+            if ((directoryEntry.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY)
+            {
+                continue;
+            }
+
             std::string filename(directoryEntry.cFileName);
 
             // Check if the extension matches the one we are looking for
@@ -361,16 +382,24 @@ void CoreClrEmbedding::AddToTpaList(std::string directoryPath, std::string* tpaL
                 tpaList->append("/");
 #endif
                 tpaList->append(filename);
+#ifdef EDGE_PLATFORM_WINDOWS
+                tpaList->append(";");
+#else
                 tpaList->append(":");
+#endif
+
+                DBG("CoreClrEmbedding::AddToTpaList - Added %s to the TPA list", filename.c_str());
             }
         }
-        while (FindNextFile(directory, &directoryEntry) != NULL);
+        while (FindNextFile(fileHandle, &directoryEntry));
+
+        FindClose(fileHandle);
 
         // Rewind the directory stream to be able to iterate over it for the next extension
-        directory = FindFirstFile(directoryPath.c_str(), &directoryEntry);
+        fileHandle = FindFirstFile(directoryPathWithFilter.c_str(), &directoryEntry);
     }
 
-    FindClose(directory);
+    FindClose(fileHandle);
 }
 #else
 void CoreClrEmbedding::AddToTpaList(std::string directoryPath, std::string* tpaList)

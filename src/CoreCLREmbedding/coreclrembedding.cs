@@ -10,7 +10,6 @@ using System.Collections.Generic;
 using System.Collections;
 using System.Threading.Tasks;
 using System.IO;
-using System.Runtime.Loader;
 
 [StructLayout(LayoutKind.Sequential)]
 public struct V8ObjectData
