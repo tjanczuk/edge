@@ -29,8 +29,6 @@ cd ..
 npm install node-gyp -g
 npm install mocha -g
 
-su ${THE_USER} -l -s /bin/bash -c "source .dnx/dnvm/dnvm.sh && dnvm install 1.0.0-beta7-12274 -r coreclr -u -a edge-coreclr"
-
 curl -sSL https://raw.githubusercontent.com/aspnet/Home/dev/dnvminstall.sh | DNX_BRANCH=dev sudo -u ${THE_USER} sh
 
 su ${THE_USER} -l -s /bin/bash -c "source .dnx/dnvm/dnvm.sh && dnvm install 1.0.0-beta7-12274 -r coreclr -u -a edge-coreclr"
@@ -44,6 +42,7 @@ sudo -u ${THE_USER} curl https://codeload.github.com/medicomp/edge/zip/master > 
 sudo -u ${THE_USER} unzip edge.js.zip 
 cd edge-master/
 EDGE_DIRECTORY=$(pwd)
+chown -R ${THE_USER} ~/.npm
 
 su ${THE_USER} -l -s /bin/bash -c "source ~/.dnx/dnvm/dnvm.sh && dnvm use edge-mono && cd $EDGE_DIRECTORY && npm install"
 
