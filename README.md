@@ -1265,7 +1265,7 @@ sudo bash -c 'bash <(wget -qO- https://raw.githubusercontent.com/medicomp/edge/m
 This will do the following:
 
 * Download Node.js v0.10.26 sources, build, and install Node.js x64
-* Download Mono 3.4.0 sources, build, and install Mono x64
+* Install the Xamarin Mono apt repository and install the latest Mono x64
 * Download and install the latest version of Microsoft's CoreCLR
 * Download and install node-gyp and mocha
 * Download Edge.js sources and build x64 release
@@ -1285,7 +1285,7 @@ sudo bash -c 'bash <(wget -qO- https://raw.githubusercontent.com/medicomp/edge/m
 This will do the following:
 
 * Download Node.js v0.10.26 sources, build, and install Node.js x64  
-* Download Mono 3.4.0 sources, build, and install Mono x64  
+* Install the Xamarin Mono apt repository and install the latest Mono x64
 * Download and install the latest version of Microsoft's CoreCLR
 * Download and install node-gyp and mocha  
 * Download Edge.js sources and build x64 release  
