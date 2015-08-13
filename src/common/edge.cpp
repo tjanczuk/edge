@@ -41,28 +41,19 @@ void init(Handle<Object> target)
 {
     debugMode = HasEnvironmentVariable("EDGE_DEBUG");
     DBG("edge::init");
-    V8SynchronizationContext::Initialize();
-#ifdef HAVE_NATIVECLR
-#ifdef HAVE_CORECLR
-    if (!HasEnvironmentVariable("EDGE_USE_CORECLR"))
-    {
-#ifndef EDGE_PLATFORM_WINDOWS
-    	MonoEmbedding::Initialize();
-#endif
-    }
 
-    else if (FAILED(CoreClrEmbedding::Initialize(debugMode)))
-    {
-    	DBG("Error occurred during CoreCLR initialization");
-    	return;
-    }
-#endif
-#else
+    V8SynchronizationContext::Initialize();
+
+#ifdef HAVE_CORECLR
     if (FAILED(CoreClrEmbedding::Initialize(debugMode)))
 	{
 		DBG("Error occurred during CoreCLR initialization");
 		return;
 	}
+#else
+#ifndef EDGE_PLATFORM_WINDOWS
+    MonoEmbedding::Initialize();
+#endif
 #endif
 
     enableScriptIgnoreAttribute = HasEnvironmentVariable("EDGE_ENABLE_SCRIPTIGNOREATTRIBUTE");
