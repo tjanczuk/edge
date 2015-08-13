@@ -1142,7 +1142,7 @@ cd tools
 build.bat release 0.10.0
 ```
 
-Note: the Node.js version number you provide must be version number corresponding to one of the subdirectories of http://nodejs.org/dist. The command will build both x32 and x64 architectures (assuming you use x64 machine). The command will also copy the edge.node executables to appropriate locations under lib\native directory where they are looked up from at runtime. The `npm install` step copies the C standard library shared DLL to the location of the edge.node for the component to be ready to go.
+Note: the Node.js version number you provide must be version number corresponding to one of the subdirectories of http://nodejs.org/dist. The command will build both x32 and x64 architectures (assuming you use x64 machine). The command will also copy the edge\_\*.node executables to appropriate locations under lib\native directory where they are looked up from at runtime. The `npm install` step copies the C standard library shared DLL to the location of the edge\_\*.node files for the component to be ready to go.
 
 To build the C++\CLI native extension using the version of Node.js installed on your machine, issue the following command:
 
@@ -1152,10 +1152,10 @@ node-gyp configure --msvs_version=2013
 node-gyp build -debug
 ```
 
-You can then set the EDGE_NATIVE environment variable to the fully qualified file name of the built edge.node binary. It is useful during development, for example:
+You can then set the EDGE_NATIVE environment variable to the fully qualified file name of the built edge_\*.node binary (edge\_nativeclr.node if you're using the native CLR runtime or edge\_coreclr.node if you're using CoreCLR). It is useful during development, for example:
 
 ```
-set EDGE_NATIVE=C:\projects\edge\build\Debug\edge.node
+set EDGE_NATIVE=C:\projects\edge\build\Debug\edge_nativeclr.node
 ``` 
 
 You can also set the `EDGE_DEBUG` environment variable to 1 to have the edge module generate debug traces to the console when it runs.
@@ -1246,7 +1246,7 @@ To build a debug build instead of release, you need to:
 
 ```bash
 node-gyp configure build -debug
-export EDGE_NATIVE=/Users/tomek/edge/build/Debug/edge.node
+export EDGE_NATIVE=/Users/tomek/edge/build/Debug/edge_nativeclr.node
 ```
 
 ### Building on Linux 
@@ -1309,7 +1309,7 @@ To build a debug build instead of release, you need to:
 
 ```bash
 node-gyp configure build -debug
-export EDGE_NATIVE=/home/tomek/edge/build/Debug/edge.node
+export EDGE_NATIVE=/home/tomek/edge/build/Debug/edge_nativeclr.node
 ```
 
 ### Using CoreCLR
@@ -1324,7 +1324,7 @@ Edge will try to find the CLR runtime in the following locations:
 
  * The path in the `CORECLR_DIR` environment variable, if provided
  * The current directory
- * The directory containing `edge.node`
+ * The directory containing `edge_*.node`
  * Directories in the `PATH` environment variable
   
 If you've used `dnvm install` and `dnvm use` to set your preferred version of the CLR, you don't have to supply any additional parameters or environment variables when starting node.  However, if the CLR is another location or you want to use a version of the CLR other than the default that you've set, the best way to specify that is through the `CORECLR_DIR` environment variable, i.e.
