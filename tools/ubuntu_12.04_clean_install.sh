@@ -31,10 +31,10 @@ npm install mocha -g
 
 curl -sSL https://raw.githubusercontent.com/aspnet/Home/dev/dnvminstall.sh | DNX_BRANCH=dev sudo -u ${THE_USER} sh
 
-su ${THE_USER} -l -s /bin/bash -c "source .dnx/dnvm/dnvm.sh && dnvm install 1.0.0-beta7-12274 -r coreclr -u -a edge-coreclr"
+su ${THE_USER} -l -s /bin/bash -c "source .dnx/dnvm/dnvm.sh && dnvm install latest -r coreclr -u -a edge-coreclr"
 
 # TODO: remove this once Mono is no longer necessary for dnu restore and dnu build
-su ${THE_USER} -l -s /bin/bash -c "source .dnx/dnvm/dnvm.sh && dnvm install 1.0.0-beta7-12274 -r mono -u -a edge-mono"
+su ${THE_USER} -l -s /bin/bash -c "source .dnx/dnvm/dnvm.sh && dnvm install latest -r mono -u -a edge-mono"
 
 # download and build Edge.js
 
