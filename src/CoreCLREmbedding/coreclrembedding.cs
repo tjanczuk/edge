@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Collections;
 using System.Threading.Tasks;
 using System.IO;
+using System.Diagnostics;
 
 [StructLayout(LayoutKind.Sequential)]
 public struct V8ObjectData
@@ -809,6 +810,7 @@ public class CoreCLREmbedding
 		return expando;
 	}
 
+	[Conditional("DEBUG")]
 	internal static void DebugMessage(string message, params object[] parameters)
 	{
 		if (DebugMode) 
