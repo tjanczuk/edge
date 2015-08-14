@@ -93,6 +93,10 @@ public class CoreCLREmbedding
 	private static bool DebugMode = false;
 	private static long MinDateTimeTicks = 621355968000000000;
 	private static Dictionary<Type, List<Tuple<string, Func<object, object>>>> TypePropertyAccessors = new Dictionary<Type, List<Tuple<string, Func<object, object>>>>();
+	private static int PointerSize = Marshal.SizeOf<IntPtr>();
+	private static int V8BufferDataSize = Marshal.SizeOf<V8BufferData>();
+	private static int V8ObjectDataSize = Marshal.SizeOf<V8ObjectData>();
+	private static int V8ArrayDataSize = Marshal.SizeOf<V8ArrayData>();
 
     [SecurityCritical]
 	public static IntPtr GetFunc(string assemblyFile, string typeName, string methodName, IntPtr exception)
@@ -313,8 +317,8 @@ public class CoreCLREmbedding
 				for (int i = 0; i < objectData.propertiesCount; i++)
 				{
 					int propertyType = Marshal.ReadInt32(objectData.propertyTypes, i * sizeof(int));
-                    IntPtr propertyValue = Marshal.ReadIntPtr(objectData.propertyValues, i * Marshal.SizeOf<IntPtr>());
-                    IntPtr propertyName = Marshal.ReadIntPtr(objectData.propertyNames, i * Marshal.SizeOf<IntPtr>());
+                    IntPtr propertyValue = Marshal.ReadIntPtr(objectData.propertyValues, i * PointerSize);
+                    IntPtr propertyName = Marshal.ReadIntPtr(objectData.propertyNames, i * PointerSize);
 
 					FreeMarshalData(propertyValue, propertyType);
 					Marshal.FreeHGlobal(propertyName);
@@ -333,7 +337,7 @@ public class CoreCLREmbedding
 				for (int i = 0; i < arrayData.arrayLength; i++)
 				{
 					int itemType = Marshal.ReadInt32(arrayData.itemTypes, i * sizeof(int));
-                    IntPtr itemValue = Marshal.ReadIntPtr(arrayData.itemValues, i * Marshal.SizeOf<IntPtr>());
+                    IntPtr itemValue = Marshal.ReadIntPtr(arrayData.itemValues, i * PointerSize);
 
 					FreeMarshalData(itemValue, itemType);
 				}
@@ -510,7 +514,7 @@ public class CoreCLREmbedding
 
 			Marshal.Copy(buffer, 0, bufferData.buffer, bufferData.bufferLength);
 
-            IntPtr destinationPointer = Marshal.AllocHGlobal(Marshal.SizeOf<V8BufferData>());
+            IntPtr destinationPointer = Marshal.AllocHGlobal(V8BufferDataSize);
 			Marshal.StructureToPtr<V8BufferData>(bufferData, destinationPointer, false);
 
 			return destinationPointer;
@@ -543,32 +547,24 @@ public class CoreCLREmbedding
 			}
 
 			V8ObjectData objectData = new V8ObjectData();
-			IntPtr[] propertyNames = new IntPtr[keyCount];
-			int[] propertyTypes = new int[keyCount];
-			IntPtr[] propertyValues = new IntPtr[keyCount];
-            int pointerSize = Marshal.SizeOf<IntPtr>();
 			int counter = 0;
 			V8Type propertyType;
 
 			objectData.propertiesCount = keyCount;
-			objectData.propertyNames = Marshal.AllocHGlobal(pointerSize * keyCount);
+			objectData.propertyNames = Marshal.AllocHGlobal(PointerSize * keyCount);
 			objectData.propertyTypes = Marshal.AllocHGlobal(sizeof(int) * keyCount);
-			objectData.propertyValues = Marshal.AllocHGlobal(pointerSize * keyCount);
+			objectData.propertyValues = Marshal.AllocHGlobal(PointerSize * keyCount);
 
 			foreach (object key in keys)
 			{
-				propertyNames[counter] = Marshal.StringToHGlobalAnsi(key.ToString());
-				propertyValues[counter] = MarshalCLRToV8(getValue(key), out propertyType);
-				propertyTypes[counter] = (int)propertyType;
+				Marshal.WriteIntPtr(objectData.propertyNames, counter * PointerSize, Marshal.StringToHGlobalAnsi(key.ToString()));
+				Marshal.WriteIntPtr(objectData.propertyValues, counter * PointerSize, MarshalCLRToV8(getValue(key), out propertyType));
+				Marshal.WriteInt32(objectData.propertyTypes, counter * sizeof(int), (int)propertyType);
 
 				counter++;
 			}
 
-			Marshal.Copy(propertyNames, 0, objectData.propertyNames, propertyNames.Length);
-			Marshal.Copy(propertyTypes, 0, objectData.propertyTypes, propertyTypes.Length);
-			Marshal.Copy(propertyValues, 0, objectData.propertyValues, propertyValues.Length);
-
-            IntPtr destinationPointer = Marshal.AllocHGlobal(Marshal.SizeOf<V8ObjectData>());
+            IntPtr destinationPointer = Marshal.AllocHGlobal(V8ObjectDataSize);
 			Marshal.StructureToPtr<V8ObjectData>(objectData, destinationPointer, false);
 
 			return destinationPointer;
@@ -591,18 +587,18 @@ public class CoreCLREmbedding
 
 			arrayData.arrayLength = itemValues.Count;
 			arrayData.itemTypes = Marshal.AllocHGlobal(sizeof(int) * arrayData.arrayLength);
-            arrayData.itemValues = Marshal.AllocHGlobal(Marshal.SizeOf<IntPtr>() * arrayData.arrayLength);
+            arrayData.itemValues = Marshal.AllocHGlobal(PointerSize * arrayData.arrayLength);
 
 			Marshal.Copy(itemTypes.ToArray(), 0, arrayData.itemTypes, arrayData.arrayLength);
 			Marshal.Copy(itemValues.ToArray(), 0, arrayData.itemValues, arrayData.arrayLength);
 
-            IntPtr destinationPointer = Marshal.AllocHGlobal(Marshal.SizeOf<V8ArrayData>());
+            IntPtr destinationPointer = Marshal.AllocHGlobal(V8ArrayDataSize);
 			Marshal.StructureToPtr<V8ArrayData>(arrayData, destinationPointer, false);
 
 			return destinationPointer;
 		}
 
-		else if (clrObject.GetType().FullName.StartsWith("System.Func`"))
+		else if (clrObject.GetType().GetTypeInfo().IsGenericType && clrObject.GetType().GetGenericTypeDefinition() == typeof(Func<,>))
 		{
 			Func<object, Task<object>> funcObject = clrObject as Func<object, Task<object>>;
 
@@ -641,32 +637,23 @@ public class CoreCLREmbedding
 
 			List<Tuple<string, Func<object, object>>> propertyAccessors = GetPropertyAccessors(clrObject.GetType());
 			V8ObjectData objectData = new V8ObjectData();
-			IntPtr[] propertyNames = new IntPtr[propertyAccessors.Count];
-			int[] propertyTypes = new int[propertyAccessors.Count];
-			IntPtr[] propertyValues = new IntPtr[propertyAccessors.Count];
-            int pointerSize = Marshal.SizeOf<IntPtr>();
 			int counter = 0;
 			V8Type propertyType;
 
 			objectData.propertiesCount = propertyAccessors.Count;
-			objectData.propertyNames = Marshal.AllocHGlobal(pointerSize * propertyAccessors.Count);
+			objectData.propertyNames = Marshal.AllocHGlobal(PointerSize * propertyAccessors.Count);
 			objectData.propertyTypes = Marshal.AllocHGlobal(sizeof(int) * propertyAccessors.Count);
-			objectData.propertyValues = Marshal.AllocHGlobal(pointerSize * propertyAccessors.Count);
+			objectData.propertyValues = Marshal.AllocHGlobal(PointerSize * propertyAccessors.Count);
 
 			foreach (Tuple<string, Func<object, object>> propertyAccessor in propertyAccessors)
 			{
-				propertyNames[counter] = Marshal.StringToHGlobalAnsi(propertyAccessor.Item1);
-				propertyValues[counter] = MarshalCLRToV8(propertyAccessor.Item2(clrObject), out propertyType);
-				propertyTypes[counter] = (int)propertyType;
-
+				Marshal.WriteIntPtr(objectData.propertyNames, counter * PointerSize, Marshal.StringToHGlobalAnsi(propertyAccessor.Item1));
+				Marshal.WriteIntPtr(objectData.propertyValues, counter * PointerSize, MarshalCLRToV8(propertyAccessor.Item2(clrObject), out propertyType));
+				Marshal.WriteInt32(objectData.propertyTypes, counter * sizeof(int), (int)propertyType);
 				counter++;
 			}
 
-			Marshal.Copy(propertyNames, 0, objectData.propertyNames, propertyNames.Length);
-			Marshal.Copy(propertyTypes, 0, objectData.propertyTypes, propertyTypes.Length);
-			Marshal.Copy(propertyValues, 0, objectData.propertyValues, propertyValues.Length);
-
-            IntPtr destinationPointer = Marshal.AllocHGlobal(Marshal.SizeOf<V8ObjectData>());
+            IntPtr destinationPointer = Marshal.AllocHGlobal(V8ObjectDataSize);
 			Marshal.StructureToPtr<V8ObjectData>(objectData, destinationPointer, false);
 
 			return destinationPointer;
@@ -708,16 +695,14 @@ public class CoreCLREmbedding
 
 			case V8Type.Array:
 				V8ArrayData arrayData = Marshal.PtrToStructure<V8ArrayData>(v8Object);
-				int[] itemTypes = new int[arrayData.arrayLength];
-				IntPtr[] itemValues = new IntPtr[arrayData.arrayLength];
 				object[] array = new object[arrayData.arrayLength];
-
-				Marshal.Copy(arrayData.itemTypes, itemTypes, 0, arrayData.arrayLength);
-				Marshal.Copy(arrayData.itemValues, itemValues, 0, arrayData.arrayLength);
 
 				for (int i = 0; i < arrayData.arrayLength; i++)
 				{
-					array[i] = MarshalV8ToCLR(itemValues[i], (V8Type)itemTypes[i]);
+					int itemType = Marshal.ReadInt32(arrayData.itemTypes, i * sizeof(int));
+					IntPtr itemValuePointer = Marshal.ReadIntPtr(arrayData.itemValues, i * PointerSize);
+
+					array[i] = MarshalV8ToCLR(itemValuePointer, (V8Type)itemType);
 				}
 
 				return array;
@@ -810,21 +795,15 @@ public class CoreCLREmbedding
 	{
 		ExpandoObject expando = new ExpandoObject();
 		IDictionary<string, object> expandoDictionary = (IDictionary<string, object>) expando;
-		int[] propertyTypes = new int[v8Object.propertiesCount];
-		IntPtr[] propertyNamePointers = new IntPtr[v8Object.propertiesCount];
-		IntPtr[] propertyValuePointers = new IntPtr[v8Object.propertiesCount];
-
-		Marshal.Copy(v8Object.propertyTypes, propertyTypes, 0, v8Object.propertiesCount);
-		Marshal.Copy(v8Object.propertyNames, propertyNamePointers, 0, v8Object.propertiesCount);
-		Marshal.Copy(v8Object.propertyValues, propertyValuePointers, 0, v8Object.propertiesCount);
 
 		for (int i = 0; i < v8Object.propertiesCount; i++) 
 		{
-			IntPtr propertyNamePointer = propertyNamePointers [i];
-			IntPtr propertyValuePointer = propertyValuePointers [i];
+			int propertyType = Marshal.ReadInt32(v8Object.propertyTypes, i * sizeof(int));
+			IntPtr propertyNamePointer = Marshal.ReadIntPtr(v8Object.propertyNames, i * PointerSize);
 			string propertyName = Marshal.PtrToStringAnsi(propertyNamePointer);
+			IntPtr propertyValuePointer = Marshal.ReadIntPtr(v8Object.propertyValues, i * PointerSize);
 
-			expandoDictionary[propertyName] = MarshalV8ToCLR(propertyValuePointer, (V8Type) propertyTypes[i]);
+			expandoDictionary.Add(propertyName, MarshalV8ToCLR(propertyValuePointer, (V8Type) propertyType));
 		}
 
 		return expando;
