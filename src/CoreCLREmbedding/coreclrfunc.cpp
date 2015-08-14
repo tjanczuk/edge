@@ -227,6 +227,10 @@ void CoreClrFunc::FreeMarshalData(void* marshalData, int payloadType)
 		case V8TypeArray:
 			delete ((V8ArrayData*)marshalData);
 			break;
+
+        case V8TypeBuffer:
+            delete ((V8BufferData*)marshalData);
+            break;
 	}
 }
 
