@@ -24,6 +24,11 @@
       'cflags+': [
         '-DHAVE_CORECLR'
       ],
+      'xcode_settings': {
+        'OTHER_CFLAGS': [
+          '-DHAVE_CORECLR'
+        ]
+      },
       'conditions': [
         [
           '"<!(node -e "var whereis = require(\'./tools/whereis\'); console.log(whereis(\'dnx.exe\', \'dnx\'));")"!=""',
@@ -98,6 +103,11 @@
       'cflags+': [
         '-DHAVE_NATIVECLR'
       ],
+      'xcode_settings': {
+        'OTHER_CFLAGS': [
+          '-DHAVE_NATIVECLR'
+        ]
+      },
       'conditions': [
         [
           'OS=="win"',

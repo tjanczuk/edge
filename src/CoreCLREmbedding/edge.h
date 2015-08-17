@@ -9,8 +9,6 @@
 #include <stdio.h>
 
 #ifndef EDGE_PLATFORM_WINDOWS
-#include <uchar.h>
-
 typedef int BOOL;
 
 #define SUCCEEDED(status) ((HRESULT)(status) >= 0)
