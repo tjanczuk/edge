@@ -14,11 +14,11 @@
 #include <intsafe.h>
 #endif
 
-#if PLATFORM_DARWIN
+#if EDGE_PLATFORM_APPLE
 #include <libproc.h>
 #endif
 
-#ifdef PLATFORM_DARWIN
+#ifdef EDGE_PLATFORM_APPLE
 const char* LIBCORECLR_NAME = "libcoreclr.dylib";
 #elif defined(EDGE_PLATFORM_WINDOWS)
 const char* LIBCORECLR_NAME = "coreclr.dll";
@@ -572,7 +572,7 @@ char* CoreClrEmbedding::GetLoadError()
 
 void CoreClrEmbedding::GetPathToBootstrapper(char* pathToBootstrapper, size_t bufferSize)
 {
-#ifdef PLATFORM_DARWIN
+#ifdef EDGE_PLATFORM_APPLE
     ssize_t pathLength = proc_pidpath(getpid(), pathToBootstrapper, bufferSize);
 #elif defined(EDGE_PLATFORM_WINDOWS)
     DWORD dwBufferSize;

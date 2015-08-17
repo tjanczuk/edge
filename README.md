@@ -1224,8 +1224,8 @@ brew tap aspnet/dnx
 brew update
 brew install dnvm
 source dnvm.sh
-dnvm install 1.0.0-beta6-12120 -r coreclr -u
-dnvm use 1.0.0-beta6-12120 -r coreclr
+dnvm install latest -r coreclr -u
+dnvm install latest -r mono -u
 ```
 
 Then install and build Edge.js:
