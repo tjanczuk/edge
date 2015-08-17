@@ -31,17 +31,43 @@
       },
       'conditions': [
         [
-          '"<!(node -e "var whereis = require(\'./tools/whereis\'); console.log(whereis(\'dnx.exe\', \'dnx\'));")"!=""',
+          'OS=="win"',
           {
-            'sources+': [
-              'src/common/v8synchronizationcontext.cpp',
-              'src/common/edge.cpp',
-              'src/CoreCLREmbedding/coreclrembedding.cpp',
-              'src/CoreCLREmbedding/coreclrfunc.cpp',
-              'src/CoreCLREmbedding/coreclrnodejsfunc.cpp',
-              'src/CoreCLREmbedding/coreclrfuncinvokecontext.cpp',
-              'src/CoreCLREmbedding/coreclrnodejsfuncinvokecontext.cpp',
-              'src/common/utils.cpp'
+            'conditions': [
+              [
+                '"<!(node -e "var whereis = require(\'./tools/whereis\'); console.log(whereis(\'dnx.exe\'));")"!=""',
+                {
+                  'sources+': [
+                    'src/common/v8synchronizationcontext.cpp',
+                    'src/common/edge.cpp',
+                    'src/CoreCLREmbedding/coreclrembedding.cpp',
+                    'src/CoreCLREmbedding/coreclrfunc.cpp',
+                    'src/CoreCLREmbedding/coreclrnodejsfunc.cpp',
+                    'src/CoreCLREmbedding/coreclrfuncinvokecontext.cpp',
+                    'src/CoreCLREmbedding/coreclrnodejsfuncinvokecontext.cpp',
+                    'src/common/utils.cpp'
+                  ]
+                }
+              ]
+            ]
+          },
+          {
+            'conditions': [
+              [
+                '"<!(echo -n `which dnx`)"!=""',
+                {
+                  'sources+': [
+                    'src/common/v8synchronizationcontext.cpp',
+                    'src/common/edge.cpp',
+                    'src/CoreCLREmbedding/coreclrembedding.cpp',
+                    'src/CoreCLREmbedding/coreclrfunc.cpp',
+                    'src/CoreCLREmbedding/coreclrnodejsfunc.cpp',
+                    'src/CoreCLREmbedding/coreclrfuncinvokecontext.cpp',
+                    'src/CoreCLREmbedding/coreclrnodejsfuncinvokecontext.cpp',
+                    'src/common/utils.cpp'
+                  ]
+                }
+              ]
             ]
           }
         ]
