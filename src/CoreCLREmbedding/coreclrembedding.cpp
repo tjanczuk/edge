@@ -49,6 +49,7 @@ CallFuncFunction callFunc;
 ContinueTaskFunction continueTask;
 FreeHandleFunction freeHandle;
 FreeMarshalDataFunction freeMarshalData;
+CompileFuncFunction compileFunc;
 
 #define CREATE_DELEGATE(functionName, functionPointer)\
 	result = createDelegate(\
@@ -274,6 +275,7 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
     CREATE_DELEGATE("FreeMarshalData", &freeMarshalData);
     CREATE_DELEGATE("SetDebugMode", &setDebugMode);
     CREATE_DELEGATE("SetCallV8FunctionDelegate", &setCallV8Function);
+    CREATE_DELEGATE("CompileFunc", &compileFunc);
 
     setDebugMode(debugMode);
 	DBG("CoreClrEmbedding::Initialize - Debug mode set successfully");
@@ -611,4 +613,26 @@ void CoreClrEmbedding::FreeMarshalData(void* marshalData, int marshalDataType)
 {
 	DBG("CoreClrEmbedding::FreeMarshalData");
 	freeMarshalData(marshalData, marshalDataType);
+}
+
+CoreClrGcHandle CoreClrEmbedding::CompileFunc(const void* options, const int payloadType, v8::Handle<v8::Value>* v8Exception)
+{
+    DBG("CoreClrEmbedding::CompileFunc - Starting");
+
+    CoreClrGcHandle exception;
+    CoreClrGcHandle function = compileFunc(options, payloadType, &exception);
+
+    if (exception)
+    {
+        *v8Exception = CoreClrFunc::MarshalCLRToV8(exception, V8TypeException);
+        FreeMarshalData(exception, V8TypeException);
+
+        return NULL;
+    }
+
+    else
+    {
+        DBG("CoreClrEmbedding::CompileFunc - Finished");
+        return function;
+    }
 }

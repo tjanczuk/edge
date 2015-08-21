@@ -28,7 +28,7 @@
     }
   ],
   "dependencies": {
-    "edge-cs": "0.2.7",
+    "edge-cs": "medicomp/edge-cs",
     "nan": "^1.6.2"
   },
   "devDependencies": {

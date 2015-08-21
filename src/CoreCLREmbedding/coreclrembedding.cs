@@ -11,6 +11,7 @@ using System.Collections;
 using System.Threading.Tasks;
 using System.IO;
 using System.Diagnostics;
+using System.Runtime.Versioning;
 
 [StructLayout(LayoutKind.Sequential)]
 public struct V8ObjectData
@@ -73,13 +74,230 @@ public class CoreCLREmbedding
 
     private class FileAssemblyLoadContext : AssemblyLoadContext
     {
+        private readonly Dictionary<string, dynamic> _nuGetDependencyProviders = new Dictionary<string, dynamic>();
+        private readonly Dictionary<string, dynamic> _projectDependencyProviders = new Dictionary<string, dynamic>();
+        private Type _projectDependencyProviderType;
+        private Type _projectResolverType;
+        private Type _dependencyProviderType;
+        private Type _dependencyWalkerType;
+        private Type _nugetDependencyProviderType;
+        private Type _packageRepositoryType;
+        private Type _lockFileReaderType;
+        private MethodInfo _parseSemanticVersionMethod;
+        private MethodInfo _resolveRepositoryPathMethod;
+        private readonly Dictionary<string, string> _resolvedAssemblies = new Dictionary<string, string>();
+
+        public FileAssemblyLoadContext()
+        {
+            DebugMessage("FileAssemblyLoadContext::ctor (CLR) - Starting");
+
+            string applicationRoot = Environment.GetEnvironmentVariable("EDGE_APP_ROOT") ?? Directory.GetCurrentDirectory();
+            DebugMessage("FileAssemblyLoadContext::ctor (CLR) - Application root is {0}", applicationRoot);
+
+            Assembly runtimeAssembly = Assembly.Load(new AssemblyName("Microsoft.Dnx.Runtime")
+            {
+                Version = new Version("1.0.0.0")
+            });
+            DebugMessage("FileAssemblyLoadContext::ctor (CLR) - Loaded Microsoft.Dnx.Runtime");
+
+            _projectDependencyProviderType = runtimeAssembly.GetType("Microsoft.Dnx.Runtime.ProjectReferenceDependencyProvider");
+            _projectResolverType = runtimeAssembly.GetType("Microsoft.Dnx.Runtime.ProjectResolver");
+            _dependencyWalkerType = runtimeAssembly.GetType("Microsoft.Dnx.Runtime.DependencyWalker");
+            _dependencyProviderType = runtimeAssembly.GetType("Microsoft.Dnx.Runtime.IDependencyProvider");
+            _nugetDependencyProviderType = runtimeAssembly.GetType("Microsoft.Dnx.Runtime.NuGetDependencyResolver");
+            _packageRepositoryType = runtimeAssembly.GetType("NuGet.PackageRepository");
+
+            Type semanticVersionType = runtimeAssembly.GetType("NuGet.SemanticVersion");
+
+            DebugMessage("FileAssemblyLoadContext::ctor (CLR) - Loaded the dependency management types");
+
+            _resolveRepositoryPathMethod = _nugetDependencyProviderType.GetMethod("ResolveRepositoryPath", BindingFlags.Static | BindingFlags.Public);
+            _lockFileReaderType = runtimeAssembly.GetType("Microsoft.Dnx.Runtime.DependencyManagement.LockFileReader");
+            _parseSemanticVersionMethod = semanticVersionType.GetMethod("Parse", BindingFlags.Public | BindingFlags.Static);
+
+            DebugMessage("FileAssemblyLoadContext::ctor (CLR) - Loaded the dependency management methods");
+
+            dynamic projectDependencyProvider = CreateProjectDependencyProvider(applicationRoot);
+
+            if (projectDependencyProvider != null)
+            {
+                string projectName = new DirectoryInfo(applicationRoot).Name;
+
+                CreateNuGetDependencyProvider(applicationRoot);
+                ResolveDependencies(projectName);
+            }
+
+            DebugMessage("FileAssemblyLoadContext::ctor (CLR) - Created the dependency providers for the application");
+        }
+
+        private dynamic CreateNuGetDependencyProvider(string projectDirectory)
+        {
+            DebugMessage("FileAssemblyLoadContext::CreateNuGetDependencyProvider (CLR) - Creating a NuGet dependency provider for the project in {0}", projectDirectory);
+
+            string repositoryPath = (string) _resolveRepositoryPathMethod.Invoke(null, new object[]
+            {
+                projectDirectory
+            });
+            object nuGetDependencyProvider = null;
+
+            DebugMessage("FileAssemblyLoadContext::CreateNuGetDependencyProvider (CLR) - Repository path for the project is {0}", repositoryPath);
+
+            if (_nuGetDependencyProviders.ContainsKey(repositoryPath))
+            {
+                DebugMessage("FileAssemblyLoadContext::CreateNuGetDependencyProvider (CLR) - A dependency provider already exists for that repository path, re-using it");
+                nuGetDependencyProvider = _nuGetDependencyProviders[repositoryPath];
+            }
+
+            if (File.Exists(Path.Combine(projectDirectory, "project.lock.json")))
+            {
+                DebugMessage("FileAssemblyLoadContext::CreateNuGetDependencyProvider (CLR) - Reading the project.lock.json file for the project and applying it to the dependency provider");
+
+                if (nuGetDependencyProvider == null)
+                {
+                    nuGetDependencyProvider = Activator.CreateInstance(_nugetDependencyProviderType,
+                        Activator.CreateInstance(_packageRepositoryType, repositoryPath, false));
+                }
+                
+                object lockFileReader = Activator.CreateInstance(_lockFileReaderType);
+
+                object lockFile = _lockFileReaderType.GetMethod("Read", new Type[]
+                {
+                    typeof (string)
+                }).Invoke(lockFileReader, new object[]
+                {
+                    Path.Combine(projectDirectory, "project.lock.json")
+                });
+
+                _nugetDependencyProviderType.GetMethod("ApplyLockFile").Invoke(nuGetDependencyProvider, new object[]
+                {
+                    lockFile
+                });
+
+                _nuGetDependencyProviders[repositoryPath] = nuGetDependencyProvider;
+            }
+
+            else
+            {
+                DebugMessage("FileAssemblyLoadContext::CreateNuGetDependencyProvider (CLR) - No project.lock.json file in {0}, nothing to do", projectDirectory);
+            }
+
+            DebugMessage("FileAssemblyLoadContext::CreateNuGetDependencyProvider (CLR) - Finished");
+            return nuGetDependencyProvider;
+        }
+
+        private dynamic CreateDependencyWalker()
+        {
+            Array dependencyProvidersArray = Array.CreateInstance(_dependencyProviderType, _projectDependencyProviders.Count + _nuGetDependencyProviders.Count);
+            int count = 0;
+
+            foreach (string projectDirectory in _projectDependencyProviders.Keys)
+            {
+                dependencyProvidersArray.SetValue(_projectDependencyProviders[projectDirectory], count);
+                count++;
+            }
+
+            foreach (string repositoryPath in _nuGetDependencyProviders.Keys)
+            {
+                dependencyProvidersArray.SetValue(_nuGetDependencyProviders[repositoryPath], count);
+                count++;
+            }
+
+            return Activator.CreateInstance(_dependencyWalkerType, dependencyProvidersArray);
+        }
+
+        private dynamic CreateProjectDependencyProvider(string projectDirectory)
+        {
+            DebugMessage("FileAssemblyLoadContext::CreateProjectDependencyProvider (CLR) - Creating a project dependency provider for the project in {0}", projectDirectory);
+
+            if (_projectDependencyProviders.ContainsKey(projectDirectory))
+            {
+                DebugMessage("FileAssemblyLoadContext::CreateProjectDependencyProvider (CLR) - A dependency provider already exists for that project directory, re-using it");
+                return _projectDependencyProviders[projectDirectory];
+            }
+
+            if (File.Exists(Path.Combine(projectDirectory, "project.json")))
+            {
+                DebugMessage("FileAssemblyLoadContext::CreateProjectDependencyProvider (CLR) - Creating a new project dependency provider for the project");
+
+                var projectDependencyProvider = Activator.CreateInstance(_projectDependencyProviderType,
+                    Activator.CreateInstance(_projectResolverType, projectDirectory));
+                _projectDependencyProviders[projectDirectory] = projectDependencyProvider;
+
+                DebugMessage("FileAssemblyLoadContext::CreateProjectDependencyProvider (CLR) - Finished");
+
+                return projectDependencyProvider;
+            }
+
+            DebugMessage("FileAssemblyLoadContext::CreateProjectDependencyProvider (CLR) - No project.json file in the project directory, nothing to do");
+            return null;
+        }
+
+        internal void AddCompiler(string compilerDirectory)
+        {
+            DebugMessage("FileAssemblyLoadContext::AddCompiler (CLR) - Adding the compiler in {0}", compilerDirectory);
+
+            var compilerDependencyProvider = CreateProjectDependencyProvider(compilerDirectory);
+
+            if (compilerDependencyProvider != null)
+            {
+                string compilerName = new DirectoryInfo(compilerDirectory).Name;
+
+                CreateNuGetDependencyProvider(compilerDirectory);
+                ResolveDependencies(compilerName);
+            }
+
+            DebugMessage("FileAssemblyLoadContext::AddCompiler (CLR) - Finished");
+        }
+
+        private void ResolveDependencies(string projectName)
+        {
+            dynamic dependencyWalker = CreateDependencyWalker();
+
+            DebugMessage("FileAssemblyLoadContext::ResolveDependencies (CLR) - Getting the dependencies for the project");
+            // TODO: see if we can get some sort of globally matched semantic version
+            dependencyWalker.Walk(projectName, ParseSemanticVersion("1.0.0.0"), new FrameworkName("DNXCore,Version=v5.0"));
+            DebugMessage("FileAssemblyLoadContext::ResolveDependencies (CLR) - Finished getting dependencies for the project");
+
+            foreach (dynamic nuGetDependencyProvider in _nuGetDependencyProviders.Values)
+            {
+                foreach (dynamic dependencyAssemblyName in nuGetDependencyProvider.PackageAssemblyLookup.Keys)
+                {
+                    string assemblyName = dependencyAssemblyName.Name;
+                    string assemblyPath = nuGetDependencyProvider.PackageAssemblyLookup[dependencyAssemblyName].Path;
+
+                    if (!_resolvedAssemblies.ContainsKey(assemblyName))
+                    {
+                        DebugMessage("FileAssemblyLoadContext::ResolveDependencies (CLR) - Resolved {0} to {1}", assemblyName, assemblyPath);
+                        _resolvedAssemblies[assemblyName] = assemblyPath;
+                    }
+                }
+            }
+        }
+
+        private dynamic ParseSemanticVersion(string version)
+        {
+            return _parseSemanticVersionMethod.Invoke(null, new object[]
+            {
+                version
+            });
+        }
+
         [SecuritySafeCritical]
         protected override Assembly Load(AssemblyName assemblyName)
         {
+            DebugMessage("FileAssemblyLoadContext::Load (CLR) - Trying to load {0}", assemblyName.Name);
+
+            if (_resolvedAssemblies.ContainsKey(assemblyName.Name))
+            {
+                DebugMessage("FileAssemblyLoadContext::Load (CLR) - Found an entry in the resolved assemblies cache");
+                return LoadPath(_resolvedAssemblies[assemblyName.Name]);
+            }
+
+            DebugMessage("FileAssemblyLoadContext::Load (CLR) - No entry in the resolved assemblies cache, calling Assembly.Load()");
             return Assembly.Load(assemblyName);
         }
 
-        public Assembly LoadFrom(string assemblyPath)
+        public Assembly LoadPath(string assemblyPath)
         {
             if (!File.Exists(assemblyPath))
             {
@@ -88,8 +306,13 @@ public class CoreCLREmbedding
 
             return LoadFromAssemblyPath(assemblyPath);
         }
-    }
 
+        public Assembly LoadStream(Stream assemblyStream)
+        {
+            return LoadFromStream(assemblyStream);
+        }
+    }
+    
     private static FileAssemblyLoadContext AssemblyLoadContext = new FileAssemblyLoadContext();
 	private static bool DebugMode = false;
 	private static long MinDateTimeTicks = 621355968000000000;
@@ -111,7 +334,7 @@ public class CoreCLREmbedding
 				assemblyFile = Path.Combine(Directory.GetCurrentDirectory(), assemblyFile);
 			}
 
-            Assembly assembly = AssemblyLoadContext.LoadFrom(assemblyFile);
+            Assembly assembly = AssemblyLoadContext.LoadPath(assemblyFile);
 			DebugMessage("CoreCLREmbedding::GetFunc (CLR) - Assembly {0} loaded successfully", assemblyFile);
 
 			ClrFuncReflectionWrap wrapper = ClrFuncReflectionWrap.Create(assembly, typeName, methodName);
@@ -126,6 +349,84 @@ public class CoreCLREmbedding
 		catch (Exception e)
 		{
 			DebugMessage("CoreCLREmbedding::GetFunc (CLR) - Exception was thrown: {0}", e.Message);
+
+			V8Type v8type;
+			Marshal.WriteIntPtr(exception, MarshalCLRToV8(e, out v8type));
+
+			return IntPtr.Zero;
+		}
+    }
+
+    [SecurityCritical]
+    public static IntPtr CompileFunc(IntPtr v8Options, int payloadType, IntPtr exception)
+    {
+    	try
+    	{
+    		Marshal.WriteIntPtr(exception, IntPtr.Zero);
+
+    		IDictionary<string, object> options = (IDictionary<string, object>) MarshalV8ToCLR(v8Options, (V8Type)payloadType);
+    		string compiler = (string) options["compiler"];
+
+    		if (!Path.IsPathRooted(compiler))
+			{
+				compiler = Path.Combine(Directory.GetCurrentDirectory(), compiler);
+			}
+            
+            AssemblyLoadContext.AddCompiler(Directory.GetParent(compiler).FullName);
+
+    		Assembly compilerAssembly = AssemblyLoadContext.LoadPath(compiler);
+    		DebugMessage("CoreCLREmbedding::CompileFunc (CLR) - Compiler assembly {0} loaded successfully", compiler);
+
+    		Type compilerType = compilerAssembly.GetType("EdgeCompiler");
+
+			if (compilerType == null)
+	        {
+	            throw new TypeLoadException("Could not load type 'EdgeCompiler'");
+	        }
+
+    	    object compilerInstance = Activator.CreateInstance(compilerType);
+    	    MethodInfo compileMethod = compilerType.GetMethod("CompileFunc", BindingFlags.Instance | BindingFlags.Public);
+
+    	    if (compileMethod == null)
+    	    {
+    	        throw new Exception("Unable to find the CompileFunc() method on " + compilerType.FullName + ".");
+    	    }
+
+    	    MethodInfo setAssemblyLoader = compilerType.GetMethod("SetAssemblyLoader", BindingFlags.Instance | BindingFlags.Public);
+
+    	    if (setAssemblyLoader != null)
+    	    {
+    	        setAssemblyLoader.Invoke(compilerInstance, new object[]
+    	        {
+                    new Func<Stream, Assembly>(AssemblyLoadContext.LoadStream)
+    	        });
+    	    }
+
+            DebugMessage("CoreCLREmbedding::CompileFunc (CLR) - Starting compilation");
+    	    Func<object, Task<object>> compiledFunction = (Func<object, Task<object>>) compileMethod.Invoke(compilerInstance, new object[]
+    	    {
+    	        options
+    	    });
+            DebugMessage("CoreCLREmbedding::CompileFunc (CLR) - Compilation complete");
+
+    	    GCHandle handle = GCHandle.Alloc(compiledFunction);
+
+    	    return GCHandle.ToIntPtr(handle);
+    	}
+
+        catch (TargetInvocationException e)
+        {
+            DebugMessage("CoreCLREmbedding::CompileFunc (CLR) - Exception was thrown: {0}\n{1}", e.InnerException.Message, e.InnerException.StackTrace);
+
+            V8Type v8type;
+            Marshal.WriteIntPtr(exception, MarshalCLRToV8(e, out v8type));
+
+            return IntPtr.Zero;
+        }
+
+        catch (Exception e)
+		{
+			DebugMessage("CoreCLREmbedding::CompileFunc (CLR) - Exception was thrown: {0}\n{1}", e.Message, e.StackTrace);
 
 			V8Type v8type;
 			Marshal.WriteIntPtr(exception, MarshalCLRToV8(e, out v8type));
@@ -373,8 +674,7 @@ public class CoreCLREmbedding
 			v8Type = V8Type.Null;
 			return IntPtr.Zero;
 		}
-
-		// TODO: return strings as unicode
+        
 		else if (clrObject is string)
 		{
 			v8Type = V8Type.String;
@@ -813,10 +1113,10 @@ public class CoreCLREmbedding
 	[Conditional("DEBUG")]
 	internal static void DebugMessage(string message, params object[] parameters)
 	{
-		if (DebugMode) 
-		{
-			Console.WriteLine(message, parameters);
-		}
+	    if (DebugMode)
+	    {
+	        Console.WriteLine(message, parameters);
+	    }
 	}
 
 	public static void SetDebugMode(bool debugMode)

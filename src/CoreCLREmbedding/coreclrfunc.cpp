@@ -168,7 +168,7 @@ NAN_METHOD(CoreClrFunc::Initialize)
 
 		if (functionHandle)
 		{
-			DBG("CoreClrFunc::Initialize - Function loaded successfully")
+			DBG("CoreClrFunc::Initialize - Function loaded successfully");
 
 			result = CoreClrFunc::InitializeInstance(functionHandle);
 			DBG("CoreClrFunc::Initialize - Callback initialized successfully");
@@ -183,8 +183,31 @@ NAN_METHOD(CoreClrFunc::Initialize)
 
 	else
 	{
+		v8::Handle<v8::Value> exception;
+		void* marshalledOptionsData;
+		int payloadType;
+
+		MarshalV8ToCLR(options, &marshalledOptionsData, &payloadType);
+
+		DBG("CoreClrFunc::Initialize - Compiling dynamic .NET function");
+		CoreClrGcHandle functionHandle = CoreClrEmbedding::CompileFunc(marshalledOptionsData, payloadType, &exception);
+
+		if (functionHandle)
+		{
+			DBG("CoreClrFunc::Initialize - Function compiled successfully");
+
+			result = CoreClrFunc::InitializeInstance(functionHandle);
+			DBG("CoreClrFunc::Initialize - Callback initialized successfully");
+		}
+
+		else
+		{
+			DBG("CoreClrFunc::Initialize - Error loading function, V8 exception being thrown");
+			throwV8Exception(exception);
+		}
+
 		// TODO: support compilation from source once the Roslyn C# compiler is made available on CoreCLR
-		throwV8Exception("Compiling .NET methods from source is not yet supported with CoreCLR, you must provide an assembly path, type name, and method name as arguments to edge.initializeClrFunction().");
+		//throwV8Exception("Compiling .NET methods from source is not yet supported with CoreCLR, you must provide an assembly path, type name, and method name as arguments to edge.initializeClrFunction().");
 	}
 
 	DBG("CoreClrFunc::Initialize - Finished");

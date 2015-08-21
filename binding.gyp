@@ -100,7 +100,7 @@
           'msvs_settings': {
             'VCCLCompilerTool': {
               # this is out of range and will generate a warning and skip adding RuntimeLibrary property:
-              'RuntimeLibrary': -1,
+              'RuntimeLibrary': 3,
               # this is out of range and will generate a warning and skip adding RuntimeTypeInfo property:
               'RuntimeTypeInfo': -1,
               'BasicRuntimeChecks': -1,
@@ -253,18 +253,18 @@
                         'src/CoreCLREmbedding/project.json'
                       ],
                       'outputs': [
-                        'src/CoreCLREmbedding/bin/Release/dnxcore50/CoreCLREmbedding.dll'
+                        'src/CoreCLREmbedding/bin/$(BUILDTYPE)/dnxcore50/CoreCLREmbedding.dll'
                       ],                        
                       'action': [
-                        'cd "<(module_root_dir)\\src\\CoreCLREmbedding" & dnu restore & cd "<(module_root_dir)\\src\\CoreCLREmbedding" & dnu build --configuration Release & copy "<(module_root_dir)\\src\\CoreCLREmbedding\\bin\\Release\\dnxcore50\\CoreCLREmbedding.dll" "<(module_root_dir)\\build\\Release"'
+                        'cd "<(module_root_dir)\\src\\CoreCLREmbedding" & dnu restore & cd "<(module_root_dir)\\src\\CoreCLREmbedding" & dnu build --configuration $(Configuration) & copy "<(module_root_dir)\\src\\CoreCLREmbedding\\bin\\$(Configuration)\\dnxcore50\\CoreCLREmbedding.dll" "<(module_root_dir)\\build\\$(Configuration)"'
                       ]
                     }
                   ],
                   'copies+': [
                     {
-                      'destination': '<(module_root_dir)\\build\\Release',
+                      'destination': '<(module_root_dir)\\build\\$(BUILDTYPE)',
                       'files': [
-                        '<(module_root_dir)\\src\\CoreCLREmbedding\\bin\\Release\\dnxcore50\\CoreCLREmbedding.dll'
+                        '<(module_root_dir)\\src\\CoreCLREmbedding\\bin\\$(BUILDTYPE)\\dnxcore50\\CoreCLREmbedding.dll'
                       ]
                     }
                   ]

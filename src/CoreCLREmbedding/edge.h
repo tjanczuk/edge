@@ -39,6 +39,10 @@ typedef void (*SetDebugModeFunction)(const BOOL debugMode);
 typedef void (*FreeHandleFunction)(CoreClrGcHandle handle);
 typedef void (*FreeMarshalDataFunction)(void* marshalData, int marshalDataType);
 typedef void (*NodejsFuncCompleteFunction)(CoreClrGcHandle context, int taskStatus, void* result, int resultType);
+typedef CoreClrGcHandle (*CompileFuncFunction)(
+        const void* options,
+        const int payloadType,
+        void** exception);
 
 typedef enum v8Type
 {
@@ -102,6 +106,7 @@ class CoreClrEmbedding
         static void ContinueTask(CoreClrGcHandle taskHandle, void* context, TaskCompleteFunction callback, void** exception);
         static void FreeHandle(CoreClrGcHandle handle);
         static void FreeMarshalData(void* marshalData, int marshalDataType);
+        static CoreClrGcHandle CompileFunc(const void* options, const int payloadType, v8::Handle<v8::Value>* exception);
 };
 
 class CoreClrFunc
