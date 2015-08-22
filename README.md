@@ -132,7 +132,7 @@ Edge.js runs on Windows, Linux, and MacOS and requires Node.js 0.8 or later, as 
 
 #### Windows
 
-* Node.js 0.8.x or later (developed and tested with v0.8.22, and v0.10.0, both x32 and x64 architectures)  
+* Node.js 0.8.x or later (developed and tested with v0.8.22, v0.10.0, and v0.12.0, both x32 and x64 architectures)  
 * [.NET 4.5](http://www.microsoft.com/en-us/download/details.aspx?id=30653)  
 * to use Python, you also need [IronPython 2.7.3 or later](http://ironpython.codeplex.com/releases/view/81726)  
 * to use F#, read [Dave Thomas blog post](http://7sharpnine.com/posts/i-node-something/)
@@ -299,7 +299,7 @@ In that case the default typeName of `My.Edge.Samples.Startup` and methodName of
 
 ### How to: specify additional CLR assembly references in C# code
 
-When you provide C# source code and let edge compile it for you at runtime, edge will by default reference only mscorlib.dll and System.dll assemblies. In applications that require additional assemblies you can specify them in C# code using a special hash pattern, similar to Roslyn. For example, to use ADO.NET you must reference System.Data.dll:
+When you provide C# source code and let edge compile it for you at runtime, edge will by default reference only mscorlib.dll and System.dll assemblies.  If you're using CoreCLR, we automatically reference the most recent versions of the System.Runtime, System.Threading.Tasks, System.Dynamic.Runtime, and the compiler language packages, like Microsoft.CSharp. In applications that require additional assemblies you can specify them in C# code using a special hash pattern, similar to Roslyn. For example, to use ADO.NET you must reference System.Data.dll:
 
 ```javascript
 var add7 = edge.func(function() {/*
@@ -337,6 +337,29 @@ var add7 = edge.func({
         }
     */},
     references: [ 'System.Data.dll' ]
+);
+```
+
+If you are using CoreCLR, the above samples will resolve references to the most recent version of that package installed on the system.  If you want to use specific versions of a package, you can do so by passing a `project.json`-like object in `references`:
+
+```javascript
+var add7 = edge.func({
+    source: function() {/*
+
+        using System.Data;
+        using System.Threading.Tasks;
+
+        public class Startup
+        {
+            public async Task<object> Invoke(object input)
+            {
+                // ...
+            }
+        }
+    */},
+    references: { 
+        'System.Data.SqlClient': '4.0.0-beta-23123'
+    }
 );
 ```
 
