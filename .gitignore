@@ -24,6 +24,7 @@ _ReSharper*
 
 Edge.Tests.*
 node.exe
+iojs.exe
 Sample105.*
 
 .DS_Store

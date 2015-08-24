@@ -11,10 +11,10 @@ shift
 if "%FLAVOR%" equ "" set FLAVOR=release
 WHERE iojs
 if %ERRORLEVEL% NEQ 0 (
-    set ISIOJS=0
+    set RUNNINGIOJS=0
     for %%i in (node.exe) do set NODEEXE=%%~$PATH:i
 ) else (
-    set ISIOJS=1
+    set RUNNINGIOJS=1
     for %%i in (iojs.exe) do set NODEEXE=%%~$PATH:i
 )
 if not exist "%NODEEXE%" (
@@ -42,7 +42,18 @@ exit /b 0
 :build
 
 set DESTDIR=%DESTDIRROOT%\%1\%3
-if exist "%DESTDIR%\node.exe" goto gyp
+
+for /F "tokens=1 delims=." %%a in ("%3%") do (
+    if "%%a" equ "0" (
+        set TARGETIOJS=0
+        set TARGETNODEEXE=%DESTDIR%\node.exe
+    ) else (
+        set TARGETIOJS=1
+        set TARGETNODEEXE=%DESTDIR%\iojs.exe
+    )
+)
+
+if exist "%TARGETNODEEXE%" goto gyp
 if not exist "%DESTDIR%\NUL" mkdir "%DESTDIR%"
 echo Downloading node.exe %2 %3...
 "%NODEEXE%" %SELF%\download.js %2 %3 "%DESTDIR%"
@@ -54,21 +65,21 @@ if %ERRORLEVEL% neq 0 (
 :gyp
 
 echo Building edge.node %FLAVOR% for node.js %2 v%3
-set NODEEXE=%DESTDIR%\node.exe
-if "%ISIOJS%" equ "1" (
+
+if "%RUNNINGIOJS%" equ "1" (
     SET GYP=%NODEDIR%\node_modules\pangyp\bin\node-gyp.js
     if not exist "%GYP%" (
         echo Cannot find pangyp at %GYP%. Make sure to install with npm install pangyp -g
         exit /b -1
     )
-    "%NODEEXE%" "%GYP%" configure build --msvs_version=2013 -%FLAVOR%
+    "%TARGETNODEEXE%" "%GYP%" configure build --msvs_version=2013 -%FLAVOR%
 ) else (
     set GYP=%APPDATA%\npm\node_modules\node-gyp\bin\node-gyp.js
     if not exist "%GYP%" (
         echo Cannot find node-gyp at %GYP%. Make sure to install with npm install node-gyp -g
         exit /b -1
     )
-    "%NODEEXE%" "%GYP%" configure build --msvs_version=2013 -%FLAVOR%
+    "%TARGETNODEEXE%" "%GYP%" configure build --msvs_version=2013 -%FLAVOR%
 )
 
 if %ERRORLEVEL% neq 0 (
