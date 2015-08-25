@@ -350,7 +350,8 @@ public class CoreCLREmbedding
 	private static int V8BufferDataSize = Marshal.SizeOf<V8BufferData>();
 	private static int V8ObjectDataSize = Marshal.SizeOf<V8ObjectData>();
 	private static int V8ArrayDataSize = Marshal.SizeOf<V8ArrayData>();
-
+    private static Dictionary<string, Tuple<Type, MethodInfo>> Compilers = new Dictionary<string, Tuple<Type, MethodInfo>>();
+        
     [SecurityCritical]
 	public static IntPtr GetFunc(string assemblyFile, string typeName, string methodName, IntPtr exception)
     {
@@ -400,36 +401,51 @@ public class CoreCLREmbedding
 			{
 				compiler = Path.Combine(Directory.GetCurrentDirectory(), compiler);
 			}
-            
-            AssemblyLoadContext.AddCompiler(Directory.GetParent(compiler).FullName);
 
-    		Assembly compilerAssembly = AssemblyLoadContext.LoadPath(compiler);
-    		DebugMessage("CoreCLREmbedding::CompileFunc (CLR) - Compiler assembly {0} loaded successfully", compiler);
+    	    MethodInfo compileMethod;
+    	    Type compilerType;
 
-    		Type compilerType = compilerAssembly.GetType("EdgeCompiler");
-
-			if (compilerType == null)
-	        {
-	            throw new TypeLoadException("Could not load type 'EdgeCompiler'");
-	        }
-
-    	    object compilerInstance = Activator.CreateInstance(compilerType);
-    	    MethodInfo compileMethod = compilerType.GetMethod("CompileFunc", BindingFlags.Instance | BindingFlags.Public);
-
-    	    if (compileMethod == null)
+    	    if (!Compilers.ContainsKey(compiler))
     	    {
-    	        throw new Exception("Unable to find the CompileFunc() method on " + compilerType.FullName + ".");
-    	    }
+    	        AssemblyLoadContext.AddCompiler(Directory.GetParent(compiler).FullName);
 
-    	    MethodInfo setAssemblyLoader = compilerType.GetMethod("SetAssemblyLoader", BindingFlags.Instance | BindingFlags.Public);
+    	        Assembly compilerAssembly = AssemblyLoadContext.LoadPath(compiler);
+    	        DebugMessage("CoreCLREmbedding::CompileFunc (CLR) - Compiler assembly {0} loaded successfully", compiler);
 
-    	    if (setAssemblyLoader != null)
-    	    {
-    	        setAssemblyLoader.Invoke(compilerInstance, new object[]
+    	        compilerType = compilerAssembly.GetType("EdgeCompiler");
+
+    	        if (compilerType == null)
     	        {
-                    new Func<Stream, Assembly>(AssemblyLoadContext.LoadStream)
-    	        });
+    	            throw new TypeLoadException("Could not load type 'EdgeCompiler'");
+    	        }
+    	        
+    	        compileMethod = compilerType.GetMethod("CompileFunc", BindingFlags.Instance | BindingFlags.Public);
+
+    	        if (compileMethod == null)
+    	        {
+    	            throw new Exception("Unable to find the CompileFunc() method on " + compilerType.FullName + ".");
+    	        }
+
+    	        MethodInfo setAssemblyLoader = compilerType.GetMethod("SetAssemblyLoader", BindingFlags.Static | BindingFlags.Public);
+
+    	        if (setAssemblyLoader != null)
+    	        {
+    	            setAssemblyLoader.Invoke(null, new object[]
+    	            {
+    	                new Func<Stream, Assembly>(AssemblyLoadContext.LoadStream)
+    	            });
+    	        }
+
+                Compilers[compiler] = new Tuple<Type, MethodInfo>(compilerType, compileMethod);
     	    }
+
+    	    else
+    	    {
+    	        compilerType = Compilers[compiler].Item1;
+    	        compileMethod = Compilers[compiler].Item2;
+    	    }
+
+            object compilerInstance = Activator.CreateInstance(compilerType);
 
             DebugMessage("CoreCLREmbedding::CompileFunc (CLR) - Starting compilation");
     	    Func<object, Task<object>> compiledFunction = (Func<object, Task<object>>) compileMethod.Invoke(compilerInstance, new object[]
