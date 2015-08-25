@@ -72,7 +72,7 @@ public class CoreCLREmbedding
 		}
 	}
 
-    private class FileAssemblyLoadContext : AssemblyLoadContext
+    private class EdgeAssemblyLoadContext : AssemblyLoadContext
     {
         private readonly Dictionary<string, dynamic> _nuGetDependencyProviders = new Dictionary<string, dynamic>();
         private readonly Dictionary<string, dynamic> _projectDependencyProviders = new Dictionary<string, dynamic>();
@@ -89,18 +89,18 @@ public class CoreCLREmbedding
         private bool _noProjectJsonFile = false;
         private string _applicationRoot;
 
-        public FileAssemblyLoadContext()
+        public EdgeAssemblyLoadContext()
         {
-            DebugMessage("FileAssemblyLoadContext::ctor (CLR) - Starting");
+            DebugMessage("EdgeAssemblyLoadContext::ctor (CLR) - Starting");
 
             _applicationRoot = Environment.GetEnvironmentVariable("EDGE_APP_ROOT") ?? Directory.GetCurrentDirectory();
-            DebugMessage("FileAssemblyLoadContext::ctor (CLR) - Application root is {0}", _applicationRoot);
+            DebugMessage("EdgeAssemblyLoadContext::ctor (CLR) - Application root is {0}", _applicationRoot);
 
             Assembly runtimeAssembly = Assembly.Load(new AssemblyName("Microsoft.Dnx.Runtime")
             {
                 Version = new Version("1.0.0.0")
             });
-            DebugMessage("FileAssemblyLoadContext::ctor (CLR) - Loaded Microsoft.Dnx.Runtime");
+            DebugMessage("EdgeAssemblyLoadContext::ctor (CLR) - Loaded Microsoft.Dnx.Runtime");
 
             _projectDependencyProviderType = runtimeAssembly.GetType("Microsoft.Dnx.Runtime.ProjectReferenceDependencyProvider");
             _projectResolverType = runtimeAssembly.GetType("Microsoft.Dnx.Runtime.ProjectResolver");
@@ -111,13 +111,13 @@ public class CoreCLREmbedding
 
             Type semanticVersionType = runtimeAssembly.GetType("NuGet.SemanticVersion");
 
-            DebugMessage("FileAssemblyLoadContext::ctor (CLR) - Loaded the dependency management types");
+            DebugMessage("EdgeAssemblyLoadContext::ctor (CLR) - Loaded the dependency management types");
 
             _resolveRepositoryPathMethod = _nugetDependencyProviderType.GetMethod("ResolveRepositoryPath", BindingFlags.Static | BindingFlags.Public);
             _lockFileReaderType = runtimeAssembly.GetType("Microsoft.Dnx.Runtime.DependencyManagement.LockFileReader");
             _parseSemanticVersionMethod = semanticVersionType.GetMethod("Parse", BindingFlags.Public | BindingFlags.Static);
 
-            DebugMessage("FileAssemblyLoadContext::ctor (CLR) - Loaded the dependency management methods");
+            DebugMessage("EdgeAssemblyLoadContext::ctor (CLR) - Loaded the dependency management methods");
 
             dynamic projectDependencyProvider = CreateProjectDependencyProvider(_applicationRoot);
 
@@ -134,12 +134,12 @@ public class CoreCLREmbedding
                 _noProjectJsonFile = true;
             }
 
-            DebugMessage("FileAssemblyLoadContext::ctor (CLR) - Created the dependency providers for the application");
+            DebugMessage("EdgeAssemblyLoadContext::ctor (CLR) - Created the dependency providers for the application");
         }
 
         private dynamic CreateNuGetDependencyProvider(string projectDirectory)
         {
-            DebugMessage("FileAssemblyLoadContext::CreateNuGetDependencyProvider (CLR) - Creating a NuGet dependency provider for the project in {0}", projectDirectory);
+            DebugMessage("EdgeAssemblyLoadContext::CreateNuGetDependencyProvider (CLR) - Creating a NuGet dependency provider for the project in {0}", projectDirectory);
 
             string repositoryPath = (string) _resolveRepositoryPathMethod.Invoke(null, new object[]
             {
@@ -147,17 +147,17 @@ public class CoreCLREmbedding
             });
             object nuGetDependencyProvider = null;
 
-            DebugMessage("FileAssemblyLoadContext::CreateNuGetDependencyProvider (CLR) - Repository path for the project is {0}", repositoryPath);
+            DebugMessage("EdgeAssemblyLoadContext::CreateNuGetDependencyProvider (CLR) - Repository path for the project is {0}", repositoryPath);
 
             if (_nuGetDependencyProviders.ContainsKey(repositoryPath))
             {
-                DebugMessage("FileAssemblyLoadContext::CreateNuGetDependencyProvider (CLR) - A dependency provider already exists for that repository path, re-using it");
+                DebugMessage("EdgeAssemblyLoadContext::CreateNuGetDependencyProvider (CLR) - A dependency provider already exists for that repository path, re-using it");
                 nuGetDependencyProvider = _nuGetDependencyProviders[repositoryPath];
             }
 
             if (File.Exists(Path.Combine(projectDirectory, "project.lock.json")))
             {
-                DebugMessage("FileAssemblyLoadContext::CreateNuGetDependencyProvider (CLR) - Reading the project.lock.json file for the project and applying it to the dependency provider");
+                DebugMessage("EdgeAssemblyLoadContext::CreateNuGetDependencyProvider (CLR) - Reading the project.lock.json file for the project and applying it to the dependency provider");
 
                 if (nuGetDependencyProvider == null)
                 {
@@ -185,10 +185,10 @@ public class CoreCLREmbedding
 
             else
             {
-                DebugMessage("FileAssemblyLoadContext::CreateNuGetDependencyProvider (CLR) - No project.lock.json file in {0}, nothing to do", projectDirectory);
+                DebugMessage("EdgeAssemblyLoadContext::CreateNuGetDependencyProvider (CLR) - No project.lock.json file in {0}, nothing to do", projectDirectory);
             }
 
-            DebugMessage("FileAssemblyLoadContext::CreateNuGetDependencyProvider (CLR) - Finished");
+            DebugMessage("EdgeAssemblyLoadContext::CreateNuGetDependencyProvider (CLR) - Finished");
             return nuGetDependencyProvider;
         }
 
@@ -214,34 +214,34 @@ public class CoreCLREmbedding
 
         private dynamic CreateProjectDependencyProvider(string projectDirectory)
         {
-            DebugMessage("FileAssemblyLoadContext::CreateProjectDependencyProvider (CLR) - Creating a project dependency provider for the project in {0}", projectDirectory);
+            DebugMessage("EdgeAssemblyLoadContext::CreateProjectDependencyProvider (CLR) - Creating a project dependency provider for the project in {0}", projectDirectory);
 
             if (_projectDependencyProviders.ContainsKey(projectDirectory))
             {
-                DebugMessage("FileAssemblyLoadContext::CreateProjectDependencyProvider (CLR) - A dependency provider already exists for that project directory, re-using it");
+                DebugMessage("EdgeAssemblyLoadContext::CreateProjectDependencyProvider (CLR) - A dependency provider already exists for that project directory, re-using it");
                 return _projectDependencyProviders[projectDirectory];
             }
 
             if (File.Exists(Path.Combine(projectDirectory, "project.json")))
             {
-                DebugMessage("FileAssemblyLoadContext::CreateProjectDependencyProvider (CLR) - Creating a new project dependency provider for the project");
+                DebugMessage("EdgeAssemblyLoadContext::CreateProjectDependencyProvider (CLR) - Creating a new project dependency provider for the project");
 
                 var projectDependencyProvider = Activator.CreateInstance(_projectDependencyProviderType,
                     Activator.CreateInstance(_projectResolverType, projectDirectory));
                 _projectDependencyProviders[projectDirectory] = projectDependencyProvider;
 
-                DebugMessage("FileAssemblyLoadContext::CreateProjectDependencyProvider (CLR) - Finished");
+                DebugMessage("EdgeAssemblyLoadContext::CreateProjectDependencyProvider (CLR) - Finished");
 
                 return projectDependencyProvider;
             }
 
-            DebugMessage("FileAssemblyLoadContext::CreateProjectDependencyProvider (CLR) - No project.json file in the project directory, nothing to do");
+            DebugMessage("EdgeAssemblyLoadContext::CreateProjectDependencyProvider (CLR) - No project.json file in the project directory, nothing to do");
             return null;
         }
 
         internal void AddCompiler(string compilerDirectory)
         {
-            DebugMessage("FileAssemblyLoadContext::AddCompiler (CLR) - Adding the compiler in {0}", compilerDirectory);
+            DebugMessage("EdgeAssemblyLoadContext::AddCompiler (CLR) - Adding the compiler in {0}", compilerDirectory);
 
             var compilerDependencyProvider = CreateProjectDependencyProvider(compilerDirectory);
 
@@ -253,17 +253,17 @@ public class CoreCLREmbedding
                 ResolveDependencies(compilerName);
             }
 
-            DebugMessage("FileAssemblyLoadContext::AddCompiler (CLR) - Finished");
+            DebugMessage("EdgeAssemblyLoadContext::AddCompiler (CLR) - Finished");
         }
 
         private void ResolveDependencies(string projectName)
         {
             dynamic dependencyWalker = CreateDependencyWalker();
 
-            DebugMessage("FileAssemblyLoadContext::ResolveDependencies (CLR) - Getting the dependencies for the project");
+            DebugMessage("EdgeAssemblyLoadContext::ResolveDependencies (CLR) - Getting the dependencies for the project");
             // TODO: see if we can get some sort of globally matched semantic version
             dependencyWalker.Walk(projectName, ParseSemanticVersion("1.0.0.0"), new FrameworkName("DNXCore,Version=v5.0"));
-            DebugMessage("FileAssemblyLoadContext::ResolveDependencies (CLR) - Finished getting dependencies for the project");
+            DebugMessage("EdgeAssemblyLoadContext::ResolveDependencies (CLR) - Finished getting dependencies for the project");
 
             foreach (dynamic nuGetDependencyProvider in _nuGetDependencyProviders.Values)
             {
@@ -274,7 +274,7 @@ public class CoreCLREmbedding
 
                     if (!_resolvedAssemblies.ContainsKey(assemblyName))
                     {
-                        DebugMessage("FileAssemblyLoadContext::ResolveDependencies (CLR) - Resolved {0} to {1}", assemblyName, assemblyPath);
+                        DebugMessage("EdgeAssemblyLoadContext::ResolveDependencies (CLR) - Resolved {0} to {1}", assemblyName, assemblyPath);
                         _resolvedAssemblies[assemblyName] = assemblyPath;
                     }
                 }
@@ -292,15 +292,15 @@ public class CoreCLREmbedding
         [SecuritySafeCritical]
         protected override Assembly Load(AssemblyName assemblyName)
         {
-            DebugMessage("FileAssemblyLoadContext::Load (CLR) - Trying to load {0}", assemblyName.Name);
+            DebugMessage("EdgeAssemblyLoadContext::Load (CLR) - Trying to load {0}", assemblyName.Name);
 
             if (_resolvedAssemblies.ContainsKey(assemblyName.Name))
             {
-                DebugMessage("FileAssemblyLoadContext::Load (CLR) - Found an entry in the resolved assemblies cache");
+                DebugMessage("EdgeAssemblyLoadContext::Load (CLR) - Found an entry in the resolved assemblies cache");
                 return LoadPath(_resolvedAssemblies[assemblyName.Name]);
             }
 
-            DebugMessage("FileAssemblyLoadContext::Load (CLR) - No entry in the resolved assemblies cache, calling Assembly.Load()");
+            DebugMessage("EdgeAssemblyLoadContext::Load (CLR) - No entry in the resolved assemblies cache, calling Assembly.Load()");
 
             try
             {
@@ -343,7 +343,7 @@ public class CoreCLREmbedding
     }
 
     private static bool DebugMode = Environment.GetEnvironmentVariable("EDGE_DEBUG") == "1";
-    private static FileAssemblyLoadContext AssemblyLoadContext = new FileAssemblyLoadContext();
+    private static EdgeAssemblyLoadContext AssemblyLoadContext = new EdgeAssemblyLoadContext();
 	private static long MinDateTimeTicks = 621355968000000000;
 	private static Dictionary<Type, List<Tuple<string, Func<object, object>>>> TypePropertyAccessors = new Dictionary<Type, List<Tuple<string, Func<object, object>>>>();
 	private static int PointerSize = Marshal.SizeOf<IntPtr>();
