@@ -1,5 +1,6 @@
 rem usage: test.bat [ia32|x64 {version}], e.g. test.bat x64 0.10.0
 @echo off
+set EDGE_APP_ROOT=%~dp0
 set NODEEXE=node.exe
 if "%1" neq "" if "%2" neq "" set NODEEXE=%~dp0\..\lib\native\win32\%1\%2\node.exe
 echo Using node.js: %NODEEXE%

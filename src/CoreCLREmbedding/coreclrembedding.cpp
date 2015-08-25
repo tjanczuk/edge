@@ -265,7 +265,6 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 	DBG("CoreClrEmbedding::Initialize - CoreCLR initialized successfully");
     DBG("CoreClrEmbedding::Initialize - App domain created successfully (app domain ID: %d)", appDomainId);
 
-    SetDebugModeFunction setDebugMode;
     SetCallV8FunctionDelegateFunction setCallV8Function;
 
     CREATE_DELEGATE("GetFunc", &getFunc);
@@ -273,12 +272,8 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
     CREATE_DELEGATE("ContinueTask", &continueTask);
     CREATE_DELEGATE("FreeHandle", &freeHandle);
     CREATE_DELEGATE("FreeMarshalData", &freeMarshalData);
-    CREATE_DELEGATE("SetDebugMode", &setDebugMode);
     CREATE_DELEGATE("SetCallV8FunctionDelegate", &setCallV8Function);
     CREATE_DELEGATE("CompileFunc", &compileFunc);
-
-    setDebugMode(debugMode);
-	DBG("CoreClrEmbedding::Initialize - Debug mode set successfully");
 
 	CoreClrGcHandle exception = NULL;
 	setCallV8Function(CoreClrNodejsFunc::Call, &exception);

@@ -86,13 +86,15 @@ public class CoreCLREmbedding
         private MethodInfo _parseSemanticVersionMethod;
         private MethodInfo _resolveRepositoryPathMethod;
         private readonly Dictionary<string, string> _resolvedAssemblies = new Dictionary<string, string>();
+        private bool _noProjectJsonFile = false;
+        private string _applicationRoot;
 
         public FileAssemblyLoadContext()
         {
             DebugMessage("FileAssemblyLoadContext::ctor (CLR) - Starting");
 
-            string applicationRoot = Environment.GetEnvironmentVariable("EDGE_APP_ROOT") ?? Directory.GetCurrentDirectory();
-            DebugMessage("FileAssemblyLoadContext::ctor (CLR) - Application root is {0}", applicationRoot);
+            _applicationRoot = Environment.GetEnvironmentVariable("EDGE_APP_ROOT") ?? Directory.GetCurrentDirectory();
+            DebugMessage("FileAssemblyLoadContext::ctor (CLR) - Application root is {0}", _applicationRoot);
 
             Assembly runtimeAssembly = Assembly.Load(new AssemblyName("Microsoft.Dnx.Runtime")
             {
@@ -117,14 +119,19 @@ public class CoreCLREmbedding
 
             DebugMessage("FileAssemblyLoadContext::ctor (CLR) - Loaded the dependency management methods");
 
-            dynamic projectDependencyProvider = CreateProjectDependencyProvider(applicationRoot);
+            dynamic projectDependencyProvider = CreateProjectDependencyProvider(_applicationRoot);
 
             if (projectDependencyProvider != null)
             {
-                string projectName = new DirectoryInfo(applicationRoot).Name;
+                string projectName = new DirectoryInfo(_applicationRoot).Name;
 
-                CreateNuGetDependencyProvider(applicationRoot);
+                CreateNuGetDependencyProvider(_applicationRoot);
                 ResolveDependencies(projectName);
+            }
+
+            if (!File.Exists(Path.Combine(_applicationRoot, "project.json")) || !File.Exists(Path.Combine(_applicationRoot, "project.lock.json")))
+            {
+                _noProjectJsonFile = true;
             }
 
             DebugMessage("FileAssemblyLoadContext::ctor (CLR) - Created the dependency providers for the application");
@@ -294,11 +301,33 @@ public class CoreCLREmbedding
             }
 
             DebugMessage("FileAssemblyLoadContext::Load (CLR) - No entry in the resolved assemblies cache, calling Assembly.Load()");
-            return Assembly.Load(assemblyName);
+
+            try
+            {
+                return Assembly.Load(assemblyName);
+            }
+
+            catch (Exception e)
+            {
+                if (_noProjectJsonFile)
+                {
+                    throw new Exception(
+                        String.Format(
+                            "Could not load assembly '{0}'.  Please ensure that a project.json file specifying the dependencies for this application exists either in the current directory or in a .NET project directory specified using the EDGE_APP_ROOT environment variable and that the 'dnu restore' command has been run for this project.json file.",
+                            assemblyName.Name), e);
+                }
+
+                throw;
+            }
         }
 
         public Assembly LoadPath(string assemblyPath)
         {
+            if (!Path.IsPathRooted(assemblyPath))
+            {
+                assemblyPath = Path.Combine(_applicationRoot, assemblyPath);
+            }
+
             if (!File.Exists(assemblyPath))
             {
                 throw new FileNotFoundException("Assembly file not found.", assemblyPath);
@@ -312,9 +341,9 @@ public class CoreCLREmbedding
             return LoadFromStream(assemblyStream);
         }
     }
-    
+
+    private static bool DebugMode = Environment.GetEnvironmentVariable("EDGE_DEBUG") == "1";
     private static FileAssemblyLoadContext AssemblyLoadContext = new FileAssemblyLoadContext();
-	private static bool DebugMode = false;
 	private static long MinDateTimeTicks = 621355968000000000;
 	private static Dictionary<Type, List<Tuple<string, Func<object, object>>>> TypePropertyAccessors = new Dictionary<Type, List<Tuple<string, Func<object, object>>>>();
 	private static int PointerSize = Marshal.SizeOf<IntPtr>();

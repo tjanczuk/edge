@@ -35,7 +35,6 @@ typedef CoreClrGcHandle (*GetFuncFunction)(
 		const char* typeName,
 		const char* methodName,
 		void** exception);
-typedef void (*SetDebugModeFunction)(const BOOL debugMode);
 typedef void (*FreeHandleFunction)(CoreClrGcHandle handle);
 typedef void (*FreeMarshalDataFunction)(void* marshalData, int marshalDataType);
 typedef void (*NodejsFuncCompleteFunction)(CoreClrGcHandle context, int taskStatus, void* result, int resultType);

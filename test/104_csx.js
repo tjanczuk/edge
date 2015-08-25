@@ -457,5 +457,83 @@ describe('edge-cs', function () {
             assert.equal(result, 'Dictionary works');
             done();
         });
-    });    
+    });   
+
+    it('fails with a reference to a non-existent assembly without comment in class', function () {
+        assert.throws(function() {
+            edge.func({
+                source: process.env.EDGE_USE_CORECLR ?
+                    function () {/* 
+                        #r "Package.Doesnt.Exist"
+
+                        using System.Threading.Tasks;
+                        using System.Data;
+
+                        public class Startup 
+                        {
+                            public async Task<object> Invoke(object input) 
+                            {
+                                return "Hello, " + input.ToString();
+                            }
+                        }           
+                    */} :
+                    function () {/* 
+                        #r "Package.Doesnt.Exist.dll"
+
+                        using System.Threading.Tasks;
+                        using System.Data;
+
+                        public class Startup 
+                        {
+                            public async Task<object> Invoke(object input) 
+                            {
+                                return "Hello, " + input.ToString();
+                            }
+                        }           
+                    */}
+            });
+        },
+        function (error) {
+            if ((error instanceof Error) && error.message.match(/Unable to find the NuGet package for Package\.Doesnt\.Exist|error CS0006\: Metadata file 'Package\.Doesnt\.Exist\.dll' could not be found/)) {
+                return true;
+            }
+            return false;
+        },
+        'Unexpected result');
+    });
+
+    if (process.env.EDGE_USE_CORECLR) {
+        it('fails when dynamically loading an assembly that doesn\'t exist', function () {
+            assert.throws(function() {
+                var func = edge.func({
+                    source: function () {/* 
+                        #r "System.Reflection"
+                        #r "System.Runtime.Loader"
+
+                        using System.Runtime.Loader;
+                        using System.Threading.Tasks;
+                        using System.Reflection;
+
+                        public class Startup 
+                        {
+                            public async Task<object> Invoke(object input) 
+                            {
+                                var assembly = AssemblyLoadContext.GetLoadContext(GetType().GetTypeInfo().Assembly).LoadFromAssemblyName(new AssemblyName("Package.Doesnt.Exist"));
+                                return "Hello, " + input.ToString();
+                            }
+                        }           
+                    */}
+                });
+
+                func("JavaScript");
+            },
+            function (error) {
+                if ((error instanceof Error) && error.message.match(/Could not load file or assembly 'Package\.Doesnt\.Exist/)) {
+                    return true;
+                }
+                return false;
+            },
+            'Unexpected result');
+        });
+    }
 });
