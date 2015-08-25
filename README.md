@@ -340,27 +340,11 @@ var add7 = edge.func({
 );
 ```
 
-If you are using CoreCLR, the above samples will resolve references to the most recent version of that package installed on the system.  If you want to use specific versions of a package, you can do so by passing a `project.json`-like object in `references`:
+If you are using CoreCLR, you must have a `project.json` file (specification [here](https://github.com/aspnet/Home/wiki/Project.json-file)) that specifies the dependencies for the application and you must have run the `dnu restore` command in that project's directory to generate a `project.lock.json` file.  This file must either be in the current working directory that `node` is executed in or you must specify its directory by setting the `EDGE_APP_ROOT` environment variable.  For example, if the `project.json` file is in the `c:\DotNet\MyProject` directory, you would run something like:
 
-```javascript
-var add7 = edge.func({
-    source: function() {/*
-
-        using System.Data;
-        using System.Threading.Tasks;
-
-        public class Startup
-        {
-            public async Task<object> Invoke(object input)
-            {
-                // ...
-            }
-        }
-    */},
-    references: { 
-        'System.Data.SqlClient': '4.0.0-beta-23123'
-    }
-);
+```
+set EDGE_APP_ROOT=c:\DotNet\MyProject
+node app.js
 ```
 
 ### How to: marshal data between C# and Node.js
