@@ -261,8 +261,7 @@ public class CoreCLREmbedding
             dynamic dependencyWalker = CreateDependencyWalker();
 
             DebugMessage("EdgeAssemblyLoadContext::ResolveDependencies (CLR) - Getting the dependencies for the project");
-            // TODO: see if we can get some sort of globally matched semantic version
-            dependencyWalker.Walk(projectName, ParseSemanticVersion("1.0.0.0"), new FrameworkName("DNXCore,Version=v5.0"));
+            dependencyWalker.Walk(projectName, ParseSemanticVersion("0.0.0.0"), new FrameworkName("DNXCore,Version=v5.0"));
             DebugMessage("EdgeAssemblyLoadContext::ResolveDependencies (CLR) - Finished getting dependencies for the project");
 
             foreach (dynamic nuGetDependencyProvider in _nuGetDependencyProviders.Values)
