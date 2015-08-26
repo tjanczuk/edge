@@ -12,7 +12,7 @@ then
     apt-get update
 fi
 
-apt-get -y install curl g++ pkg-config libgdiplus libunwind8 libssl-dev unzip make mono-complete
+apt-get -y install curl g++ pkg-config libgdiplus libunwind8 libssl-dev unzip make mono-complete git
 
 # download and build Node.js
 
