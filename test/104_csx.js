@@ -6,7 +6,6 @@ var edgeTestDll = path.join(__dirname, 'Edge.Tests.dll');
 describe('edge-cs', function () {
 
     it('succeeds with literal lambda', function (done) {
-        setTimeout(function() {
         var func = edge.func('async (input) => { return "Hello, " + input.ToString(); }');
         func("JavaScript", function (error, result) {
             assert.ifError(error);
@@ -14,7 +13,6 @@ describe('edge-cs', function () {
 
             done();
         });
-        }, 0);
     });
 
     it('succeeds with csx file with lambda', function (done) {
@@ -494,7 +492,7 @@ describe('edge-cs', function () {
             });
         },
         function (error) {
-            if ((error instanceof Error) && error.message.match(/Unable to find the NuGet package for Package\.Doesnt\.Exist|error CS0006\: Metadata file 'Package\.Doesnt\.Exist\.dll' could not be found/)) {
+            if ((error instanceof Error) && error.message.match(/Unable to resolve reference to Package\.Doesnt\.Exist|error CS0006\: Metadata file 'Package\.Doesnt\.Exist\.dll' could not be found/)) {
                 return true;
             }
             return false;

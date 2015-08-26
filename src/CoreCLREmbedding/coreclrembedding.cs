@@ -76,6 +76,7 @@ public class CoreCLREmbedding
     {
         private readonly Dictionary<string, dynamic> _nuGetDependencyProviders = new Dictionary<string, dynamic>();
         private readonly Dictionary<string, dynamic> _projectDependencyProviders = new Dictionary<string, dynamic>();
+        private readonly Dictionary<dynamic, dynamic> _nuGetLockFiles = new Dictionary<dynamic, dynamic>();
         private Type _projectDependencyProviderType;
         private Type _projectResolverType;
         private Type _dependencyProviderType;
@@ -85,9 +86,11 @@ public class CoreCLREmbedding
         private Type _lockFileReaderType;
         private MethodInfo _parseSemanticVersionMethod;
         private MethodInfo _resolveRepositoryPathMethod;
-        private readonly Dictionary<string, string> _resolvedAssemblies = new Dictionary<string, string>();
+        private readonly Dictionary<string, string> _runtimeAssemblies = new Dictionary<string, string>();
+        internal readonly Dictionary<string, string> CompileAssemblies = new Dictionary<string, string>();
         private bool _noProjectJsonFile = false;
         private string _applicationRoot;
+        private readonly FrameworkName _targetFrameworkName = new FrameworkName("DNXCore,Version=v5.0");
 
         public EdgeAssemblyLoadContext()
         {
@@ -167,7 +170,7 @@ public class CoreCLREmbedding
                 
                 object lockFileReader = Activator.CreateInstance(_lockFileReaderType);
 
-                object lockFile = _lockFileReaderType.GetMethod("Read", new Type[]
+                dynamic lockFile = _lockFileReaderType.GetMethod("Read", new Type[]
                 {
                     typeof (string)
                 }).Invoke(lockFileReader, new object[]
@@ -180,6 +183,7 @@ public class CoreCLREmbedding
                     lockFile
                 });
 
+                _nuGetLockFiles[nuGetDependencyProvider] = lockFile;
                 _nuGetDependencyProviders[repositoryPath] = nuGetDependencyProvider;
             }
 
@@ -261,20 +265,54 @@ public class CoreCLREmbedding
             dynamic dependencyWalker = CreateDependencyWalker();
 
             DebugMessage("EdgeAssemblyLoadContext::ResolveDependencies (CLR) - Getting the dependencies for the project");
-            dependencyWalker.Walk(projectName, ParseSemanticVersion("0.0.0.0"), new FrameworkName("DNXCore,Version=v5.0"));
+            dependencyWalker.Walk(projectName, ParseSemanticVersion("0.0.0.0"), _targetFrameworkName);
             DebugMessage("EdgeAssemblyLoadContext::ResolveDependencies (CLR) - Finished getting dependencies for the project");
 
-            foreach (dynamic nuGetDependencyProvider in _nuGetDependencyProviders.Values)
+            foreach (KeyValuePair<string, dynamic> nuGetDependencyProviderEntry in _nuGetDependencyProviders)
             {
+                string repositoryPath = nuGetDependencyProviderEntry.Key;
+                dynamic nuGetDependencyProvider = nuGetDependencyProviderEntry.Value;
+
+                foreach (dynamic lockFileTarget in _nuGetLockFiles[nuGetDependencyProvider].Targets)
+                {
+                    if (lockFileTarget.TargetFramework == _targetFrameworkName)
+                    {
+                        IList libraries = lockFileTarget.Libraries;
+
+                        foreach (dynamic lockFileLibrary in libraries)
+                        {
+                            string libraryName = lockFileLibrary.Name;
+                            IList assemblies = lockFileLibrary.CompileTimeAssemblies;
+
+                            if (!CompileAssemblies.ContainsKey(libraryName) && assemblies.Count > 0)
+                            {
+                                dynamic assembly = assemblies[0];
+
+                                string compileAssemblyPath = Path.Combine(repositoryPath, libraryName, lockFileLibrary.Version.ToString(), assembly.Path.Replace('/', Path.DirectorySeparatorChar));
+
+                                DebugMessage("EdgeAssemblyLoadContext::ResolveDependencies (CLR) - Resolved {0} to compile assembly {1}", libraryName,
+                                    compileAssemblyPath);
+                                CompileAssemblies[libraryName] = compileAssemblyPath;
+                            }
+                        }
+                    }
+                }
+
                 foreach (dynamic dependencyAssemblyName in nuGetDependencyProvider.PackageAssemblyLookup.Keys)
                 {
                     string assemblyName = dependencyAssemblyName.Name;
-                    string assemblyPath = nuGetDependencyProvider.PackageAssemblyLookup[dependencyAssemblyName].Path;
+                    string runtimeAssemblyPath = nuGetDependencyProvider.PackageAssemblyLookup[dependencyAssemblyName].Path;
 
-                    if (!_resolvedAssemblies.ContainsKey(assemblyName))
+                    if (!_runtimeAssemblies.ContainsKey(assemblyName))
                     {
-                        DebugMessage("EdgeAssemblyLoadContext::ResolveDependencies (CLR) - Resolved {0} to {1}", assemblyName, assemblyPath);
-                        _resolvedAssemblies[assemblyName] = assemblyPath;
+                        DebugMessage("EdgeAssemblyLoadContext::ResolveDependencies (CLR) - Resolved {0} to runtime assembly {1}", assemblyName, runtimeAssemblyPath);
+                        _runtimeAssemblies[assemblyName] = runtimeAssemblyPath;
+                    }
+
+                    if (!CompileAssemblies.ContainsKey(assemblyName))
+                    {
+                        DebugMessage("EdgeAssemblyLoadContext::ResolveDependencies (CLR) - Resolved {0} to compile assembly {1}", assemblyName, runtimeAssemblyPath);
+                        CompileAssemblies[assemblyName] = runtimeAssemblyPath;
                     }
                 }
             }
@@ -293,10 +331,10 @@ public class CoreCLREmbedding
         {
             DebugMessage("EdgeAssemblyLoadContext::Load (CLR) - Trying to load {0}", assemblyName.Name);
 
-            if (_resolvedAssemblies.ContainsKey(assemblyName.Name))
+            if (_runtimeAssemblies.ContainsKey(assemblyName.Name))
             {
                 DebugMessage("EdgeAssemblyLoadContext::Load (CLR) - Found an entry in the resolved assemblies cache");
-                return LoadPath(_resolvedAssemblies[assemblyName.Name]);
+                return LoadPath(_runtimeAssemblies[assemblyName.Name]);
             }
 
             DebugMessage("EdgeAssemblyLoadContext::Load (CLR) - No entry in the resolved assemblies cache, calling Assembly.Load()");
@@ -449,7 +487,8 @@ public class CoreCLREmbedding
             DebugMessage("CoreCLREmbedding::CompileFunc (CLR) - Starting compilation");
     	    Func<object, Task<object>> compiledFunction = (Func<object, Task<object>>) compileMethod.Invoke(compilerInstance, new object[]
     	    {
-    	        options
+    	        options,
+                AssemblyLoadContext.CompileAssemblies
     	    });
             DebugMessage("CoreCLREmbedding::CompileFunc (CLR) - Compilation complete");
 
