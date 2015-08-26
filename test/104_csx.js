@@ -492,7 +492,7 @@ describe('edge-cs', function () {
             });
         },
         function (error) {
-            if ((error instanceof Error) && error.message.match(/Unable to resolve reference to Package\.Doesnt\.Exist|error CS0006\: Metadata file 'Package\.Doesnt\.Exist\.dll' could not be found/)) {
+            if ((error instanceof Error) && error.message.match(/Unable to resolve reference to Package\.Doesnt\.Exist|Package\.Doesnt\.Exist\.dll' could not be found/)) {
                 return true;
             }
             return false;
