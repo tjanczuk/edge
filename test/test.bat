@@ -7,6 +7,7 @@ echo Using node.js: %NODEEXE%
 call "%~dp0\build.bat"
 if %ERRORLEVEL% NEQ 0 exit /b -1;
 pushd "%~dp0\.."
+set EDGE_USE_CORECLR=
 "%NODEEXE%" "%APPDATA%\npm\node_modules\mocha\bin\mocha" -R spec
 set EDGE_USE_CORECLR=1
 "%NODEEXE%" "%APPDATA%\npm\node_modules\mocha\bin\mocha" -R spec
