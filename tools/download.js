@@ -1,13 +1,33 @@
 var http = require('http');
 
-var url = 'http://nodejs.org/dist/v' + process.argv[3] + '/' 
-	+ (process.argv[2] === 'x86' ? '/node.exe' : '/x64/node.exe');
+var urls;
+if (process.argv[2] === 'x86') {
+	urls = [
+		'http://nodejs.org/dist/v' + process.argv[3] + '/node.exe',
+		'http://nodejs.org/dist/v' + process.argv[3] + '/win-x86/node.exe'
+	];
+}
+else {
+	urls = [
+		'http://nodejs.org/dist/v' + process.argv[3] + '/x64/node.exe',
+		'http://nodejs.org/dist/v' + process.argv[3] + '/win-x64/node.exe'
+	];
+}
 
-console.log(url);
-http.get(url, function (res) {
-	if (res.statusCode !== 200)
-		throw new Error('HTTP response status code ' + res.statusCode);
+try_get(0);
 
-	var stream = require('fs').createWriteStream(process.argv[4] + '/node.exe');
-	res.pipe(stream);
-});
+function try_get(i) {
+	console.log('Trying download from', urls[i]);
+	http.get(urls[i], function (res) {
+		console.log('HTTP', res.statusCode);
+		if (res.statusCode !== 200) {
+			if (++i === urls.length)
+				throw new Error('Unable to download node.exe');
+			else
+				try_get(i);
+		}
+
+		var stream = require('fs').createWriteStream(process.argv[4] + '/node.exe');
+		res.pipe(stream);
+	});
+}
