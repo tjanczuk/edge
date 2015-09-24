@@ -18,6 +18,7 @@
   'targets': [
     {
       'target_name': 'edge',
+      'win_delay_load_hook': 'false',
       'include_dirs' : [
           "<!(node -e \"require('nan')\")"
       ],
