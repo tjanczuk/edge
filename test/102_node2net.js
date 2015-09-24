@@ -5,6 +5,12 @@ var edgeTestDll = path.join(__dirname, 'Edge.Tests.dll');
 
 describe('async call from node.js to .net', function () {
 
+    // afterEach(function () {
+    //     console.log('GC!');
+    //     gc();
+    //     console.log('AFTER GC!');
+    // });
+
     it('succeeds for hello world', function (done) {
         var func = edge.func(edgeTestDll);
         func('Node.js', function (error, result) {

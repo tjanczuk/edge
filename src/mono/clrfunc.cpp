@@ -13,29 +13,31 @@ ClrFunc::ClrFunc()
 NAN_METHOD(clrFuncProxy)
 {
     DBG("clrFuncProxy");
-    NanEscapableScope();
-    Handle<v8::External> correlator = Handle<v8::External>::Cast(args[2]);
+    Nan::HandleScope scope;
+    v8::Local<v8::External> correlator = v8::Local<v8::External>::Cast(info[2]);
     ClrFuncWrap* wrap = (ClrFuncWrap*)(correlator->Value());
     ClrFunc* clrFunc = wrap->clrFunc;
-    NanReturnValue(clrFunc->Call(args[0], args[1]));
+    info.GetReturnValue().Set(clrFunc->Call(info[0], info[1]));
 }
 
-NAN_WEAK_CALLBACK(clrFuncProxyNearDeath)
+template<typename T>
+void clrFuncProxyNearDeath(const Nan::WeakCallbackInfo<T> &data)
 {
     DBG("clrFuncProxyNearDeath");
     ClrFuncWrap* wrap = (ClrFuncWrap*)(data.GetParameter());
+    delete wrap->clrFunc; 
     wrap->clrFunc = NULL;
     delete wrap;
 }
 
-Handle<v8::Function> ClrFunc::Initialize(MonoObject* func)
+v8::Local<v8::Function> ClrFunc::Initialize(MonoObject* func)
 {
     DBG("ClrFunc::Initialize Func<object,Task<object>> wrapper");
 
-    static Persistent<v8::Function> proxyFactory;
-    static Persistent<v8::Function> proxyFunction;    
+    static Nan::Persistent<v8::Function> proxyFactory;
+    static Nan::Persistent<v8::Function> proxyFunction;    
 
-    NanEscapableScope();
+    Nan::EscapableHandleScope scope;
 
     ClrFunc* app = new ClrFunc();
     app->func = mono_gchandle_new(func, FALSE);
@@ -46,42 +48,42 @@ Handle<v8::Function> ClrFunc::Initialize(MonoObject* func)
     
     if (proxyFactory.IsEmpty())
     {
-        NanAssignPersistent(
-            proxyFunction, NanNew<FunctionTemplate>(clrFuncProxy)->GetFunction());
-        Handle<v8::String> code = NanNew<v8::String>(
-            "(function (f, ctx) { return function (d, cb) { return f(d, cb, ctx); }; })");
-        NanAssignPersistent(
-            proxyFactory, Handle<v8::Function>::Cast(v8::Script::Compile(code)->Run()));
+        v8::Local<v8::Function> clrFuncProxyFunction = Nan::New<v8::FunctionTemplate>(clrFuncProxy)->GetFunction();
+        proxyFunction.Reset(clrFuncProxyFunction);
+        v8::Local<v8::String> code = Nan::New<v8::String>(
+            "(function (f, ctx) { return function (d, cb) { return f(d, cb, ctx); }; })").ToLocalChecked();
+        v8::Local<v8::Function> codeFunction = v8::Local<v8::Function>::Cast(v8::Script::Compile(code)->Run());
+        proxyFactory.Reset(codeFunction);
     }
 
-    Handle<v8::Value> factoryArgv[] = { NanNew(proxyFunction), NanNew<v8::External>((void*)wrap) };
-    Local<v8::Function> funcProxy = 
-            (NanNew(proxyFactory)->Call(NanGetCurrentContext()->Global(), 2, factoryArgv)).As<v8::Function>();
-    NanMakeWeakPersistent(funcProxy, (void*)wrap, &clrFuncProxyNearDeath);
+    v8::Local<v8::Value> factoryArgv[] = { Nan::New(proxyFunction), Nan::New<v8::External>((void*)wrap) };
+    v8::Local<v8::Function> funcProxy = 
+        (Nan::New(proxyFactory)->Call(Nan::GetCurrentContext()->Global(), 2, factoryArgv)).As<v8::Function>();
+    Nan::Persistent<v8::Function> funcProxyPersistent(funcProxy);
+    funcProxyPersistent.SetWeak((void*)wrap, &clrFuncProxyNearDeath, Nan::WeakCallbackType::kParameter);
 
-    return NanEscapeScope(funcProxy);
+    return scope.Escape(funcProxy);
 }
 
 NAN_METHOD(ClrFunc::Initialize)
 {
     DBG("ClrFunc::Initialize MethodInfo wrapper");
 
-    NanEscapableScope();
-    Handle<v8::Object> options = args[0]->ToObject();
-    Handle<v8::Function> result;
+    Nan::EscapableHandleScope scope;
+    v8::Local<v8::Object> options = info[0]->ToObject();
+    v8::Local<v8::Function> result;
 
-    Handle<v8::Value> jsassemblyFile = options->Get(NanNew<v8::String>("assemblyFile"));
+    v8::Local<v8::Value> jsassemblyFile = options->Get(Nan::New<v8::String>("assemblyFile").ToLocalChecked());
     if (jsassemblyFile->IsString())
     {
         // reference .NET code through pre-compiled CLR assembly 
         String::Utf8Value assemblyFile(jsassemblyFile);
-        String::Utf8Value nativeTypeName(options->Get(NanNew<v8::String>("typeName")));
-        String::Utf8Value nativeMethodName(options->Get(NanNew<v8::String>("methodName")));
+        String::Utf8Value nativeTypeName(options->Get(Nan::New<v8::String>("typeName").ToLocalChecked()));
+        String::Utf8Value nativeMethodName(options->Get(Nan::New<v8::String>("methodName").ToLocalChecked()));
         MonoException* exc = NULL;
         MonoObject* func = MonoEmbedding::GetClrFuncReflectionWrapFunc(*assemblyFile, *nativeTypeName, *nativeMethodName, &exc);
         if (exc) {
-            throwV8Exception(ClrFunc::MarshalCLRExceptionToV8(exc));
-            NanReturnValue(NanUndefined());
+            return Nan::ThrowError(ClrFunc::MarshalCLRExceptionToV8(exc));
         }
         result = ClrFunc::Initialize(func);
     }
@@ -90,15 +92,14 @@ NAN_METHOD(ClrFunc::Initialize)
         //// reference .NET code throgh embedded source code that needs to be compiled
         MonoException* exc = NULL;
 
-        String::Utf8Value compilerFile(options->Get(NanNew<v8::String>("compiler")));
+        String::Utf8Value compilerFile(options->Get(Nan::New<v8::String>("compiler").ToLocalChecked()));
         MonoAssembly *assembly = mono_domain_assembly_open (mono_domain_get(), *compilerFile);
         MonoClass* compilerClass = mono_class_from_name(mono_assembly_get_image(assembly), "", "EdgeCompiler");
         MonoObject* compilerInstance = mono_object_new(mono_domain_get(), compilerClass);
         MonoMethod* ctor = mono_class_get_method_from_name(compilerClass, ".ctor", 0);
         mono_runtime_invoke(ctor, compilerInstance, NULL, (MonoObject**)&exc);
         if (exc) {
-            throwV8Exception(ClrFunc::MarshalCLRExceptionToV8(exc));
-            NanReturnValue(NanUndefined());
+            return Nan::ThrowError(ClrFunc::MarshalCLRExceptionToV8(exc));
         }
 
         MonoMethod* compileFunc = mono_class_get_method_from_name(compilerClass, "CompileFunc", -1);
@@ -117,26 +118,25 @@ NAN_METHOD(ClrFunc::Initialize)
         params[1] = methodInfoParams;
         MonoObject* func = mono_runtime_invoke(invoke, methodInfo, params, (MonoObject**)&exc);
         if (exc) {
-            throwV8Exception(ClrFunc::MarshalCLRExceptionToV8(exc));
-            NanReturnValue(NanUndefined());
+            return Nan::ThrowError(ClrFunc::MarshalCLRExceptionToV8(exc));
         }
 
         result = ClrFunc::Initialize(func);
     }
 
-    NanReturnValue(result);
+    info.GetReturnValue().Set(result);
 }
 
-Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata, MonoException** exc)
+v8::Local<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata, MonoException** exc)
 {
     DBG("ClrFunc::MarshalCLRToV8");
-    NanEscapableScope();
-    Handle<v8::Value> jsdata;
+    Nan::EscapableHandleScope scope;
+    v8::Local<v8::Value> jsdata;
     *exc = NULL;
 
     if (netdata == NULL)
     {
-        return NanEscapeScope(NanNull());
+        return scope.Escape(Nan::Null());
     }
 
     static MonoClass* guid_class;
@@ -186,7 +186,7 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata, MonoException** e
     }
     else if (klass == mono_get_boolean_class())
     {
-        jsdata = NanNew<v8::Boolean>((bool)*(bool*)mono_object_unbox(netdata));
+        jsdata = Nan::New<v8::Boolean>((bool)*(bool*)mono_object_unbox(netdata));
     }
     else if (klass == guid_class)
     {
@@ -198,7 +198,7 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata, MonoException** e
     {
         double value = MonoEmbedding::GetDateValue(netdata, exc);
         if (!*exc)
-            jsdata = NanNew<v8::Date>(value);
+            jsdata = Nan::New<v8::Date>(value).ToLocalChecked();
     }
     else if (klass == datetimeoffset_class)
     {
@@ -214,25 +214,25 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata, MonoException** e
     }
     else if (klass == mono_get_int16_class())
     {
-        jsdata = NanNew<v8::Integer>(*(int16_t*)mono_object_unbox(netdata));
+        jsdata = Nan::New<v8::Integer>(*(int16_t*)mono_object_unbox(netdata));
     }
     else if (klass == mono_get_int32_class())
     {
-        jsdata = NanNew<v8::Integer>(*(int32_t*)mono_object_unbox(netdata));
+        jsdata = Nan::New<v8::Integer>(*(int32_t*)mono_object_unbox(netdata));
     }
     else if (klass == mono_get_int64_class())
     {
         double val = MonoEmbedding::Int64ToDouble(netdata, exc);
         if (!*exc)
-            jsdata = NanNew<v8::Number>(val);
+            jsdata = Nan::New<v8::Number>(val);
     }
     else if (klass == mono_get_double_class())
     {
-        jsdata = NanNew<v8::Number>(*(double*)mono_object_unbox(netdata));
+        jsdata = Nan::New<v8::Number>(*(double*)mono_object_unbox(netdata));
     }
     else if (klass == mono_get_single_class())
     {
-        jsdata = NanNew<v8::Number>(*(float*)mono_object_unbox(netdata));
+        jsdata = Nan::New<v8::Number>(*(float*)mono_object_unbox(netdata));
     }
     else if (NULL != (primitive = MonoEmbedding::TryConvertPrimitiveOrDecimal(netdata, exc)) || *exc)
     {
@@ -248,21 +248,21 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata, MonoException** e
     else if (mono_class_get_rank(klass) > 0 && mono_class_get_element_class(klass) == mono_get_byte_class())
     {
         MonoArray* buffer = (MonoArray*)netdata;
-        size_t length = mono_array_length(buffer);
+        size_t length = mono_array_length(buffer);      
         if (length > 0)
         {
             uint8_t* pinnedBuffer = mono_array_addr(buffer, uint8_t, 0);
-            jsdata = NanNewBufferHandle((char *)pinnedBuffer, length);
+            jsdata = Nan::CopyBuffer((char *)pinnedBuffer, length).ToLocalChecked();
         }
         else 
         {
-            jsdata = NanNewBufferHandle(0);
+            jsdata = Nan::NewBuffer(0).ToLocalChecked();
         }
     }
     else if (mono_class_is_assignable_from (idictionary_string_object_class, klass)
              || mono_class_is_assignable_from (idictionary_class, klass))
     {
-        Handle<v8::Object> result = NanNew<v8::Object>();
+        v8::Local<v8::Object> result = Nan::New<v8::Object>();
         MonoArray* kvs = MonoEmbedding::IDictionaryToFlatArray(netdata, exc);
         if (!*exc)
         {
@@ -282,7 +282,7 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata, MonoException** e
     }
     else if (mono_class_is_assignable_from (ienumerable_class, klass))
     {
-        Handle<v8::Array> result = NanNew<v8::Array>();
+        v8::Local<v8::Array> result = Nan::New<v8::Array>();
         MonoArray* values = MonoEmbedding::IEnumerableToArray(netdata, exc);
         if (!*exc)
         {
@@ -313,26 +313,26 @@ Handle<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata, MonoException** e
 
     if (*exc)
     {
-        return NanEscapeScope(NanUndefined());
+        return scope.Escape(Nan::Undefined());
     }
 
-    return NanEscapeScope(jsdata);
+    return scope.Escape(jsdata);
 }
 
-Handle<v8::Object> ClrFunc::MarshalCLRExceptionToV8(MonoException* exception)
+v8::Local<v8::Value> ClrFunc::MarshalCLRExceptionToV8(MonoException* exception)
 {
     DBG("ClrFunc::MarshalCLRExceptionToV8");
-    NanEscapableScope();
-    Handle<v8::Object> result;
-    Handle<v8::String> message;
-    Handle<v8::String> name;
+    Nan::EscapableHandleScope scope;
+    v8::Local<v8::Object> result;
+    v8::Local<v8::String> message;
+    v8::Local<v8::String> name;
     MonoException* exc = NULL;
         
     if (exception == NULL)
     {
-        result = NanNew<v8::Object>();
-        message = NanNew<v8::String>("Unrecognized exception thrown by CLR.");
-        name = NanNew<v8::String>("InternalException");
+        result = Nan::New<v8::Object>();
+        message = Nan::New<v8::String>("Unrecognized exception thrown by CLR.").ToLocalChecked();
+        name = Nan::New<v8::String>("InternalException").ToLocalChecked();
     }
     else
     {
@@ -356,19 +356,19 @@ Handle<v8::Object> ClrFunc::MarshalCLRExceptionToV8(MonoException* exception)
     // Construct an error that is just used for the prototype - not verify efficient
     // but 'typeof Error' should work in JavaScript
     result->SetPrototype(v8::Exception::Error(message));
-    result->Set(NanNew<v8::String>("message"), message);
+    result->Set(Nan::New<v8::String>("message").ToLocalChecked(), message);
     
     // Recording the actual type - 'name' seems to be the common used property
-    result->Set(NanNew<v8::String>("name"), name);
+    result->Set(Nan::New<v8::String>("name").ToLocalChecked(), name);
 
-    return NanEscapeScope(result);
+    return scope.Escape(result);
 }
 
-Handle<v8::Object> ClrFunc::MarshalCLRObjectToV8(MonoObject* netdata, MonoException** exc)
+v8::Local<v8::Object> ClrFunc::MarshalCLRObjectToV8(MonoObject* netdata, MonoException** exc)
 {
     DBG("ClrFunc::MarshalCLRObjectToV8");
-    NanEscapableScope();
-    Handle<v8::Object> result = NanNew<v8::Object>();
+    Nan::EscapableHandleScope scope;
+    v8::Local<v8::Object> result = Nan::New<v8::Object>();
     MonoClass* klass = mono_object_get_class(netdata);
     MonoClass* current;
     MonoClassField* field;
@@ -381,7 +381,7 @@ Handle<v8::Object> ClrFunc::MarshalCLRObjectToV8(MonoObject* netdata, MonoExcept
         || 0 == strcmp(mono_class_get_namespace(klass), "System.Reflection"))
     {
         // Avoid stack overflow due to self-referencing reflection elements
-        return NanEscapeScope(result);
+        return scope.Escape(result);
     }
     for (current = klass; !*exc && current; current = mono_class_get_parent(current))
     {
@@ -398,7 +398,7 @@ Handle<v8::Object> ClrFunc::MarshalCLRObjectToV8(MonoObject* netdata, MonoExcept
             const char* name = mono_field_get_name(field);
             MonoObject* value = mono_field_get_value_object(mono_domain_get(), field, netdata);
             result->Set(
-                NanNew<v8::String>(name), 
+                Nan::New<v8::String>(name).ToLocalChecked(), 
                 ClrFunc::MarshalCLRToV8(value, exc));
         }
     }
@@ -424,7 +424,7 @@ Handle<v8::Object> ClrFunc::MarshalCLRObjectToV8(MonoObject* netdata, MonoExcept
             if (!*exc)
             {
                 result->Set(
-                    NanNew<v8::String>(name),
+                    Nan::New<v8::String>(name).ToLocalChecked(),
                     ClrFunc::MarshalCLRToV8(value, exc));
             }
         }
@@ -432,27 +432,27 @@ Handle<v8::Object> ClrFunc::MarshalCLRObjectToV8(MonoObject* netdata, MonoExcept
 
     if (*exc) 
     {
-        return NanEscapeScope(ClrFunc::MarshalCLRExceptionToV8(*exc));
+        return scope.Escape(v8::Local<v8::Object>::Cast(ClrFunc::MarshalCLRExceptionToV8(*exc)));
     }
 
-    return NanEscapeScope(result);
+    return scope.Escape(result);
 }
 
-MonoObject* ClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata)
+MonoObject* ClrFunc::MarshalV8ToCLR(v8::Local<v8::Value> jsdata)
 {
     DBG("ClrFunc::MarshalV8ToCLR");
-    NanScope();
+    Nan::HandleScope scope;
 
     if (jsdata->IsFunction())
     {
-        NodejsFunc* functionContext = new NodejsFunc(Handle<v8::Function>::Cast(jsdata));
+        NodejsFunc* functionContext = new NodejsFunc(v8::Local<v8::Function>::Cast(jsdata));
         MonoObject* netfunc = functionContext->GetFunc();
 
         return netfunc;
     }
     else if (node::Buffer::HasInstance(jsdata))
     {
-        Handle<v8::Object> jsbuffer = jsdata->ToObject();
+        v8::Local<v8::Object> jsbuffer = jsdata->ToObject();
         MonoArray* netbuffer = mono_array_new(mono_domain_get(), mono_get_byte_class(), (int)node::Buffer::Length(jsbuffer));
         memcpy(mono_array_addr_with_size(netbuffer, sizeof(char), 0), node::Buffer::Data(jsbuffer), mono_array_length(netbuffer));
 
@@ -460,7 +460,7 @@ MonoObject* ClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata)
     }
     else if (jsdata->IsArray())
     {
-        Handle<v8::Array> jsarray = Handle<v8::Array>::Cast(jsdata);
+        v8::Local<v8::Array> jsarray = v8::Local<v8::Array>::Cast(jsdata);
         MonoArray* netarray = mono_array_new(mono_domain_get(), mono_get_object_class(), jsarray->Length());
         for (unsigned int i = 0; i < jsarray->Length(); i++)
         {
@@ -471,19 +471,19 @@ MonoObject* ClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata)
     }
     else if (jsdata->IsDate())
     {
-        Handle<v8::Date> jsdate = Handle<v8::Date>::Cast(jsdata);
+        v8::Local<v8::Date> jsdate = v8::Local<v8::Date>::Cast(jsdata);
         double ticks = jsdate->NumberValue();
         return MonoEmbedding::CreateDateTime(ticks);
     }    
     else if (jsdata->IsObject()) 
     {
         MonoObject* netobject = MonoEmbedding::CreateExpandoObject();
-        Handle<v8::Object> jsobject = Handle<v8::Object>::Cast(jsdata);
-        Handle<v8::Array> propertyNames = jsobject->GetPropertyNames();
+        v8::Local<v8::Object> jsobject = v8::Local<v8::Object>::Cast(jsdata);
+        v8::Local<v8::Array> propertyNames = jsobject->GetPropertyNames();
         for (unsigned int i = 0; i < propertyNames->Length(); i++)
         {
-            Handle<v8::String> name = Handle<v8::String>::Cast(propertyNames->Get(i));
-            String::Utf8Value utf8name(name);
+            v8::Local<v8::String> name = v8::Local<v8::String>::Cast(propertyNames->Get(i));
+            v8::String::Utf8Value utf8name(name);
             Dictionary::Add(netobject, *utf8name, ClrFunc::MarshalV8ToCLR(jsobject->Get(name)));
         }
 
@@ -491,7 +491,7 @@ MonoObject* ClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata)
     }
     else if (jsdata->IsString()) 
     {
-        return (MonoObject*)stringV82CLR(Handle<v8::String>::Cast(jsdata));
+        return (MonoObject*)stringV82CLR(v8::Local<v8::String>::Cast(jsdata));
     }
     else if (jsdata->IsBoolean())
     {
@@ -524,10 +524,10 @@ MonoObject* ClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata)
     }
 }
 
-Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> callback)
+v8::Local<v8::Value> ClrFunc::Call(v8::Local<v8::Value> payload, v8::Local<v8::Value> callback)
 {
     DBG("ClrFunc::Call instance");
-    NanEscapableScope();
+    Nan::EscapableHandleScope scope;
     MonoException* exc = NULL;
 
     ClrFuncInvokeContext* c = new ClrFuncInvokeContext(callback);
@@ -543,8 +543,8 @@ Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> cal
     {
         delete c;
         c = NULL;
-        throwV8Exception(ClrFunc::MarshalCLRExceptionToV8(exc));
-        return NanEscapeScope(NanUndefined());
+        Nan::ThrowError(ClrFunc::MarshalCLRExceptionToV8(exc));
+        return scope.Escape(Nan::Undefined());
     }
 
     MonoProperty* prop = mono_class_get_property_from_name(mono_object_get_class(task), "IsCompleted");
@@ -553,8 +553,8 @@ Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> cal
     {
         delete c;
         c = NULL;
-        throwV8Exception(ClrFunc::MarshalCLRExceptionToV8(exc));
-        return NanEscapeScope(NanUndefined());
+        Nan::ThrowError(ClrFunc::MarshalCLRExceptionToV8(exc));
+        return scope.Escape(Nan::Undefined());
     }
 
     bool isCompleted = *(bool*)mono_object_unbox(isCompletedObject);
@@ -562,14 +562,14 @@ Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> cal
     {
         // Completed synchronously. Return a value or invoke callback based on call pattern.
         c->Task(task);
-        return NanEscapeScope(c->CompleteOnV8Thread(true));
+        return scope.Escape(c->CompleteOnV8Thread(true));
     }
     else if (c->Sync())
     {
-        throwV8Exception(ClrFunc::MarshalCLRExceptionToV8(mono_get_exception_invalid_operation("The JavaScript function was called synchronously "
+        Nan::ThrowError(ClrFunc::MarshalCLRExceptionToV8(mono_get_exception_invalid_operation("The JavaScript function was called synchronously "
             "but the underlying CLR function returned without completing the Task. Call the "
             "JavaScript function asynchronously.")));
-        return NanEscapeScope(NanUndefined());
+        return scope.Escape(Nan::Undefined());
     }
     else
     {
@@ -580,12 +580,10 @@ Handle<v8::Value> ClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> cal
         {
             delete c;
             c = NULL;
-            throwV8Exception(ClrFunc::MarshalCLRExceptionToV8(exc));
-            return NanEscapeScope(NanUndefined());
+            Nan::ThrowError(ClrFunc::MarshalCLRExceptionToV8(exc));
+            return scope.Escape(Nan::Undefined());
         }
     }
 
-    return NanEscapeScope(NanUndefined()); 
+    return scope.Escape(Nan::Undefined());
 }
-
-// vim: ts=4 sw=4 et: 

@@ -10,7 +10,7 @@ static MonoClass* GetNodejsFuncClass()
     return klass;
 }
 
-NodejsFunc::NodejsFunc(Handle<Function> function)
+NodejsFunc::NodejsFunc(v8::Local<v8::Function> function)
 {
     DBG("NodejsFunc::NodejsFunc");
 
@@ -18,8 +18,8 @@ NodejsFunc::NodejsFunc(Handle<Function> function)
     if (!ctor)
         ctor = mono_class_get_method_from_name(GetNodejsFuncClass(), ".ctor", -1);
 
-    this->Func = new Persistent<Function>;
-    NanAssignPersistent(*(this->Func), function);
+    this->Func = new Nan::Persistent<v8::Function>;
+    (this->Func)->Reset(function);
 
     MonoObject* thisObj = mono_object_new(mono_domain_get(), GetNodejsFuncClass());
     MonoException* exc = NULL;
@@ -32,8 +32,9 @@ NodejsFunc::NodejsFunc(Handle<Function> function)
 NodejsFunc::~NodejsFunc() 
 {
     DBG("NodejsFunc::~NodejsFunc");
-    NanDisposePersistent(*(this->Func));
+    this->Func->Reset();
     delete this->Func;
+    this->Func = NULL;
 }
 
 void NodejsFunc::Release(NodejsFunc* _this)
@@ -61,5 +62,3 @@ void  NodejsFunc::ExecuteActionOnV8Thread(MonoObject* action)
     uv_edge_async_t* uv_edge_async = V8SynchronizationContext::RegisterAction(ClrActionContext::ActionCallback, data);
     V8SynchronizationContext::ExecuteAction(uv_edge_async);    
 }
-
-// vim: ts=4 sw=4 et: 
