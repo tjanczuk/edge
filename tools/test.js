@@ -19,7 +19,7 @@ if(process.platform === 'win32') {
 
 function runOnSuccess(code, signal) {
 	if(code === 0) {
-		spawn('node', [mocha, testDir, '-R', 'spec'], { stdio: 'inherit' })
+		spawn('node', [mocha, testDir, '-R', 'spec', '-gc'], { stdio: 'inherit' })
 			.on('error', function(err) { console.log(err); });
 	}
 }

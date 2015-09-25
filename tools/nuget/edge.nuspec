@@ -2,7 +2,7 @@
 <package >
   <metadata>
     <id>Edge.js</id>
-    <version>0.10.0</version>
+    <version>4.0.0</version>
     <authors>Tomasz Janczuk</authors>
     <owners>Tomasz Janczuk</owners>
     <licenseUrl>https://raw.githubusercontent.com/tjanczuk/edge/master/LICENSE.txt</licenseUrl>
@@ -10,7 +10,7 @@
     <!--<iconUrl>http://ICON_URL_HERE_OR_DELETE_THIS_LINE</iconUrl>-->
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <summary>Script Node.js in a .NET application.</summary>
-    <description>With Edge.js you can script Node.js in a .NET application. Edge.js allows you to run Node.js and .NET code in one process. You can call Node.js functions from .NET and .NET functions from Node.js. Edge.js takes care of marshalling data between CLR and V8. Edge.js also reconciles threading models of single threaded V8 and multi-threaded CLR. Edge.js ensures correct lifetime of objects on V8 and CLR heaps. Current version of Edge supports scripting Node.js v0.12.0.</description>
+    <description>With Edge.js you can script Node.js in a .NET application. Edge.js allows you to run Node.js and .NET code in one process. You can call Node.js functions from .NET and .NET functions from Node.js. Edge.js takes care of marshalling data between CLR and V8. Edge.js also reconciles threading models of single threaded V8 and multi-threaded CLR. Edge.js ensures correct lifetime of objects on V8 and CLR heaps. Current version of Edge supports scripting Node.js v4.1.1.</description>
     <copyright>Copyright 2015 Tomasz Janczuk</copyright>
     <tags>node.js node .net edge edge.js v8 clr interop javascript</tags>
   </metadata>

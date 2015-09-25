@@ -7,7 +7,7 @@ FROM node:0.10.30
 
 # Install Mono.
 # See https://github.com/tjanczuk/edge/blob/master/tools/ubuntu_12.04_clean_install.sh for context
-ENV MONO_VERSION 3.4.0
+ENV MONO_VERSION 4.0.4.1
 RUN \
   apt-get update && \
   apt-get install -y pkg-config libgdiplus wget && \
@@ -15,8 +15,6 @@ RUN \
   wget http://download.mono-project.com/sources/mono/mono-$MONO_VERSION.tar.bz2 && \
   tar -xvf mono-$MONO_VERSION.tar.bz2 && \
   rm -f mono-$MONO_VERSION.tar.bz2 && \
-  wget https://raw.githubusercontent.com/tjanczuk/edge/master/tools/Microsoft.Portable.Common.targets \
-    -O ./mono-$MONO_VERSION/mcs/tools/xbuild/targets/Microsoft.Portable.Common.targets && \
   cd mono-$MONO_VERSION && \
   sed -i "s/\@prefix\@\/lib\///g" ./data/config.in && \
   ./configure --prefix=/usr/local --with-glib=embedded --enable-nls=no && \

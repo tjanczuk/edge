@@ -16,15 +16,14 @@
  */
 #include "edge.h"
 
-ClrFuncInvokeContext::ClrFuncInvokeContext(Handle<v8::Value> callbackOrSync)
+ClrFuncInvokeContext::ClrFuncInvokeContext(v8::Local<v8::Value> callbackOrSync)
 {
     DBG("ClrFuncInvokeContext::ClrFuncInvokeContext");
     if (callbackOrSync->IsFunction())
     {
-        this->callback = new Persistent<Function>;
-        NanAssignPersistent(
-            *(this->callback),
-            Handle<Function>::Cast(callbackOrSync));
+        this->callback = new Nan::Persistent<v8::Function>;
+        v8::Local<v8::Function> callbackOrSyncFunction = v8::Local<v8::Function>::Cast(callbackOrSync);
+        (this->callback)->Reset(callbackOrSyncFunction);
         this->Sync = false;
     }
     else 
@@ -40,7 +39,7 @@ void ClrFuncInvokeContext::DisposeCallback()
     if (this->callback)
     {
         DBG("ClrFuncInvokeContext::DisposeCallback");
-        NanDisposePersistent(*(this->callback));
+        this->callback->Reset();
         delete this->callback;
         this->callback = NULL;        
     }
@@ -66,15 +65,15 @@ void ClrFuncInvokeContext::InitializeAsyncOperation()
 
 void ClrFuncInvokeContext::CompleteOnV8ThreadAsynchronous()
 {
-    NanScope();
+    Nan::HandleScope scope;
     this->CompleteOnV8Thread();
 }
 
-Handle<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread()
+v8::Local<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread()
 {
     DBG("ClrFuncInvokeContext::CompleteOnV8Thread");
 
-    NanEscapableScope();
+    Nan::EscapableHandleScope scope;
 
     // The uv_edge_async was already cleaned up in V8SynchronizationContext::ExecuteAction
     this->uv_edge_async = NULL;
@@ -83,26 +82,26 @@ Handle<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread()
     {
         // this was an async call without callback specified
         DBG("ClrFuncInvokeContext::CompleteOnV8Thread - async without callback");
-        return NanEscapeScope(NanUndefined());
+        return scope.Escape(Nan::Undefined());
     }
 
-    Handle<Value> argv[] = { NanUndefined(), NanUndefined() };
+    v8::Local<v8::Value> argv[] = { Nan::Undefined(), Nan::Undefined() };
     int argc = 1;
 
     switch (this->Task->Status) {
         default:
-            argv[0] = NanNew<v8::String>("The operation reported completion in an unexpected state.");
+            argv[0] = Nan::New<v8::String>("The operation reported completion in an unexpected state.").ToLocalChecked();
         break;
         case TaskStatus::Faulted:
             if (this->Task->Exception != nullptr) {
                 argv[0] = ClrFunc::MarshalCLRExceptionToV8(this->Task->Exception);
             }
             else {
-                argv[0] = NanNew<v8::String>("The operation has failed with an undetermined error.");
+                argv[0] = Nan::New<v8::String>("The operation has failed with an undetermined error.").ToLocalChecked();
             }
         break;
         case TaskStatus::Canceled:
-            argv[0] = NanNew<v8::String>("The operation was cancelled.");
+            argv[0] = Nan::New<v8::String>("The operation was cancelled.").ToLocalChecked();
         break;
         case TaskStatus::RanToCompletion:
             argc = 2;
@@ -119,28 +118,28 @@ Handle<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread()
     if (!this->Sync)
     {
         // complete the asynchronous call to C# by invoking a callback in JavaScript
-        TryCatch try_catch;
-        NanNew<v8::Function>(*(this->callback))->Call(NanGetCurrentContext()->Global(), argc, argv);
+        Nan::TryCatch try_catch;
+        Nan::New<v8::Function>(*(this->callback))->Call(Nan::GetCurrentContext()->Global(), argc, argv);
         this->DisposeCallback();
         if (try_catch.HasCaught()) 
         {
-            node::FatalException(try_catch);
+            Nan::FatalException(try_catch);
         }        
 
         DBG("ClrFuncInvokeContext::CompleteOnV8Thread - async with callback");
-        return NanEscapeScope(NanUndefined());
+        return scope.Escape(Nan::Undefined());
     }
     else if (1 == argc) 
     {
         DBG("ClrFuncInvokeContext::CompleteOnV8Thread - handleScope.Close(ThrowException(argv[0]))");
         // complete the synchronous call to C# by re-throwing the resulting exception
-        NanThrowError(argv[0]);
-        return NanEscapeScope(argv[0]);
+        Nan::ThrowError(argv[0]);
+        return scope.Escape(argv[0]);
     }
     else
     {
         DBG("ClrFuncInvokeContext::CompleteOnV8Thread - handleScope.Close(argv[1])");
         // complete the synchronous call to C# by returning the result
-        return NanEscapeScope(argv[1]);
+        return scope.Escape(argv[1]);
     }
 }
