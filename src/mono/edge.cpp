@@ -2,6 +2,7 @@
 
 BOOL debugMode;
 BOOL enableScriptIgnoreAttribute;
+BOOL enableMarshalEnumAsInt;
 
 NAN_METHOD(initializeClrFunc)
 {
@@ -15,6 +16,7 @@ void init(Handle<Object> target)
     V8SynchronizationContext::Initialize();
     MonoEmbedding::Initialize();
     enableScriptIgnoreAttribute = getenv("EDGE_ENABLE_SCRIPTIGNOREATTRIBUTE") != NULL;
+    enableMarshalEnumAsInt = getenv("EDGE_MARSHAL_ENUM_AS_INT") != NULL;
     NODE_SET_METHOD(target, "initializeClrFunc", initializeClrFunc);
 }
 
