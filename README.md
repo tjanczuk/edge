@@ -81,9 +81,9 @@ Listen to the [Edge.js podcast on Herdingcode](http://herdingcode.com/herding-co
 &nbsp;&nbsp;&nbsp;&nbsp;[How to: script T-SQL in a Node.js application](#how-to-script-t-sql-in-a-nodejs-application)  
 &nbsp;&nbsp;&nbsp;&nbsp;[How to: support for other CLR languages](#how-to-support-for-other-clr-languages)  
 &nbsp;&nbsp;&nbsp;&nbsp;[How to: exceptions](#how-to-exceptions)  
-&nbsp;&nbsp;&nbsp;&nbsp;[How to: app.config](#how-to-app-config)  
+&nbsp;&nbsp;&nbsp;&nbsp;[How to: app.config](#how-to-app.config)  
 &nbsp;&nbsp;&nbsp;&nbsp;[How to: debugging](#how-to-debugging)  
-&nbsp;&nbsp;&nbsp;&nbsp;[Performance](#performance)
+&nbsp;&nbsp;&nbsp;&nbsp;[Performance](#performance)  
 &nbsp;&nbsp;&nbsp;&nbsp;[Building on Windows](#building-on-windows)  
 &nbsp;&nbsp;&nbsp;&nbsp;[Building on OSX](#building-on-osx)  
 &nbsp;&nbsp;&nbsp;&nbsp;[Building on Linux](#building-on-linux)  
@@ -97,6 +97,7 @@ Listen to the [Edge.js podcast on Herdingcode](http://herdingcode.com/herding-co
 &nbsp;&nbsp;&nbsp;&nbsp;[How to: handle Node.js events in .NET](#how-to-handle-nodejs-events-in-net)  
 &nbsp;&nbsp;&nbsp;&nbsp;[How to: expose Node.js state to .NET](#how-to-expose-nodejs-state-to-net)  
 &nbsp;&nbsp;&nbsp;&nbsp;[How to: use Node.js in ASP.NET application](#how-to-use-nodejs-in-aspnet-web-applications)  
+&nbsp;&nbsp;&nbsp;&nbsp;[How to: debug Node.js code running in a CLR application](#how-to-debug-nodejs-code-running-in-a-clr-application)  
 &nbsp;&nbsp;&nbsp;&nbsp;[Building Edge.js NuGet package](#building-edgejs-nuget-package)  
 &nbsp;&nbsp;&nbsp;&nbsp;[Running tests of scripting Node.js in C#](#running-tests-of-scripting-nodejs-in-c)  
 [Contribution and derived work](#contribution-and-derived-work)  
@@ -128,11 +129,11 @@ If you are writing a Node.js application, this section explains how you include 
 
 ### What you need
 
-Edge.js runs on Windows, Linux, and MacOS and requires Node.js 0.8 or later, as well as .NET Framework 4.5. or Mono 3.4.0. 
+Edge.js runs on Windows, Linux, and OSX and requires Node.js 4.x, 0.12.x, 0.10.x, or 0.8.x, as well as .NET Framework 4.5 (Windows) or Mono 4.0.4.1 (OSX, Linux). 
 
 #### Windows
 
-* Node.js 0.8.x or later (developed and tested with v0.8.22, and v0.10.0, both x32 and x64 architectures)  
+* Node.js 4.x, 0.12.x, 0.10.x, or 0.8.x 
 * [.NET 4.5](http://www.microsoft.com/en-us/download/details.aspx?id=30653)  
 * to use Python, you also need [IronPython 2.7.3 or later](http://ironpython.codeplex.com/releases/view/81726)  
 * to use F#, read [Dave Thomas blog post](http://7sharpnine.com/posts/i-node-something/)
@@ -141,16 +142,16 @@ Edge.js runs on Windows, Linux, and MacOS and requires Node.js 0.8 or later, as 
 
 #### Linux
 
-* Node.js 0.8.x or later (developed and tested with v0.10.26 x64)  
-* Mono 3.4.0 x64  
+* Node.js 4.x, 0.12.x, 0.10.x, or 0.8.x
+* Mono 4.0.4.1 x64  
 * Check out [Ubuntu 12.04 setup instructions](#building-on-linux)
 
 ![image](https://cloud.githubusercontent.com/assets/822369/2808077/03f92874-cd0e-11e3-88ea-79f67b8b1d49.png)
 
 #### MacOS  
 
-* Node.js 0.8.x or later (developed and tested with v0.10.26 x64)  
-* Mono 3.4.0 x64
+* Node.js 4.x, 0.12.x, 0.10.x, or 0.8.x  
+* Mono 4.0.4.1 x64  
 * Check out [Mac OS setup instructions](#building-on-osx)  
 
 ![image](https://cloud.githubusercontent.com/assets/822369/2808046/8f4ce378-cd0b-11e3-95dc-ef0842c28821.png)
@@ -1205,9 +1206,9 @@ npm run jshint
 Prerequisities:
 
 * [Homebrew](http://brew.sh/)  
-* [Node.js x64](http://nodejs.org/) (tested with v0.10.26)  
+* [Node.js x64](http://nodejs.org/) (tested with v4.1.1)  
 
-First build Mono x64:
+First build Mono 4.0.4.1 x64:
 
 ```bash
 brew install https://raw.githubusercontent.com/tjanczuk/edge/master/tools/mono64.rb
@@ -1253,8 +1254,8 @@ sudo bash -c 'bash <(wget -qO- https://raw.githubusercontent.com/tjanczuk/edge/m
 
 This will do the following:
 
-* Download Node.js v0.10.26 sources, build, and install Node.js x64
-* Download Mono 3.4.0 sources, build, and install Mono x64
+* Download Node.js v4.1.1 sources, build, and install Node.js x64
+* Download Mono 4.0.4.1 sources, build, and install Mono x64
 * Download and install node-gyp and mocha
 * Download Edge.js sources and build x64 release
 * Run Edge.js tests
@@ -1272,8 +1273,8 @@ sudo bash -c 'bash <(wget -qO- https://raw.githubusercontent.com/tjanczuk/edge/m
 
 This will do the following:
 
-* Download Node.js v0.10.26 sources, build, and install Node.js x64  
-* Download Mono 3.4.0 sources, build, and install Mono x64  
+* Download Node.js v4.1.1 sources, build, and install Node.js x64  
+* Download Mono 4.0.4.1 sources, build, and install Mono x64  
 * Download and install node-gyp and mocha  
 * Download Edge.js sources and build x64 release  
 * Run Edge.js tests  
@@ -1286,7 +1287,6 @@ This method is adequate if you already have a Mono x64 or Node.js x64 install on
 
 Read through the [install script](https://raw.githubusercontent.com/tjanczuk/edge/mono/tools/ubuntu_12.04_clean_install.sh) and cherry pick the steps you need. Here are some gotchas:
 
-* The Mono 3.4.0 source code tarball misses one file which the install script manually adds. For background on the missing file see [here](http://stackoverflow.com/questions/22844569/build-error-mono-3-4-0-centos).  
 * If you need to build Mono, make sure to run `ldconfig` afterwards, otherwise the garbage collection libraries may not load.  
 * To make sure Mono can load the standard C library, run `sudo ln -s -f /lib/x86_64-linux-gnu/libc.so.6 /lib/x86_64-linux-gnu/libc.so`. For background on that step, see how [Mono loads native libraries](http://www.mono-project.com/Interop_with_Native_Libraries) or just [cut to the chase](http://stackoverflow.com/questions/14359981/mono-and-unmanaged-code-in-ubuntu).  
 
@@ -1311,7 +1311,7 @@ You need Windows with:
 * [Edge.js NuGet package](https://www.nuget.org/packages/Edge.js)  
 * [Node.js](http://nodejs.org) (optional, if you want to use additional NPM packages)
 
-Edge.js support for scripting Node.js ships as a NuGet Package called `Edge.js`. It comes with everything you need to get started writing applications for x86 and x64 architectures. However, if you want to use additional Node.js packages from NPM, you must separately install Node.js runtime to access the NPM package manager. Edge.js has been developed and tested with Node.js v0.10.28. If you choose a different version of Node.js to install NPM packages, your mileage can vary. 
+Edge.js support for scripting Node.js ships as a NuGet Package called `Edge.js`. It comes with everything you need to get started writing applications for x86 and x64 architectures. However, if you want to use additional Node.js packages from NPM, you must separately install Node.js runtime to access the NPM package manager. Edge.js NuGet package has been developed and tested with Node.js v4.1.1. Older Edge.js packages exist for prior versions of Node.js. If you choose a different version of Node.js to install NPM packages, your mileage can vary. 
 
 You can install the [Edge.js NuGet package](https://www.nuget.org/packages/Edge.js) using the Visual Studio built-in NuGet package management functionality or using the stand-alone [NuGet client](http://docs.nuget.org/docs/start-here/installing-nuget). 
 
@@ -1611,6 +1611,10 @@ Notice how the `createHttpServer` function, in addition to starting an HTTP serv
 
 Using Node.js via Edge.js in ASP.NET web applications is no different than in a .NET console application. The Edge.js NuGet package must be referenced in your ASP.NET web application. If you are using any external Node.js modules, the entire `node_modules` subdirectory structure must be binplaced to the `bin` folder of you web application, and deployed that way to the server. 
 
+### How to: debug Node.js code running in a CLR application
+
+The `EDGE_NODE_PARAMS` environment variable allows you to specify any options that are normally passed via command line to the node executable. This includes the `--debug` options necessary to use [node-inspector](https://github.com/node-inspector/node-inspector) to debug Node.js code. 
+
 ### Building Edge.js NuGet package
 
 **Note** This mechanism requires hardening, expect the road ahead to be bumpy. 
@@ -1619,15 +1623,15 @@ These are unstructions for building the Edge.js NuGet package on Windows. The pa
 
 Preprequisties:
 
-* Visual Studio 2013  
-* Node.js (tested with v0.10.28)  
+* Visual Studio 2013 Update 5  
+* Node.js (tested with v4.1.1)  
 * Python 2.7.x  
-* node-gyp  
+* node-gyp (tested with 3.0.1)  
 
 To buid the NuGet package, open the Visual Studio 2013 Developer Command Prompt and call:
 
 ```
-tools\build_double.bat 0.10.28
+tools\build_double.bat 4.1.1
 ```
 
 (you can substitite another version of Node.js, but no other than 0.10.28 were tested).
