@@ -3,7 +3,6 @@
 THE_USER=${SUDO_USER:-${USERNAME:-guest}}
 
 set -e
-sudo -u ${THE_USER} mkdir ~/tmp
 
 # install prerequisities
 
@@ -28,7 +27,7 @@ npm install mocha -g
 
 sudo -u ${THE_USER} curl http://download.mono-project.com/sources/mono/mono-4.0.4.1.tar.bz2 > mono-4.0.4.1.tar.bz2
 sudo -u ${THE_USER} tar -xvf mono-4.0.4.1.tar.bz2
-cd mono-4.0.4.1
+cd mono-4.0.4
 # see http://stackoverflow.com/questions/15627951/mono-dllnotfound-error
 sudo -u ${THE_USER} bash -c 'sed -i "s/\@prefix\@\/lib\///g" ./data/config.in'
 sudo -u ${THE_USER} bash -c './configure --prefix=/usr/local --with-glib=embedded --enable-nls=no'
