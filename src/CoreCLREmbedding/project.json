@@ -2,16 +2,21 @@
     "frameworks": {
         "dnxcore50": {
             "dependencies": {
-                "System.Console": "4.0.0-beta-23019",
-                "System.Runtime": "4.0.20-beta-23019",
-                "System.Runtime.InteropServices": "4.0.20-beta-23019",
-                "System.Dynamic.Runtime": "4.0.10-beta-23019",
-                "System.Linq": "4.0.0-beta-23019",
-                "System.Linq.Expressions": "4.0.10-beta-23019",
-                "System.IO.FileSystem": "4.0.0-beta-23019",
-                "System.Runtime.Loader": "4.0.0-beta-23019",
-                "Microsoft.CSharp": "4.0.0-beta-23019",
-                "System.Reflection": "4.0.10-beta-23109"
+                "System.Console": "4.0.0-beta-*",
+                "System.Runtime": "4.0.21-beta-*",
+                "System.Runtime.InteropServices": "4.0.21-beta-*",
+                "System.Dynamic.Runtime": "4.0.11-beta-*",
+                "System.Linq": "4.0.1-beta-*",
+                "System.Linq.Expressions": "4.0.11-beta-*",
+                "System.IO.FileSystem": "4.0.1-beta-*",
+                "System.Runtime.Loader": "4.0.0-beta-*",
+                "Microsoft.CSharp": "4.0.1-beta-*",
+                "System.Reflection": "4.1.0-beta-*",
+                "Microsoft.Dnx.Runtime": "1.0.0-beta7",
+                "System.Xml.XPath.XmlDocument": "4.0.1-beta-*",
+                "System.Xml.ReaderWriter": "4.0.11-beta-*",
+                "System.Private.Uri": "4.0.1-beta-*",
+                "System.Collections.Specialized": "4.0.1-beta-*"
             }
         }
     },
