@@ -18,7 +18,7 @@ apt-get -y install curl g++ pkg-config libgdiplus libunwind8 libssl-dev unzip ma
 
 sudo -u ${THE_USER} curl https://codeload.github.com/joyent/node/tar.gz/v0.12.0 > node.v0.12.0.tar.gz
 sudo -u ${THE_USER} tar -xvf node.v0.12.0.tar.gz
-cd node-0.12.0/
+cd node-v0.x-archive-0.12.0/
 sudo -u ${THE_USER} bash -c './configure'
 sudo -u ${THE_USER} make
 make install
@@ -33,9 +33,6 @@ curl -sSL https://raw.githubusercontent.com/aspnet/Home/dev/dnvminstall.sh | DNX
 
 su ${THE_USER} -l -s /bin/bash -c "source .dnx/dnvm/dnvm.sh && dnvm install latest -r coreclr -u -a edge-coreclr"
 
-# TODO: remove this once Mono is no longer necessary for dnu restore and dnu build
-su ${THE_USER} -l -s /bin/bash -c "source .dnx/dnvm/dnvm.sh && dnvm install latest -r mono -u -a edge-mono"
-
 # download and build Edge.js
 
 sudo -u ${THE_USER} curl https://codeload.github.com/medicomp/edge/zip/master > edge.js.zip
@@ -44,7 +41,6 @@ cd edge-master/
 EDGE_DIRECTORY=$(pwd)
 chown -R ${THE_USER} ~/.npm
 
-su ${THE_USER} -l -s /bin/bash -c "source ~/.dnx/dnvm/dnvm.sh && dnvm use edge-mono && cd $EDGE_DIRECTORY && npm install"
-
+su ${THE_USER} -l -s /bin/bash -c "cd $EDGE_DIRECTORY && npm install"
 su ${THE_USER} -l -s /bin/bash -c "cd $EDGE_DIRECTORY && npm test"
-su ${THE_USER} -l -s /bin/bash -c "source ~/.dnx/dnvm/dnvm.sh && dnvm use edge-coreclr && cd $EDGE_DIRECTORY && EDGE_USE_CORECLR=1 npm test"
+su ${THE_USER} -l -s /bin/bash -c "cd $EDGE_DIRECTORY && EDGE_USE_CORECLR=1 npm test"
