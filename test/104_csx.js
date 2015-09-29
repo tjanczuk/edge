@@ -198,7 +198,7 @@ describe('edge-cs', function () {
         var func = edge.func({
             source: process.env.EDGE_USE_CORECLR ?
                 function () {/* 
-                    //#r "System.Data.SqlClient"
+                    //#r "System.Data.Common"
 
                     using System.Threading.Tasks;
                     using System.Data;
@@ -237,7 +237,7 @@ describe('edge-cs', function () {
         var func = edge.func({
             source: process.env.EDGE_USE_CORECLR ?
                 function () {/* 
-                    #r "System.Data.SqlClient"
+                    #r "System.Data.Common"
 
                     using System.Threading.Tasks;
                     using System.Data;
@@ -276,7 +276,7 @@ describe('edge-cs', function () {
         var func = edge.func({
             source: process.env.EDGE_USE_CORECLR ?
                 function () {/* 
-                    //#r "System.Data.SqlClient"
+                    //#r "System.Data.Common"
                     
                     async (input) => 
                     {
@@ -303,7 +303,7 @@ describe('edge-cs', function () {
         var func = edge.func({
             source: process.env.EDGE_USE_CORECLR ?
                 function () {/* 
-                    #r "System.Data.SqlClient"
+                    #r "System.Data.Common"
                     
                     async (input) => 
                     {
@@ -330,13 +330,13 @@ describe('edge-cs', function () {
         var func = edge.func({
             source: process.env.EDGE_USE_CORECLR ?
                 function () {/* 
-                    #r "System.Data.SqlClient"
+                    #r "System.Data.Common"
 
                     using System.Data;
                     
                     async (input) => 
                     {
-                        return input.ToString() + " is " + SqlDbType.Real.ToString();
+                        return input.ToString() + " is " + DbType.Single.ToString();
                     }
                 */} :
                 function () {/* 
@@ -346,13 +346,13 @@ describe('edge-cs', function () {
                     
                     async (input) => 
                     {
-                        return input.ToString() + " is " + SqlDbType.Real.ToString();
+                        return input.ToString() + " is " + DbType.Single.ToString();
                     }
                 */}
         });
         func("JavaScript", function (error, result) {
             assert.ifError(error);
-            assert.equal(result, 'JavaScript is Real');
+            assert.equal(result, 'JavaScript is Single');
             done();
         });
     });

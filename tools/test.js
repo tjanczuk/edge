@@ -1,58 +1,47 @@
-var spawn = require('child_process').spawn
-	, path = require('path')
-	, testDir = path.resolve(__dirname, '../test')
-	, input = path.resolve(testDir, 'tests.cs')
-	, output = path.resolve(testDir, process.env.EDGE_USE_CORECLR ? 'Edge.Tests.CoreClr.dll' : 'Edge.Tests.dll')
-	, buildParameters = ['-target:library', '/debug', '-out:' + output, input]
-	, winBuild = []
-	, monoBuild = ['-sdk:4.5']
-	, mocha = path.resolve(__dirname, '../node_modules/mocha/bin/mocha')
-	, fs = require('fs')
-	;
+var spawn = require('child_process').spawn;
+var path = require('path');
+var testDir = path.resolve(__dirname, '../test');
+var input = path.resolve(testDir, 'tests.cs');
+var output = path.resolve(testDir, process.env.EDGE_USE_CORECLR ? 'Edge.Tests.CoreClr.dll' : 'Edge.Tests.dll');
+var buildParameters = ['-target:library', '/debug', '-out:' + output, input];
+var mocha = path.resolve(__dirname, '../node_modules/mocha/bin/mocha');
+var fs = require('fs');
 
-if(process.env.EDGE_USE_CORECLR && process.platform !== 'win32') {
-	var dnxPath = path.dirname(whereis('dnx'));
+if (process.platform === 'win32') {
+	spawn('csc', buildParameters, { 
+		stdio: 'inherit' 
+	}).on('close', runOnSuccess);
+} 
 
-	monoBuild = monoBuild.concat([
-		'-nostdlib',
-		'-noconfig',
-		'-r:' + path.join(dnxPath, 'System.Collections.dll'),
-		'-r:' + path.join(dnxPath, 'mscorlib.dll'),
-		'-r:' + path.join(dnxPath, 'System.Dynamic.Runtime.dll'),
-		'-r:' + path.join(dnxPath, 'Microsoft.CSharp.dll'),
-		'-r:' + path.join(dnxPath, 'System.ObjectModel.dll'),
-		'-r:' + path.join(dnxPath, 'System.Runtime.dll'),
-		'-r:' + path.join(dnxPath, 'System.Linq.Expressions.dll')
-	]);
-}
+else {
+	spawn('dnu', ['restore'], { 
+		stdio: 'inherit', 
+		cwd: testDir 
+	}).on('close', function(code, signal) {
+		if (code === 0) {
+			spawn('dnu', ['build'], { 
+				stdio: 'inherit', 
+				cwd: testDir 
+			}).on('close', function(code, signal) {
+				var outputStream = fs.createWriteStream(output);
+				fs.createReadStream(path.join(testDir, 'bin', 'Debug', 'dnxcore50', 'test.dll')).pipe(outputStream);
 
-if(process.platform === 'win32') {
-	spawn('csc', winBuild.concat(buildParameters), { stdio: 'inherit' })
-		.on('close', runOnSuccess);
-} else {
-	spawn('dmcs', monoBuild.concat(buildParameters), { stdio: 'inherit' })
-		.on('close', runOnSuccess);
+				outputStream.on('close', function() {
+					runOnSuccess(0);
+				});
+			});
+		}
+	});
 }
 
 function runOnSuccess(code, signal) {
-	if(code === 0) {
-		spawn('node', [mocha, testDir, '-R', 'spec'], { stdio: 'inherit' })
-			.on('error', function(err) { console.log(err); });
+	if (code === 0) {
+		process.env['EDGE_APP_ROOT'] = testDir;
+
+		spawn('node', [mocha, testDir, '-R', 'spec'], { 
+			stdio: 'inherit' 
+		}).on('error', function(err) { 
+			console.log(err); 
+		});
 	}
-}
-
-function whereis(filename){
-    var pathSep = process.platform === 'win32' ? ';' : ':';
-
-    var directories = process.env.PATH.split(pathSep);
-
-    for (var i = 0; i < directories.length; i++) {
-        var path = directories[i] + '/' + filename;
-
-        if (fs.existsSync(path)) {
-            return path;
-        }
-    }
-
-    return null;
 }

@@ -168,31 +168,33 @@ public class CoreCLREmbedding
 
             string packagesRepositoryPath = ResolveRepositoryPath(projectDirectory);
             LockFile lockFile = ReadLockFile(Path.Combine(projectDirectory, "project.lock.json"));
-            LockFileTarget target = lockFile.Targets.SingleOrDefault(t => t.TargetFramework == _targetFrameworkName);
 
-            if (target == null)
+            if (!lockFile.Targets.Any(t => t.TargetFramework == _targetFrameworkName))
             {
                 throw new Exception("The project.json file in " + projectDirectory + " does not have a framework entry for dnxcore50.");
             }
 
-            foreach (LockFileTargetLibrary library in target.Libraries)
+            foreach (LockFileTarget target in lockFile.Targets.Where(t => t.TargetFramework == _targetFrameworkName))
             {
-                if (!RuntimeAssemblies.ContainsKey(library.Name) && library.RuntimeAssemblies.Count > 0)
+                foreach (LockFileTargetLibrary library in target.Libraries)
                 {
-                    string runtimeAssemblyPath = Path.Combine(packagesRepositoryPath, library.Name, library.Version.ToString(),
-                        library.RuntimeAssemblies[0].Path.Replace('/', Path.DirectorySeparatorChar));
+                    if (!RuntimeAssemblies.ContainsKey(library.Name) && library.RuntimeAssemblies.Count > 0)
+                    {
+                        string runtimeAssemblyPath = Path.Combine(packagesRepositoryPath, library.Name, library.Version.ToString(),
+                            library.RuntimeAssemblies[0].Path.Replace('/', Path.DirectorySeparatorChar));
 
-                    DebugMessage("EdgeAssemblyLoadContext::ResolveDependencies (CLR) - Resolved {0} to runtime assembly {1}", library.Name, runtimeAssemblyPath);
-                    RuntimeAssemblies[library.Name] = runtimeAssemblyPath;
-                }
+                        DebugMessage("EdgeAssemblyLoadContext::ResolveDependencies (CLR) - Resolved {0} to runtime assembly {1}", library.Name, runtimeAssemblyPath);
+                        RuntimeAssemblies[library.Name] = runtimeAssemblyPath;
+                    }
 
-                if (!CompileAssemblies.ContainsKey(library.Name) && library.CompileTimeAssemblies.Count > 0)
-                {
-                    string compileAssemblyPath = Path.Combine(packagesRepositoryPath, library.Name, library.Version.ToString(),
-                        library.CompileTimeAssemblies[0].Path.Replace('/', Path.DirectorySeparatorChar));
+                    if (!CompileAssemblies.ContainsKey(library.Name) && library.CompileTimeAssemblies.Count > 0)
+                    {
+                        string compileAssemblyPath = Path.Combine(packagesRepositoryPath, library.Name, library.Version.ToString(),
+                            library.CompileTimeAssemblies[0].Path.Replace('/', Path.DirectorySeparatorChar));
 
-                    DebugMessage("EdgeAssemblyLoadContext::ResolveDependencies (CLR) - Resolved {0} to compile assembly {1}", library.Name, compileAssemblyPath);
-                    CompileAssemblies[library.Name] = compileAssemblyPath;
+                        DebugMessage("EdgeAssemblyLoadContext::ResolveDependencies (CLR) - Resolved {0} to compile assembly {1}", library.Name, compileAssemblyPath);
+                        CompileAssemblies[library.Name] = compileAssemblyPath;
+                    }
                 }
             }
         }
