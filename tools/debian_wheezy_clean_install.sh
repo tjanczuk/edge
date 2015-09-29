@@ -41,6 +41,6 @@ cd edge-master/
 EDGE_DIRECTORY=$(pwd)
 chown -R ${THE_USER} ~/.npm
 
-su ${THE_USER} -l -s /bin/bash -c "cd $EDGE_DIRECTORY && npm install"
-su ${THE_USER} -l -s /bin/bash -c "cd $EDGE_DIRECTORY && npm test"
-su ${THE_USER} -l -s /bin/bash -c "cd $EDGE_DIRECTORY && EDGE_USE_CORECLR=1 npm test"
+su ${THE_USER} -l -s /bin/bash -c "source ~/.dnx/dnvm/dnvm.sh && dnvm use edge-coreclr && cd $EDGE_DIRECTORY && npm install"
+su ${THE_USER} -l -s /bin/bash -c "source ~/.dnx/dnvm/dnvm.sh && dnvm use edge-coreclr && cd $EDGE_DIRECTORY && npm test"
+su ${THE_USER} -l -s /bin/bash -c "source ~/.dnx/dnvm/dnvm.sh && dnvm use edge-coreclr && cd $EDGE_DIRECTORY && EDGE_USE_CORECLR=1 npm test"
