@@ -1,7 +1,7 @@
 var edge = require('../lib/edge.js'), assert = require('assert')
     , path = require('path');
 
-var edgeTestDll = path.join(__dirname, process.env.EDGE_USE_CORECLR ? 'Edge.Tests.CoreClr.dll' : 'Edge.Tests.dll');
+var edgeTestDll = path.join(__dirname, 'Edge.Tests.dll');
 
 describe('async call from node.js to .net', function () {
 

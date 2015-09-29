@@ -2,13 +2,17 @@ var spawn = require('child_process').spawn;
 var path = require('path');
 var testDir = path.resolve(__dirname, '../test');
 var input = path.resolve(testDir, 'tests.cs');
-var output = path.resolve(testDir, process.env.EDGE_USE_CORECLR ? 'Edge.Tests.CoreClr.dll' : 'Edge.Tests.dll');
+var output = path.resolve(testDir, 'Edge.Tests.dll');
 var buildParameters = ['-target:library', '/debug', '-out:' + output, input];
 var mocha = path.resolve(__dirname, '../node_modules/mocha/bin/mocha');
 var fs = require('fs');
 
-if (process.platform === 'win32') {
-	spawn('csc', buildParameters, { 
+if (!process.env.EDGE_USE_CORECLR) {
+	if (process.platform !== 'win32') {
+		buildParameters = buildParameters.concat(['-sdk:4.5']);
+	}
+
+	spawn(process.platform === 'win32' ? 'csc' : 'dmcs', buildParameters, { 
 		stdio: 'inherit' 
 	}).on('close', runOnSuccess);
 } 
