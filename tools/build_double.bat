@@ -2,7 +2,7 @@
 set SELF=%~dp0
 if "%1" equ "" (
     echo Usage: build_double.bat {node_version}
-    echo e.g. build_double.bat 0.12.0
+    echo e.g. build_double.bat 4.1.1
     exit /b -1
 )
 
@@ -27,7 +27,7 @@ if not exist "%SELF%\build\nuget.exe" (
 )
 
 if not exist "%SELF%\build\%1.zip" (
-	"%SELF%\build\download.exe" https://github.com/joyent/node/archive/v%1.zip "%SELF%\build\%1.zip"
+	"%SELF%\build\download.exe" https://github.com/nodejs/node/archive/v%1.zip "%SELF%\build\%1.zip"
 )
 
 if not exist "%SELF%\build\node-%1" (
@@ -40,11 +40,11 @@ call :build_node %1 x64
 if %ERRORLEVEL% neq 0 exit /b -1
 
 if not exist "%SELF%\build\node-%1-x86\node.exe" (
-	"%SELF%\build\download.exe" http://nodejs.org/dist/v%1/node.exe "%SELF%\build\node-%1-x86\node.exe"
+	"%SELF%\build\download.exe" http://nodejs.org/dist/v%1/win-x86/node.exe "%SELF%\build\node-%1-x86\node.exe"
 )
 
 if not exist "%SELF%\build\node-%1-x64\node.exe" (
-	"%SELF%\build\download.exe" http://nodejs.org/dist/v%1/x64/node.exe "%SELF%\build\node-%1-x64\node.exe"
+	"%SELF%\build\download.exe" http://nodejs.org/dist/v%1/win-x64/node.exe "%SELF%\build\node-%1-x64\node.exe"
 )
 
 call :build_edge %1 x86

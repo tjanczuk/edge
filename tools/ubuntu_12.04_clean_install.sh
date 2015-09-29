@@ -16,9 +16,9 @@ apt-get -y install curl g++ pkg-config libgdiplus libunwind8 libssl-dev unzip ma
 
 # download and build Node.js
 
-sudo -u ${THE_USER} curl https://codeload.github.com/joyent/node/tar.gz/v0.12.0 > node.v0.12.0.tar.gz
-sudo -u ${THE_USER} tar -xvf node.v0.12.0.tar.gz
-cd node-v0.x-archive-0.12.0/
+sudo -u ${THE_USER} curl https://codeload.github.com/nodejs/node/tar.gz/v4.1.1 > node.v4.1.1.tar.gz
+sudo -u ${THE_USER} tar -xvf node.v4.1.1.tar.gz
+cd node-4.1.1/
 sudo -u ${THE_USER} bash -c './configure'
 sudo -u ${THE_USER} make
 make install

@@ -24,20 +24,20 @@ NAN_METHOD(initializeClrFunc)
 #ifdef HAVE_CORECLR
 	if (HasEnvironmentVariable("EDGE_USE_CORECLR"))
 	{
-		return CoreClrFunc::Initialize(args);
+		CoreClrFunc::Initialize(info);
 	}
 
 #endif
-	return ClrFunc::Initialize(args);
+	ClrFunc::Initialize(info);
 #else
-	return CoreClrFunc::Initialize(args);
+	CoreClrFunc::Initialize(info);
 #endif
 }
 
 #ifdef EDGE_PLATFORM_WINDOWS
 #pragma unmanaged
 #endif
-void init(Handle<Object> target)
+NAN_MODULE_INIT(init)
 {
     debugMode = HasEnvironmentVariable("EDGE_DEBUG");
     DBG("edge::init");
@@ -57,7 +57,9 @@ void init(Handle<Object> target)
 #endif
 
     enableScriptIgnoreAttribute = HasEnvironmentVariable("EDGE_ENABLE_SCRIPTIGNOREATTRIBUTE");
-    NODE_SET_METHOD(target, "initializeClrFunc", initializeClrFunc);
+    Nan::Set(target,
+        Nan::New<v8::String>("initializeClrFunc").ToLocalChecked(),
+        Nan::New<v8::FunctionTemplate>(initializeClrFunc)->GetFunction());
 }
 
 #ifdef EDGE_PLATFORM_WINDOWS

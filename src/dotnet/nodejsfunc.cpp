@@ -16,11 +16,11 @@
  */
 #include "edge.h"
 
-NodejsFunc::NodejsFunc(Handle<Function> function)
+NodejsFunc::NodejsFunc(v8::Local<v8::Function> function)
 {
     DBG("NodejsFunc::NodejsFunc");
-    this->Func = new Persistent<Function>;
-    NanAssignPersistent(*(this->Func), function);
+    this->Func = new Nan::Persistent<v8::Function>;
+    this->Func->Reset(function);
 }
 
 NodejsFunc::~NodejsFunc()
@@ -31,7 +31,7 @@ NodejsFunc::~NodejsFunc()
 NodejsFunc::!NodejsFunc()
 {
     DBG("NodejsFunc::!NodejsFunc");
-    PersistentDisposeContext^ context = gcnew PersistentDisposeContext((Persistent<Value>*)this->Func);
+    PersistentDisposeContext^ context = gcnew PersistentDisposeContext((Nan::Persistent<v8::Value>*)this->Func);
     ClrActionContext* data = new ClrActionContext;
     data->action = gcnew System::Action(context, &PersistentDisposeContext::CallDisposeOnV8Thread);
     uv_edge_async_t* uv_edge_async = V8SynchronizationContext::RegisterAction(ClrActionContext::ActionCallback, data);

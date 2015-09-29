@@ -42,7 +42,7 @@ function runOnSuccess(code, signal) {
 	if (code === 0) {
 		process.env['EDGE_APP_ROOT'] = testDir;
 
-		spawn('node', [mocha, testDir, '-R', 'spec'], { 
+		spawn('node', [mocha, testDir, '-R', 'spec', '-gc'], { 
 			stdio: 'inherit' 
 		}).on('error', function(err) { 
 			console.log(err); 

@@ -1,9 +1,9 @@
 require 'formula'
 
 class Mono64 < Formula
-  url 'http://download.mono-project.com/sources/mono/mono-4.0.1.44.tar.bz2'
+  url 'http://download.mono-project.com/sources/mono/mono-4.0.4.1.tar.bz2'
   homepage 'http://www.mono-project.com'
-  sha256 'eaf5bd9d19818cb89483b3c9cae2ee3569643fd621560da036f6a49f6b3e3a6f'
+  sha1 '12f3dbdac92e937cafba1d4e5a168c4cf2620935'
 
   def install
     args = ["--prefix=#{prefix}",
