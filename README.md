@@ -100,6 +100,7 @@ Listen to the [Edge.js podcast on Herdingcode](http://herdingcode.com/herding-co
 &nbsp;&nbsp;&nbsp;&nbsp;[How to: debug Node.js code running in a CLR application](#how-to-debug-nodejs-code-running-in-a-clr-application)  
 &nbsp;&nbsp;&nbsp;&nbsp;[Building Edge.js NuGet package](#building-edgejs-nuget-package)  
 &nbsp;&nbsp;&nbsp;&nbsp;[Running tests of scripting Node.js in C#](#running-tests-of-scripting-nodejs-in-c)  
+[Use cases and other resources](#use-cases-and-other-resources)  
 [Contribution and derived work](#contribution-and-derived-work)  
 
 ## Introduction 
@@ -1663,6 +1664,11 @@ After you have compiled the stress tests, simply launch the executable, attach r
 ```
 C:\projects\edge\test\double\double_stress\bin\Release> double_stress.exe
 ```
+
+## Use cases and other resources
+
+[Accessing MS SQL from Node.js via Edge.js](https://blog.codeship.com/node-js-sql-server-edge-js/) by [David Neal](https://twitter.com/reverentgeek)  
+[Using ASP.NET and React on the server via Edge.js](http://navigation4asp.net/2015/10/13/progressive-enhancement-enhanced/) by [Graham Mendick](https://twitter.com/grahammendick)  
 
 ## Contribution and derived work
 
