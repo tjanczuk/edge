@@ -1233,14 +1233,15 @@ brew tap aspnet/dnx
 brew update
 brew install dnvm
 source dnvm.sh
-dnvm install latest -r coreclr -u
-dnvm install latest -r mono -u
+dnvm install latest -r coreclr -u -alias edge-coreclr
+dnvm install latest -r mono -u -alias edge-mono
 ```
 
 Then install and build Edge.js:
 
 ```bash
 brew install pkg-config
+dnvm use edge-mono
 sudo npm install node-gyp -g
 npm install edge
 ```
@@ -1257,6 +1258,18 @@ To build a debug build instead of release, you need to:
 node-gyp configure build -debug
 export EDGE_NATIVE=/Users/tomek/edge/build/Debug/edge_nativeclr.node
 ```
+
+After installation, if you wish to run using CoreCLR, switch to it using:
+
+````bash
+dnvm use edge-coreclr
+````
+
+If you wish to run using Mono, switch to it using:
+
+````bash
+dnvm use edge-mono
+````
 
 ### Building on Linux 
 
