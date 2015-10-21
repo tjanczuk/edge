@@ -8,29 +8,31 @@ CoreClrFunc::CoreClrFunc()
 NAN_METHOD(coreClrFuncProxy)
 {
     DBG("coreClrFuncProxy");
-    NanEscapableScope();
-    Handle<v8::External> correlator = Handle<v8::External>::Cast(args[2]);
+    Nan::EscapableHandleScope scope;
+    v8::Local<v8::External> correlator = v8::Local<v8::External>::Cast(info[2]);
     CoreClrFuncWrap* wrap = (CoreClrFuncWrap*)(correlator->Value());
     CoreClrFunc* clrFunc = wrap->clrFunc;
-    NanReturnValue(clrFunc->Call(args[0], args[1]));
+    info.GetReturnValue().Set(clrFunc->Call(info[0], info[1]));
 }
 
-NAN_WEAK_CALLBACK(coreClrFuncProxyNearDeath)
+template<typename T>
+void coreClrFuncProxyNearDeath(const Nan::WeakCallbackInfo<T> &data)
 {
     DBG("coreClrFuncProxyNearDeath");
     CoreClrFuncWrap* wrap = (CoreClrFuncWrap*)(data.GetParameter());
+	delete wrap->clrFunc;
     wrap->clrFunc = NULL;
     delete wrap;
 }
 
-Handle<v8::Function> CoreClrFunc::InitializeInstance(CoreClrGcHandle functionHandle)
+v8::Local<v8::Function> CoreClrFunc::InitializeInstance(CoreClrGcHandle functionHandle)
 {
     DBG("CoreClrFunc::InitializeInstance - Started");
 
-    static Persistent<v8::Function> proxyFactory;
-    static Persistent<v8::Function> proxyFunction;
+    static Nan::Persistent<v8::Function> proxyFactory;
+    static Nan::Persistent<v8::Function> proxyFunction;
 
-    NanEscapableScope();
+    Nan::EscapableHandleScope scope;
 
     CoreClrFunc* app = new CoreClrFunc();
     app->functionHandle = functionHandle;
@@ -43,28 +45,29 @@ Handle<v8::Function> CoreClrFunc::InitializeInstance(CoreClrGcHandle functionHan
     {
     	DBG("CoreClrFunc::InitializeInstance - Creating proxy factory");
 
-        NanAssignPersistent(
-            proxyFunction, NanNew<FunctionTemplate>(coreClrFuncProxy)->GetFunction());
-        Handle<v8::String> code = NanNew<v8::String>(
-            "(function (f, ctx) { return function (d, cb) { return f(d, cb, ctx); }; })");
-        NanAssignPersistent(
-            proxyFactory, Handle<v8::Function>::Cast(v8::Script::Compile(code)->Run()));
+		v8::Local<v8::Function> clrFuncProxyFunction = Nan::New<v8::FunctionTemplate>(coreClrFuncProxy)->GetFunction();
+		proxyFunction.Reset(clrFuncProxyFunction);
+		v8::Local<v8::String> code = Nan::New<v8::String>(
+			"(function (f, ctx) { return function (d, cb) { return f(d, cb, ctx); }; })").ToLocalChecked();
+		v8::Local<v8::Function> codeFunction = v8::Local<v8::Function>::Cast(v8::Script::Compile(code)->Run());
+		proxyFactory.Reset(codeFunction);
     }
 
-    Handle<v8::Value> factoryArgv[] = { NanNew(proxyFunction), NanNew<v8::External>((void*)wrap) };
-    Local<v8::Function> funcProxy =
-            (NanNew(proxyFactory)->Call(NanGetCurrentContext()->Global(), 2, factoryArgv)).As<v8::Function>();
-    NanMakeWeakPersistent(funcProxy, (void*)wrap, &coreClrFuncProxyNearDeath);
+	v8::Local<v8::Value> factoryArgv[] = { Nan::New(proxyFunction), Nan::New<v8::External>((void*)wrap) };
+	v8::Local<v8::Function> funcProxy =
+		(Nan::New(proxyFactory)->Call(Nan::GetCurrentContext()->Global(), 2, factoryArgv)).As<v8::Function>();
+	Nan::Persistent<v8::Function> funcProxyPersistent(funcProxy);
+	funcProxyPersistent.SetWeak((void*)wrap, &coreClrFuncProxyNearDeath, Nan::WeakCallbackType::kParameter);
 
     DBG("CoreClrFunc::InitializeInstance - Finished");
 
-    return NanEscapeScope(funcProxy);
+    return scope.Escape(funcProxy);
 }
 
-Handle<v8::Value> CoreClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value> callbackOrSync)
+v8::Local<v8::Value> CoreClrFunc::Call(v8::Local<v8::Value> payload, v8::Local<v8::Value> callbackOrSync)
 {
 	DBG("CoreClrFunc::Call - Started");
-	NanEscapableScope();
+	Nan::EscapableHandleScope scope;
 
 	void* marshalData;
 	int payloadType;
@@ -100,12 +103,12 @@ Handle<v8::Value> CoreClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value>
 		{
 			if (taskState == TaskStatusRanToCompletion)
 			{
-				return NanEscapeScope(CoreClrFunc::MarshalCLRToV8(result, resultType));
+				return scope.Escape(CoreClrFunc::MarshalCLRToV8(result, resultType));
 			}
 
 			else
 			{
-				throwV8Exception(CoreClrFunc::MarshalCLRToV8(result, resultType));
+				Nan::ThrowError(CoreClrFunc::MarshalCLRToV8(result, resultType));
 			}
 		}
 
@@ -143,25 +146,25 @@ Handle<v8::Value> CoreClrFunc::Call(Handle<v8::Value> payload, Handle<v8::Value>
 
 	DBG("CoreClrFunc::Call - Finished");
 
-	return NanEscapeScope(NanUndefined());
+	return scope.Escape(Nan::Undefined());
 }
 
 NAN_METHOD(CoreClrFunc::Initialize)
 {
 	DBG("CoreClrFunc::Initialize - Starting");
 
-	NanEscapableScope();
-	Handle<v8::Object> options = args[0]->ToObject();
-	Handle<v8::Function> result;
+	Nan::EscapableHandleScope scope;
+	v8::Local<v8::Object> options = info[0]->ToObject();
+	v8::Local<v8::Function> result;
 
-	Handle<v8::Value> assemblyFileArgument = options->Get(NanNew<v8::String>("assemblyFile"));
+	v8::Local<v8::Value> assemblyFileArgument = options->Get(Nan::New<v8::String>("assemblyFile").ToLocalChecked());
 
 	if (assemblyFileArgument->IsString())
 	{
 		v8::String::Utf8Value assemblyFile(assemblyFileArgument);
-		v8::String::Utf8Value typeName(options->Get(NanNew<v8::String>("typeName")));
-		v8::String::Utf8Value methodName(options->Get(NanNew<v8::String>("methodName")));
-		v8::Handle<v8::Value> exception;
+		v8::String::Utf8Value typeName(options->Get(Nan::New<v8::String>("typeName").ToLocalChecked()));
+		v8::String::Utf8Value methodName(options->Get(Nan::New<v8::String>("methodName").ToLocalChecked()));
+		v8::Local<v8::Value> exception;
 
 		DBG("CoreClrFunc::Initialize - Loading %s.%s() from %s", *typeName, *methodName, *assemblyFile);
 		CoreClrGcHandle functionHandle = CoreClrEmbedding::GetClrFuncReflectionWrapFunc(*assemblyFile, *typeName, *methodName, &exception);
@@ -177,13 +180,13 @@ NAN_METHOD(CoreClrFunc::Initialize)
 		else
 		{
 			DBG("CoreClrFunc::Initialize - Error loading function, V8 exception being thrown");
-			throwV8Exception(exception);
+			return Nan::ThrowError(exception);
 		}
 	}
 
 	else
 	{
-		v8::Handle<v8::Value> exception;
+		v8::Local<v8::Value> exception;
 		void* marshalledOptionsData;
 		int payloadType;
 
@@ -203,16 +206,13 @@ NAN_METHOD(CoreClrFunc::Initialize)
 		else
 		{
 			DBG("CoreClrFunc::Initialize - Error loading function, V8 exception being thrown");
-			throwV8Exception(exception);
+			return Nan::ThrowError(exception);
 		}
-
-		// TODO: support compilation from source once the Roslyn C# compiler is made available on CoreCLR
-		//throwV8Exception("Compiling .NET methods from source is not yet supported with CoreCLR, you must provide an assembly path, type name, and method name as arguments to edge.initializeClrFunction().");
 	}
 
 	DBG("CoreClrFunc::Initialize - Finished");
 
-	NanReturnValue(result);
+	info.GetReturnValue().Set(result);
 }
 
 void CoreClrFunc::FreeMarshalData(void* marshalData, int payloadType)
@@ -257,7 +257,7 @@ void CoreClrFunc::FreeMarshalData(void* marshalData, int payloadType)
 	}
 }
 
-char* CoreClrFunc::CopyV8StringBytes(Handle<v8::String> v8String)
+char* CoreClrFunc::CopyV8StringBytes(v8::Local<v8::String> v8String)
 {
 	String::Utf8Value utf8String(v8String);
 	char* sourceBytes = *utf8String;
@@ -274,15 +274,15 @@ char* CoreClrFunc::CopyV8StringBytes(Handle<v8::String> v8String)
 	return destinationBytes;
 }
 
-void CoreClrFunc::MarshalV8ExceptionToCLR(Handle<v8::Value> exception, void** marshalData)
+void CoreClrFunc::MarshalV8ExceptionToCLR(v8::Local<v8::Value> exception, void** marshalData)
 {
-    NanScope();
+	Nan::HandleScope scope;
 
     int payloadType;
 
     if (exception->IsObject())
     {
-        Handle<Value> stack = exception->ToObject()->Get(NanNew<v8::String>("stack"));
+        v8::Local<Value> stack = exception->ToObject()->Get(Nan::New<v8::String>("stack").ToLocalChecked());
 
         if (stack->IsString())
         {
@@ -291,26 +291,26 @@ void CoreClrFunc::MarshalV8ExceptionToCLR(Handle<v8::Value> exception, void** ma
         }
     }
 
-    *marshalData = CopyV8StringBytes(Handle<v8::String>::Cast(exception));
+    *marshalData = CopyV8StringBytes(v8::Local<v8::String>::Cast(exception));
 }
 
-void CoreClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata, void** marshalData, int* payloadType)
+void CoreClrFunc::MarshalV8ToCLR(v8::Local<v8::Value> jsdata, void** marshalData, int* payloadType)
 {
 	if (jsdata->IsString())
 	{
-		*marshalData = CopyV8StringBytes(Handle<v8::String>::Cast(jsdata));
+		*marshalData = CopyV8StringBytes(v8::Local<v8::String>::Cast(jsdata));
 		*payloadType = V8TypeString;
 	}
 
 	else if (jsdata->IsFunction())
 	{
-		*marshalData = new CoreClrNodejsFunc(Handle<v8::Function>::Cast(jsdata));
+		*marshalData = new CoreClrNodejsFunc(v8::Local<v8::Function>::Cast(jsdata));
 		*payloadType = V8TypeFunction;
 	}
 
 	else if (node::Buffer::HasInstance(jsdata))
 	{
-		Handle<v8::Object> jsBuffer = jsdata->ToObject();
+		v8::Local<v8::Object> jsBuffer = jsdata->ToObject();
 		V8BufferData* bufferData = new V8BufferData();
 
 		bufferData->bufferLength = (int)node::Buffer::Length(jsBuffer);
@@ -324,7 +324,7 @@ void CoreClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata, void** marshalData, i
 
 	else if (jsdata->IsArray())
 	{
-		Handle<v8::Array> jsarray = Handle<v8::Array>::Cast(jsdata);
+		v8::Local<v8::Array> jsarray = v8::Local<v8::Array>::Cast(jsdata);
 		V8ArrayData* arrayData = new V8ArrayData();
 
 		arrayData->arrayLength = jsarray->Length();
@@ -342,7 +342,7 @@ void CoreClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata, void** marshalData, i
 
 	else if (jsdata->IsDate())
 	{
-		Handle<v8::Date> jsdate = Handle<v8::Date>::Cast(jsdata);
+		v8::Local<v8::Date> jsdate = v8::Local<v8::Date>::Cast(jsdata);
 		double* ticks = new double();
 
 		*ticks = jsdate->NumberValue();
@@ -395,8 +395,8 @@ void CoreClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata, void** marshalData, i
 	{
 		V8ObjectData* objectData = new V8ObjectData();
 
-		Handle<v8::Object> jsobject = Handle<v8::Object>::Cast(jsdata);
-		Handle<v8::Array> propertyNames = jsobject->GetPropertyNames();
+		v8::Local<v8::Object> jsobject = v8::Local<v8::Object>::Cast(jsdata);
+		v8::Local<v8::Array> propertyNames = jsobject->GetPropertyNames();
 
 		objectData->propertiesCount = propertyNames->Length();
 		objectData->propertyData = new void*[objectData->propertiesCount];
@@ -405,7 +405,7 @@ void CoreClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata, void** marshalData, i
 
 		for (unsigned int i = 0; i < propertyNames->Length(); i++)
 		{
-			Handle<v8::String> name = Handle<v8::String>::Cast(propertyNames->Get(i));
+			v8::Local<v8::String> name = v8::Local<v8::String>::Cast(propertyNames->Get(i));
 
 			objectData->propertyNames[i] = CopyV8StringBytes(name);
 			MarshalV8ToCLR(jsobject->Get(name), &objectData->propertyData[i], &objectData->propertyTypes[i]);
@@ -416,75 +416,75 @@ void CoreClrFunc::MarshalV8ToCLR(Handle<v8::Value> jsdata, void** marshalData, i
 	}
 }
 
-Handle<v8::Value> CoreClrFunc::MarshalCLRToV8(void* marshalData, int payloadType)
+v8::Local<v8::Value> CoreClrFunc::MarshalCLRToV8(void* marshalData, int payloadType)
 {
-	NanEscapableScope();
+	Nan::EscapableHandleScope scope;
 
 	if (payloadType == V8TypeString)
 	{
-		return NanEscapeScope(NanNew<v8::String>((char*) marshalData));
+		return scope.Escape(Nan::New<v8::String>((char*)marshalData).ToLocalChecked());
 	}
 
 	else if (payloadType == V8TypeInt32)
 	{
-		return NanEscapeScope(NanNew<v8::Integer>(*(int*) marshalData));
+		return scope.Escape(Nan::New<v8::Integer>(*(int*) marshalData));
 	}
 
 	else if (payloadType == V8TypeNumber)
 	{
-		return NanEscapeScope(NanNew<v8::Number>(*(double*) marshalData));
+		return scope.Escape(Nan::New<v8::Number>(*(double*) marshalData));
 	}
 
 	else if (payloadType == V8TypeDate)
 	{
-		return NanEscapeScope(NanNew<v8::Date>(*(double*) marshalData));
+		return scope.Escape(Nan::New<v8::Date>(*(double*) marshalData).ToLocalChecked());
 	}
 
 	else if (payloadType == V8TypeBoolean)
 	{
 		bool value = (*(int*) marshalData) != 0;
-		return NanEscapeScope(NanNew<v8::Boolean>(value));
+		return scope.Escape(Nan::New<v8::Boolean>(value));
 	}
 
 	else if (payloadType == V8TypeArray)
 	{
 		V8ArrayData* arrayData = (V8ArrayData*) marshalData;
-		Handle<v8::Array> result = NanNew<v8::Array>();
+		v8::Local<v8::Array> result = Nan::New<v8::Array>();
 
 		for (int i = 0; i < arrayData->arrayLength; i++)
 		{
 			result->Set(i, MarshalCLRToV8(arrayData->itemValues[i], arrayData->itemTypes[i]));
 		}
 
-		return NanEscapeScope(result);
+		return scope.Escape(result);
 	}
 
 	else if (payloadType == V8TypeObject || payloadType == V8TypeException)
 	{
 		V8ObjectData* objectData = (V8ObjectData*) marshalData;
-		Handle<v8::Object> result = NanNew<v8::Object>();
+		v8::Local<v8::Object> result = Nan::New<v8::Object>();
 
 		for (int i = 0; i < objectData->propertiesCount; i++)
 		{
-			result->Set(NanNew<v8::String>(objectData->propertyNames[i]), MarshalCLRToV8(objectData->propertyData[i], objectData->propertyTypes[i]));
+			result->Set(Nan::New<v8::String>(objectData->propertyNames[i]).ToLocalChecked(), MarshalCLRToV8(objectData->propertyData[i], objectData->propertyTypes[i]));
 		}
 
 		if (payloadType == V8TypeException)
 		{
-			Handle<v8::String> name = Handle<v8::String>::Cast(result->Get(NanNew<v8::String>("Name")));
-			Handle<v8::String> message = Handle<v8::String>::Cast(result->Get(NanNew<v8::String>("Message")));
+			v8::Local<v8::String> name = v8::Local<v8::String>::Cast(result->Get(Nan::New<v8::String>("Name").ToLocalChecked()));
+			v8::Local<v8::String> message = v8::Local<v8::String>::Cast(result->Get(Nan::New<v8::String>("Message").ToLocalChecked()));
 
 			result->SetPrototype(v8::Exception::Error(message));
-			result->Set(NanNew<v8::String>("message"), message);
-			result->Set(NanNew<v8::String>("name"), name);
+			result->Set(Nan::New<v8::String>("message").ToLocalChecked(), message);
+			result->Set(Nan::New<v8::String>("name").ToLocalChecked(), name);
 		}
 
-		return NanEscapeScope(result);
+		return scope.Escape(result);
 	}
 
 	else if (payloadType == V8TypeNull)
 	{
-		return NanEscapeScope(NanNull());
+		return scope.Escape(Nan::Null());
 	}
 
 	else if (payloadType == V8TypeBuffer)
@@ -493,23 +493,23 @@ Handle<v8::Value> CoreClrFunc::MarshalCLRToV8(void* marshalData, int payloadType
 
 		if (bufferData->bufferLength > 0)
 		{
-			return NanEscapeScope(NanNewBufferHandle(bufferData->buffer, bufferData->bufferLength));
+			return scope.Escape(Nan::CopyBuffer(bufferData->buffer, bufferData->bufferLength).ToLocalChecked());
 		}
 
 		else
 		{
-			return NanEscapeScope(NanNewBufferHandle(0));
+			return scope.Escape(Nan::NewBuffer(0).ToLocalChecked());
 		}
 	}
 
 	else if (payloadType == V8TypeFunction)
 	{
-		return NanEscapeScope(InitializeInstance(marshalData));
+		return scope.Escape(InitializeInstance(marshalData));
 	}
 
 	else
 	{
 		throwV8Exception("Unsupported object type received from the CLR: %d", payloadType);
-		return NanEscapeScope(NanUndefined());
+		return scope.Escape(Nan::Undefined());
 	}
 }

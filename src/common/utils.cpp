@@ -1,13 +1,13 @@
 #include "edge_common.h"
 
-Handle<Value> throwV8Exception(Handle<Value> exception)
+v8::Local<Value> throwV8Exception(v8::Local<Value> exception)
 {
-    NanEscapableScope();
-    NanThrowError(exception);
-    return NanEscapeScope(exception);
+    Nan::EscapableHandleScope scope;
+    Nan::ThrowError(exception);
+    return scope.Escape(exception);
 }
 
-Handle<Value> throwV8Exception(const char* format, ...)
+v8::Local<Value> throwV8Exception(const char* format, ...)
 {
 	va_list args;
 	va_start(args, format);
@@ -17,13 +17,13 @@ Handle<Value> throwV8Exception(const char* format, ...)
 
 	vsnprintf(message, size + 1, format, args);
 
-	NanEscapableScope();
+	Nan::EscapableHandleScope scope;
 
-	Handle<v8::Object> exception = NanNew<v8::Object>();
-	exception->SetPrototype(v8::Exception::Error(NanNew<v8::String>(message)));
+	v8::Local<v8::Object> exception = Nan::New<v8::Object>();
+	exception->SetPrototype(v8::Exception::Error(Nan::New<v8::String>(message).ToLocalChecked()));
 
-	Handle<v8::Value> exceptionValue = exception;
-	NanThrowError(exceptionValue);
+	v8::Local<v8::Value> exceptionValue = exception;
+	Nan::ThrowError(exceptionValue);
 
-	return NanEscapeScope(exception);
+	return scope.Escape(exception);
 }

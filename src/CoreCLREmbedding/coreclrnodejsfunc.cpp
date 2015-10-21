@@ -1,18 +1,19 @@
 #include "edge.h"
 
-CoreClrNodejsFunc::CoreClrNodejsFunc(Handle<Function> function)
+CoreClrNodejsFunc::CoreClrNodejsFunc(v8::Local<v8::Function> function)
 {
     DBG("CoreClrNodejsFunc::CoreClrNodejsFunc");
 
-    this->Func = new Persistent<Function>;
-    NanAssignPersistent(*(this->Func), function);
+    this->Func = new Nan::Persistent<v8::Function>;
+    this->Func->Reset(function);
 }
 
 CoreClrNodejsFunc::~CoreClrNodejsFunc()
 {
     DBG("CoreClrNodejsFunc::~CoreClrNodejsFunc");
-    NanDisposePersistent(*(this->Func));
+	this->Func->Reset();
     delete this->Func;
+	this->Func = NULL;
 }
 
 void CoreClrNodejsFunc::Release(CoreClrNodejsFunc* function)

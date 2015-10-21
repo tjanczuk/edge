@@ -63,7 +63,7 @@ typedef enum v8Type
 class CoreClrFuncInvokeContext
 {
 	private:
-		Persistent<Function>* callback;
+		Nan::Persistent<Function>* callback;
 		CoreClrGcHandle task;
 		uv_edge_async_t* uv_edge_async;
 		void* resultData;
@@ -74,13 +74,13 @@ class CoreClrFuncInvokeContext
 		bool Sync();
 		void Sync(bool value);
 
-		CoreClrFuncInvokeContext(Handle<v8::Value> callback, void* task);
+		CoreClrFuncInvokeContext(v8::Local<v8::Value> callback, void* task);
 		~CoreClrFuncInvokeContext();
 
 		void InitializeAsyncOperation();
 
 		static void TaskComplete(void* result, int resultType, int taskState, CoreClrFuncInvokeContext* context);
-		static void TaskCompleteSynchronous(void* result, int resultType, int taskState, Handle<v8::Value> callback);
+		static void TaskCompleteSynchronous(void* result, int resultType, int taskState, v8::Local<v8::Value> callback);
 		static void InvokeCallback(void* data);
 };
 
@@ -99,13 +99,13 @@ class CoreClrEmbedding
         static char* GetLoadError();
 
     public:
-        static CoreClrGcHandle GetClrFuncReflectionWrapFunc(const char* assemblyFile, const char* typeName, const char* methodName, v8::Handle<v8::Value>* exception);
+        static CoreClrGcHandle GetClrFuncReflectionWrapFunc(const char* assemblyFile, const char* typeName, const char* methodName, v8::Local<v8::Value>* exception);
         static void CallClrFunc(CoreClrGcHandle functionHandle, void* payload, int payloadType, int* taskState, void** result, int* resultType);
         static HRESULT Initialize(BOOL debugMode);
         static void ContinueTask(CoreClrGcHandle taskHandle, void* context, TaskCompleteFunction callback, void** exception);
         static void FreeHandle(CoreClrGcHandle handle);
         static void FreeMarshalData(void* marshalData, int marshalDataType);
-        static CoreClrGcHandle CompileFunc(const void* options, const int payloadType, v8::Handle<v8::Value>* exception);
+        static CoreClrGcHandle CompileFunc(const void* options, const int payloadType, v8::Local<v8::Value>* exception);
 };
 
 class CoreClrFunc
@@ -115,24 +115,24 @@ class CoreClrFunc
 
 		CoreClrFunc();
 
-		static char* CopyV8StringBytes(Handle<v8::String> v8String);
-		static Handle<v8::Function> InitializeInstance(CoreClrGcHandle functionHandle);
+		static char* CopyV8StringBytes(v8::Local<v8::String> v8String);
+		static v8::Local<v8::Function> InitializeInstance(CoreClrGcHandle functionHandle);
 
 	public:
 		static NAN_METHOD(Initialize);
-		Handle<v8::Value> Call(Handle<v8::Value> payload, Handle<v8::Value> callbackOrSync);
+		v8::Local<v8::Value> Call(v8::Local<v8::Value> payload, v8::Local<v8::Value> callbackOrSync);
 		static void FreeMarshalData(void* marshalData, int payloadType);
-		static void MarshalV8ToCLR(Handle<v8::Value> jsdata, void** marshalData, int* payloadType);
-		static Handle<v8::Value> MarshalCLRToV8(void* marshalData, int payloadType);
-		static void MarshalV8ExceptionToCLR(Handle<v8::Value> exception, void** marshalData);
+		static void MarshalV8ToCLR(v8::Local<v8::Value> jsdata, void** marshalData, int* payloadType);
+		static v8::Local<v8::Value> MarshalCLRToV8(void* marshalData, int payloadType);
+		static void MarshalV8ExceptionToCLR(v8::Local<v8::Value> exception, void** marshalData);
 };
 
 class CoreClrNodejsFunc
 {
 	public:
-		Persistent<Function>* Func;
+		Nan::Persistent<Function>* Func;
 
-		CoreClrNodejsFunc(Handle<Function> function);
+		CoreClrNodejsFunc(v8::Local<Function> function);
 		~CoreClrNodejsFunc();
 
 		static void Call(void* payload, int payloadType, CoreClrNodejsFunc* functionContext, CoreClrGcHandle callbackContext, NodejsFuncCompleteFunction callbackFunction);

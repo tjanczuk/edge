@@ -113,8 +113,8 @@ typedef enum taskStatus
     TaskStatusFaulted = 7
 } TaskStatus;
 
-Handle<Value> throwV8Exception(Handle<Value> exception);
-Handle<Value> throwV8Exception(const char* format, ...);
+v8::Local<Value> throwV8Exception(v8::Local<Value> exception);
+v8::Local<Value> throwV8Exception(const char* format, ...);
 
 bool HasEnvironmentVariable(const char* variableName);
 

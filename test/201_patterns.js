@@ -105,7 +105,7 @@ describe('call patterns', function () {
                 done();
             }
         );
-    });    
+    }); 
 
     // Regression test for https://github.com/tjanczuk/edge/issues/22
     it('two async callouts each with async callin (issue #22)', function (done) {
@@ -137,7 +137,7 @@ describe('call patterns', function () {
 
         callout({ payload: 'callin1', callin: callin }, callback);
         callout({ payload: 'callin2', callin: callin }, callback);
-    }); 
+    });
 
     it('call JS func exported to .NET as a result of calling a JS func from .NET', function (done) {
         var callout = edge.func({
@@ -158,7 +158,7 @@ describe('call patterns', function () {
                 done();
             }
         );
-    }); 
+    });
 
     it('exception when marshaling CLR data to V8 when calling exported JS function', function (done) {
         var callout = edge.func({
@@ -196,7 +196,7 @@ describe('call patterns', function () {
             },
             'Unexpected result'
         );
-    }); 
+    });
 
     it('exception when marshaling CLR data to V8 when completing an asynchronous call from JS to .NET', function (done) {
         var callout = edge.func({
@@ -211,6 +211,6 @@ describe('call patterns', function () {
             done();
         });
 
-    }); 
+    });
 
 });

@@ -1,11 +1,12 @@
 #include "edge.h"
 
-CoreClrFuncInvokeContext::CoreClrFuncInvokeContext(Handle<v8::Value> callback, void* task) : task(task), uv_edge_async(NULL), resultData(NULL), resultType(0)
+CoreClrFuncInvokeContext::CoreClrFuncInvokeContext(v8::Local<v8::Value> callback, void* task) : task(task), uv_edge_async(NULL), resultData(NULL), resultType(0)
 {
     DBG("CoreClrFuncInvokeContext::CoreClrFuncInvokeContext");
 
-	this->callback = new Persistent<Function>();
-	NanAssignPersistent(*(this->callback), Handle<Function>::Cast(callback));
+	this->callback = new Nan::Persistent<Function>();
+	v8::Local<v8::Function> callbackFunction = v8::Local<v8::Function>::Cast(callback);
+    this->callback->Reset(callbackFunction);
 }
 
 CoreClrFuncInvokeContext::~CoreClrFuncInvokeContext()
@@ -14,7 +15,7 @@ CoreClrFuncInvokeContext::~CoreClrFuncInvokeContext()
 
     if (this->callback)
     {
-        NanDisposePersistent(*(this->callback));
+        this->callback->Reset();
         delete this->callback;
         this->callback = NULL;
     }
@@ -49,7 +50,7 @@ void CoreClrFuncInvokeContext::TaskComplete(void* result, int resultType, int ta
 	V8SynchronizationContext::ExecuteAction(context->uv_edge_async);
 }
 
-void CoreClrFuncInvokeContext::TaskCompleteSynchronous(void* result, int resultType, int taskState, Handle<v8::Value> callback)
+void CoreClrFuncInvokeContext::TaskCompleteSynchronous(void* result, int resultType, int taskState, v8::Local<v8::Value> callback)
 {
 	DBG("CoreClrFuncInvokeContext::TaskCompleteSynchronous");
 
@@ -67,8 +68,8 @@ void CoreClrFuncInvokeContext::InvokeCallback(void* data)
 	DBG("CoreClrFuncInvokeContext::InvokeCallback");
 
 	CoreClrFuncInvokeContext* context = (CoreClrFuncInvokeContext*)data;
-	v8::Handle<v8::Value> callbackData = NanNull();
-	v8::Handle<v8::Value> errors = NanNull();
+	v8::Local<v8::Value> callbackData = Nan::Null();
+	v8::Local<v8::Value> errors = Nan::Null();
 
 	if (context->taskState == TaskStatusFaulted)
 	{
@@ -80,15 +81,21 @@ void CoreClrFuncInvokeContext::InvokeCallback(void* data)
 		callbackData = CoreClrFunc::MarshalCLRToV8(context->resultData, context->resultType);
 	}
 
-	Handle<Value> argv[] = { errors, callbackData };
-	int argc = 2;
+	DBG("CoreClrFuncInvokeContext::InvokeCallback - Marshalling complete");
 
-	TryCatch tryCatch;
-	NanNew<v8::Function>(*(context->callback))->Call(NanGetCurrentContext()->Global(), argc, argv);
+	v8::Local<Value> argv[] = { errors, callbackData };
+	int argc = 2;	
+
+	Nan::TryCatch tryCatch;
+	Nan::New<v8::Function>(*(context->callback))->Call(Nan::GetCurrentContext()->Global(), argc, argv);
+
+	DBG("CoreClrFuncInvokeContext::InvokeCallback - Callback function invoked");
 	delete context;
 
 	if (tryCatch.HasCaught())
 	{
-		node::FatalException(tryCatch);
+		Nan::FatalException(tryCatch);
 	}
+
+	DBG("CoreClrFuncInvokeContext::InvokeCallback - Complete");
 }

@@ -4,14 +4,14 @@ NAN_METHOD(coreClrV8FuncCallback)
 {
     DBG("coreClrV8FuncCallback");
 
-    NanScope();
-    Handle<v8::External> correlator = Handle<v8::External>::Cast(args[2]);
+    Nan::HandleScope scope;
+    v8::Local<v8::External> correlator = v8::Local<v8::External>::Cast(info[2]);
     CoreClrNodejsFuncInvokeContext* context = (CoreClrNodejsFuncInvokeContext*)(correlator->Value());
 
-    if (!args[0]->IsUndefined() && !args[0]->IsNull())
+    if (!info[0]->IsUndefined() && !info[0]->IsNull())
     {
     	void* clrExceptionData;
-    	CoreClrFunc::MarshalV8ExceptionToCLR(args[0], &clrExceptionData);
+    	CoreClrFunc::MarshalV8ExceptionToCLR(info[0], &clrExceptionData);
 
         context->Complete(TaskStatusFaulted, clrExceptionData, V8TypeException);
     }
@@ -21,11 +21,11 @@ NAN_METHOD(coreClrV8FuncCallback)
     	void* marshalData;
     	int payloadType;
 
-        CoreClrFunc::MarshalV8ToCLR(args[1], &marshalData, &payloadType);
+        CoreClrFunc::MarshalV8ToCLR(info[1], &marshalData, &payloadType);
         context->Complete(TaskStatusRanToCompletion, marshalData, payloadType);
     }
 
-    NanReturnValue(NanUndefined());
+    info.GetReturnValue().SetUndefined();
 }
 
 CoreClrNodejsFuncInvokeContext::CoreClrNodejsFuncInvokeContext(void* payload, int payloadType, CoreClrNodejsFunc* functionContext, CoreClrGcHandle callbackContext, NodejsFuncCompleteFunction callbackFunction)
@@ -70,35 +70,33 @@ void CoreClrNodejsFuncInvokeContext::InvokeCallback(void* data)
 	DBG("CoreClrNodejsFuncInvokeContext::InvokeCallback");
 
 	CoreClrNodejsFuncInvokeContext* context = (CoreClrNodejsFuncInvokeContext*) data;
-	Handle<v8::Value> v8Payload = CoreClrFunc::MarshalCLRToV8(context->Payload, context->PayloadType);
+	v8::Local<v8::Value> v8Payload = CoreClrFunc::MarshalCLRToV8(context->Payload, context->PayloadType);
 
-	static Persistent<v8::Function> callbackFactory;
-	static Persistent<v8::Function> callbackFunction;
+	static Nan::Persistent<v8::Function> callbackFactory;
+	static Nan::Persistent<v8::Function> callbackFunction;
 
-	NanScope();
+	Nan::HandleScope scope;
 
 	// See https://github.com/tjanczuk/edge/issues/125 for context
 	if (callbackFactory.IsEmpty())
 	{
-		NanAssignPersistent(
-			callbackFunction,
-			NanNew<FunctionTemplate>(coreClrV8FuncCallback)->GetFunction());
-		Handle<v8::String> code = NanNew<v8::String>(
-			"(function (cb, ctx) { return function (e, d) { return cb(e, d, ctx); }; })");
-		NanAssignPersistent(
-			callbackFactory,
-			Handle<v8::Function>::Cast(v8::Script::Compile(code)->Run()));
+		v8::Local<v8::Function> v8FuncCallbackFunction = Nan::New<v8::FunctionTemplate>(coreClrV8FuncCallback)->GetFunction();
+		callbackFunction.Reset(v8FuncCallbackFunction);
+		v8::Local<v8::String> code = Nan::New<v8::String>(
+			"(function (cb, ctx) { return function (e, d) { return cb(e, d, ctx); }; })").ToLocalChecked();
+		v8::Local<v8::Function> callbackFactoryFunction = v8::Local<v8::Function>::Cast(v8::Script::Compile(code)->Run());
+		callbackFactory.Reset(callbackFactoryFunction);
 	}
 
-	Handle<v8::Value> factoryArgv[] = { NanNew(callbackFunction), NanNew<v8::External>((void*)context) };
-	Handle<v8::Function> callback = Handle<v8::Function>::Cast(
-		NanNew(callbackFactory)->Call(NanGetCurrentContext()->Global(), 2, factoryArgv));
+	v8::Local<v8::Value> factoryArgv[] = { Nan::New(callbackFunction), Nan::New<v8::External>((void*)context) };
+	v8::Local<v8::Function> callback = v8::Local<v8::Function>::Cast(
+		Nan::New(callbackFactory)->Call(Nan::GetCurrentContext()->Global(), 2, factoryArgv));
 
-	Handle<v8::Value> argv[] = { v8Payload, callback };
+	v8::Local<v8::Value> argv[] = { v8Payload, callback };
 	TryCatch tryCatch;
 
 	DBG("CoreClrNodejsFuncInvokeContext::InvokeCallback - Calling JavaScript function");
-	NanNew(*(context->FunctionContext->Func))->Call(NanGetCurrentContext()->Global(), 2, argv);
+	Nan::New(*(context->FunctionContext->Func))->Call(Nan::GetCurrentContext()->Global(), 2, argv);
 	DBG("CoreClrNodejsFuncInvokeContext::InvokeCallback - Called JavaScript function");
 
 	if (tryCatch.HasCaught())

@@ -84,7 +84,7 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
     if (!getcwd(&currentDirectory[0], PATH_MAX))
 #endif
     {
-    	NanThrowError("Unable to get the current directory.");
+		throwV8Exception("Unable to get the current directory.");
         return E_FAIL;
     }
 
@@ -184,7 +184,7 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 
     if (!libCoreClr)
     {
-    	NanThrowError("Failed to find CoreCLR.  Make sure that you have either specified the CoreCLR directory in the CORECLR_DIR environment variable or it exists somewhere in your PATH environment variable, which you do via the \"dnvm install\" and \"dnvm use\" commands.");
+		throwV8Exception("Failed to find CoreCLR.  Make sure that you have either specified the CoreCLR directory in the CORECLR_DIR environment variable or it exists somewhere in your PATH environment variable, which you do via the \"dnvm install\" and \"dnvm use\" commands.");
         return E_FAIL;
     }
 
@@ -280,7 +280,7 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 
 	if (exception)
 	{
-		Handle<v8::Value> v8Exception = CoreClrFunc::MarshalCLRToV8(exception, V8TypeException);
+		v8::Local<v8::Value> v8Exception = CoreClrFunc::MarshalCLRToV8(exception, V8TypeException);
 		FreeMarshalData(exception, V8TypeException);
 
 		throwV8Exception(v8Exception);
@@ -296,7 +296,7 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
     return S_OK;
 }
 
-CoreClrGcHandle CoreClrEmbedding::GetClrFuncReflectionWrapFunc(const char* assemblyFile, const char* typeName, const char* methodName, v8::Handle<v8::Value>* v8Exception)
+CoreClrGcHandle CoreClrEmbedding::GetClrFuncReflectionWrapFunc(const char* assemblyFile, const char* typeName, const char* methodName, v8::Local<v8::Value>* v8Exception)
 {
 	DBG("CoreClrEmbedding::GetClrFuncReflectionWrapFunc - Starting");
 
@@ -610,7 +610,7 @@ void CoreClrEmbedding::FreeMarshalData(void* marshalData, int marshalDataType)
 	freeMarshalData(marshalData, marshalDataType);
 }
 
-CoreClrGcHandle CoreClrEmbedding::CompileFunc(const void* options, const int payloadType, v8::Handle<v8::Value>* v8Exception)
+CoreClrGcHandle CoreClrEmbedding::CompileFunc(const void* options, const int payloadType, v8::Local<v8::Value>* v8Exception)
 {
     DBG("CoreClrEmbedding::CompileFunc - Starting");
 
