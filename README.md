@@ -143,15 +143,15 @@ Edge.js runs on Windows, Linux, and OSX and requires Node.js 4.x, 0.12.x, 0.10.x
 #### Linux
 
 * Node.js 4.x, 0.12.x, 0.10.x, or 0.8.x
-* Mono 4.0.4.1 x64 or Microsoft's CoreCLR
-* Check out [Ubuntu 12.04 setup instructions](#building-on-linux)
+* Mono 4.0.4.1 x64 and/or Microsoft's CoreCLR
+* Check out [Ubuntu setup instructions](#building-on-linux)
 
 ![image](https://cloud.githubusercontent.com/assets/822369/2808077/03f92874-cd0e-11e3-88ea-79f67b8b1d49.png)
 
 #### MacOS  
 
 * Node.js 4.x, 0.12.x, 0.10.x, or 0.8.x  
-* Mono 4.0.4.1 x64 or Microsoft's CoreCLR
+* Mono 4.0.4.1 x64 and/or Microsoft's CoreCLR
 * Check out [Mac OS setup instructions](#building-on-osx)  
 
 ![image](https://cloud.githubusercontent.com/assets/822369/2808046/8f4ce378-cd0b-11e3-95dc-ef0842c28821.png)
@@ -1259,7 +1259,7 @@ export EDGE_NATIVE=/Users/tomek/edge/build/Debug/edge_nativeclr.node
 
 ### Building on Linux 
 
-These instructions were tested on Ubuntu 12.04 x64 and Debian Wheezy x64. High level, you must have Node.js x64 and either Mono x64 or Microsoft's CoreCLR (or both!) installed on the machine before you can install Edge.js. There are two ways of getting there.
+These instructions were tested on Ubuntu 14.04 x64 and Debian Wheezy x64. High level, you must have Node.js x64 and either Mono x64 or Microsoft's CoreCLR (or both!) installed on the machine before you can install Edge.js. There are two ways of getting there.
 
 ### Debian, starting from a clean VM (i.e. taking the high road)
 
@@ -1279,12 +1279,12 @@ This will do the following:
 * Download Edge.js sources and build x64 release
 * Run Edge.js tests using both Mono and CoreCLR
 
-This process takes about 15 minutes on a Debian Wheezy x64 running on a 4 core with 16GB RAM. If successful, your machine will have all the prerequisites to `npm install edge`.
+If successful, your machine will have all the prerequisites to `npm install edge`.
 
 
 ### Ubuntu, starting from a clean VM (i.e. taking the high road)
 
-If you have a fresh Ubuntu 12.04 x64 installation, the most convenient way of installing Edge.js with all prerequisites is by running:
+If you have a fresh Ubuntu 14.04 x64 installation, the most convenient way of installing Edge.js with all prerequisites is by running:
 
 ```bash
 sudo bash -c 'bash <(wget -qO- https://raw.githubusercontent.com/medicomp/edge/master/tools/ubuntu_12.04_clean_install.sh)'
@@ -1299,11 +1299,11 @@ This will do the following:
 * Download Edge.js sources and build x64 release  
 * Run Edge.js tests using both Mono and CoreCLR
 
-This process takes about 25 minutes on a Ubuntu 12.04 x64 VM running on a 2 core VM with 4GB RAM within Fusion on a MacBook Pro. If successful, your machine will have all the prerequisites to `npm install edge`. 
+If successful, your machine will have all the prerequisites to `npm install edge`. 
 
 #### Ubuntu, manual install 
 
-This method is adequate if you already have a Mono x64 or Node.js x64 install on the machine and need to incrementally add Edge to it. 
+This method is adequate if you already have a Mono x64, CoreCLR, and/or Node.js x64 install on the machine and need to incrementally add Edge to it. 
 
 Read through the [install script](https://raw.githubusercontent.com/medicomp/edge/mono/tools/ubuntu_12.04_clean_install.sh) and cherry pick the steps you need. Here are some gotchas:
 
@@ -1339,12 +1339,6 @@ If you've used `dnvm install` and `dnvm use` to set your preferred version of th
 ```bash
 EDGE_USE_CORECLR=1 CORECLR_DIR=/home/user/.dnx/runtimes/dnx-coreclr-linux-x64.1.0.0-beta6-11944/bin node sample.js
 ```
-
-#### CoreCLR gotchas
-
-Because CoreCLR is still under active development, there are a few features of Edge that are not yet fully implemented:
-
- * Specifying .NET code in the JavaScript source - Because the Roslyn C#/VB.NET compiler has not yet been released on CoreCLR, Edge cannot compile .NET code on the fly from comments or strings in JavaScript.  Instead, you must pre-compile your .NET code into assemblies and reference those assemblies, classes, and methods when calling `edge.func()`.  This feature gap will be resolved when Microsoft makes the compiler bits available.
 
 ## Scripting Node.js from CLR
 
