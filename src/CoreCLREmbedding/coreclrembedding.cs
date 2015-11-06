@@ -16,6 +16,7 @@ using Microsoft.Dnx.Runtime;
 using Microsoft.Dnx.Runtime.Loader;
 
 [StructLayout(LayoutKind.Sequential)]
+// ReSharper disable once CheckNamespace
 public struct V8ObjectData
 {
     public int propertiesCount;
@@ -64,8 +65,8 @@ public class CoreCLREmbedding
 {
     private class TaskState
     {
-        public TaskCompleteDelegate Callback;
-        public IntPtr Context;
+        public readonly TaskCompleteDelegate Callback;
+        public readonly IntPtr Context;
 
         public TaskState(TaskCompleteDelegate callback, IntPtr context)
         {
@@ -76,24 +77,15 @@ public class CoreCLREmbedding
 
     private class EdgeAssemblyLoadContextAccessor : LoadContextAccessor
     {
-        private static EdgeAssemblyLoadContextAccessor _instance = new EdgeAssemblyLoadContextAccessor();
-        private EdgeAssemblyLoadContext _edgeAssemblyLoadContext = new EdgeAssemblyLoadContext();
-
         public new EdgeAssemblyLoadContext Default
         {
-            get
-            {
-                return _edgeAssemblyLoadContext;
-            }
-        }
+            get;
+        } = new EdgeAssemblyLoadContext();
 
         public new static EdgeAssemblyLoadContextAccessor Instance
         {
-            get
-            {
-                return _instance;
-            }
-        }
+            get;
+        } = new EdgeAssemblyLoadContextAccessor();
     }
 
     private class EdgeAssemblyLoadContext : AssemblyLoadContext, IAssemblyLoadContext
@@ -101,9 +93,8 @@ public class CoreCLREmbedding
         internal readonly Dictionary<string, string> CompileAssemblies = new Dictionary<string, string>();
         private readonly string _applicationRoot;
         private readonly FrameworkName _targetFrameworkName = new FrameworkName("DNXCore,Version=v5.0");
-        private readonly ApplicationHostContext _applicationHostContext;
         private readonly List<IAssemblyLoader> _loaders = new List<IAssemblyLoader>();
-        private readonly bool _noProjectJsonFile = false;
+        private readonly bool _noProjectJsonFile;
 
         public EdgeAssemblyLoadContext()
         {
@@ -114,13 +105,13 @@ public class CoreCLREmbedding
 
             if (File.Exists(Path.Combine(_applicationRoot, "project.lock.json")))
             {
-                _applicationHostContext = new ApplicationHostContext
+                ApplicationHostContext applicationHostContext = new ApplicationHostContext
                 {
                     ProjectDirectory = _applicationRoot,
                     TargetFramework = _targetFrameworkName
                 };
 
-                IList<LibraryDescription> libraries = ApplicationHostContext.GetRuntimeLibraries(_applicationHostContext);
+                IList<LibraryDescription> libraries = ApplicationHostContext.GetRuntimeLibraries(applicationHostContext);
                 Dictionary<string, ProjectDescription> projects = libraries.Where(p => p.Type == LibraryTypes.Project).ToDictionary(p => p.Identity.Name, p => (ProjectDescription)p);
                 Dictionary<AssemblyName, string> assemblies = PackageDependencyProvider.ResolvePackageAssemblyPaths(libraries);
 
@@ -236,15 +227,15 @@ public class CoreCLREmbedding
         }
     }
 
-    private static bool DebugMode = Environment.GetEnvironmentVariable("EDGE_DEBUG") == "1";
-    private static EdgeAssemblyLoadContextAccessor LoadContextAccessor = EdgeAssemblyLoadContextAccessor.Instance;
-    private static long MinDateTimeTicks = 621355968000000000;
-    private static Dictionary<Type, List<Tuple<string, Func<object, object>>>> TypePropertyAccessors = new Dictionary<Type, List<Tuple<string, Func<object, object>>>>();
-    private static int PointerSize = Marshal.SizeOf<IntPtr>();
-    private static int V8BufferDataSize = Marshal.SizeOf<V8BufferData>();
-    private static int V8ObjectDataSize = Marshal.SizeOf<V8ObjectData>();
-    private static int V8ArrayDataSize = Marshal.SizeOf<V8ArrayData>();
-    private static Dictionary<string, Tuple<Type, MethodInfo>> Compilers = new Dictionary<string, Tuple<Type, MethodInfo>>();
+    private static readonly bool DebugMode = Environment.GetEnvironmentVariable("EDGE_DEBUG") == "1";
+    private static readonly EdgeAssemblyLoadContextAccessor LoadContextAccessor = EdgeAssemblyLoadContextAccessor.Instance;
+    private static readonly long MinDateTimeTicks = 621355968000000000;
+    private static readonly Dictionary<Type, List<Tuple<string, Func<object, object>>>> TypePropertyAccessors = new Dictionary<Type, List<Tuple<string, Func<object, object>>>>();
+    private static readonly int PointerSize = Marshal.SizeOf<IntPtr>();
+    private static readonly int V8BufferDataSize = Marshal.SizeOf<V8BufferData>();
+    private static readonly int V8ObjectDataSize = Marshal.SizeOf<V8ObjectData>();
+    private static readonly int V8ArrayDataSize = Marshal.SizeOf<V8ArrayData>();
+    private static readonly Dictionary<string, Tuple<Type, MethodInfo>> Compilers = new Dictionary<string, Tuple<Type, MethodInfo>>();
 
     [SecurityCritical]
     public static IntPtr GetFunc(string assemblyFile, string typeName, string methodName, IntPtr exception)
@@ -264,7 +255,7 @@ public class CoreCLREmbedding
             ClrFuncReflectionWrap wrapper = ClrFuncReflectionWrap.Create(assembly, typeName, methodName);
             DebugMessage("CoreCLREmbedding::GetFunc (CLR) - Method {0}.{1}() loaded successfully", typeName, methodName);
 
-            Func<object, Task<object>> wrapperFunc = new Func<object, Task<object>>(wrapper.Call);
+            Func<object, Task<object>> wrapperFunc = wrapper.Call;
             GCHandle wrapperHandle = GCHandle.Alloc(wrapperFunc);
 
             return GCHandle.ToIntPtr(wrapperHandle);
@@ -274,8 +265,8 @@ public class CoreCLREmbedding
         {
             DebugMessage("CoreCLREmbedding::GetFunc (CLR) - Exception was thrown: {0}", e.Message);
 
-            V8Type v8type;
-            Marshal.WriteIntPtr(exception, MarshalCLRToV8(e, out v8type));
+            V8Type v8Type;
+            Marshal.WriteIntPtr(exception, MarshalCLRToV8(e, out v8Type));
 
             return IntPtr.Zero;
         }
@@ -322,13 +313,10 @@ public class CoreCLREmbedding
 
                 MethodInfo setAssemblyLoader = compilerType.GetMethod("SetAssemblyLoader", BindingFlags.Static | BindingFlags.Public);
 
-                if (setAssemblyLoader != null)
+                setAssemblyLoader?.Invoke(null, new object[]
                 {
-                    setAssemblyLoader.Invoke(null, new object[]
-                    {
-                        new Func<Stream, Assembly>(assemblyStream => LoadContextAccessor.Default.LoadStream(assemblyStream, null))
-                    });
-                }
+                    new Func<Stream, Assembly>(assemblyStream => LoadContextAccessor.Default.LoadStream(assemblyStream, null))
+                });
 
                 Compilers[compiler] = new Tuple<Type, MethodInfo>(compilerType, compileMethod);
             }
@@ -358,8 +346,8 @@ public class CoreCLREmbedding
         {
             DebugMessage("CoreCLREmbedding::CompileFunc (CLR) - Exception was thrown: {0}\n{1}", e.InnerException.Message, e.InnerException.StackTrace);
 
-            V8Type v8type;
-            Marshal.WriteIntPtr(exception, MarshalCLRToV8(e, out v8type));
+            V8Type v8Type;
+            Marshal.WriteIntPtr(exception, MarshalCLRToV8(e, out v8Type));
 
             return IntPtr.Zero;
         }
@@ -368,8 +356,8 @@ public class CoreCLREmbedding
         {
             DebugMessage("CoreCLREmbedding::CompileFunc (CLR) - Exception was thrown: {0}\n{1}", e.Message, e.StackTrace);
 
-            V8Type v8type;
-            Marshal.WriteIntPtr(exception, MarshalCLRToV8(e, out v8type));
+            V8Type v8Type;
+            Marshal.WriteIntPtr(exception, MarshalCLRToV8(e, out v8Type));
 
             return IntPtr.Zero;
         }
@@ -453,7 +441,7 @@ public class CoreCLREmbedding
 
         V8Type v8Type;
         TaskState actualState = (TaskState)state;
-        IntPtr resultObject = IntPtr.Zero;
+        IntPtr resultObject;
         TaskStatus taskStatus;
 
         if (task.IsFaulted)
@@ -507,7 +495,7 @@ public class CoreCLREmbedding
             TaskCompleteDelegate taskCompleteDelegate = Marshal.GetDelegateForFunctionPointer<TaskCompleteDelegate>(callback);
             DebugMessage("CoreCLREmbedding::ContinueTask (CLR) - Marshalled unmanaged callback successfully");
 
-            actualTask.ContinueWith(new Action<Task<object>, object>(TaskCompleted), new TaskState(taskCompleteDelegate, context));
+            actualTask.ContinueWith(TaskCompleted, new TaskState(taskCompleteDelegate, context));
 
             DebugMessage("CoreCLREmbedding::ContinueTask (CLR) - Finished");
         }
@@ -516,8 +504,8 @@ public class CoreCLREmbedding
         {
             DebugMessage("CoreCLREmbedding::ContinueTask (CLR) - Exception was thrown: {0}", e.Message);
 
-            V8Type v8type;
-            Marshal.WriteIntPtr(exception, MarshalCLRToV8(e, out v8type));
+            V8Type v8Type;
+            Marshal.WriteIntPtr(exception, MarshalCLRToV8(e, out v8Type));
         }
     }
 
@@ -534,8 +522,8 @@ public class CoreCLREmbedding
         {
             DebugMessage("CoreCLREmbedding::SetCallV8FunctionDelegate (CLR) - Exception was thrown: {0}", e.Message);
 
-            V8Type v8type;
-            Marshal.WriteIntPtr(exception, MarshalCLRToV8(e, out v8type));
+            V8Type v8Type;
+            Marshal.WriteIntPtr(exception, MarshalCLRToV8(e, out v8Type));
         }
     }
 
@@ -607,6 +595,7 @@ public class CoreCLREmbedding
         }
     }
 
+    // ReSharper disable once InconsistentNaming
     public static IntPtr MarshalCLRToV8(object clrObject, out V8Type v8Type)
     {
         if (clrObject == null)
@@ -660,7 +649,7 @@ public class CoreCLREmbedding
             long ticks = (dateTime.Ticks - MinDateTimeTicks) / 10000;
             IntPtr memoryLocation = Marshal.AllocHGlobal(sizeof(double));
 
-            WriteDouble(memoryLocation, (double)ticks);
+            WriteDouble(memoryLocation, ticks);
             return memoryLocation;
         }
 
@@ -676,7 +665,16 @@ public class CoreCLREmbedding
             return Marshal.StringToHGlobalAnsi(clrObject.ToString());
         }
 
-        else if (clrObject is Int16)
+        else if (clrObject is short)
+        {
+            v8Type = V8Type.Int32;
+            IntPtr memoryLocation = Marshal.AllocHGlobal(sizeof(int));
+
+            Marshal.WriteInt32(memoryLocation, Convert.ToInt32(clrObject));
+            return memoryLocation;
+        }
+
+        else if (clrObject is int)
         {
             v8Type = V8Type.Int32;
             IntPtr memoryLocation = Marshal.AllocHGlobal(sizeof(int));
@@ -685,16 +683,7 @@ public class CoreCLREmbedding
             return memoryLocation;
         }
 
-        else if (clrObject is Int32)
-        {
-            v8Type = V8Type.Int32;
-            IntPtr memoryLocation = Marshal.AllocHGlobal(sizeof(int));
-
-            Marshal.WriteInt32(memoryLocation, (int)clrObject);
-            return memoryLocation;
-        }
-
-        else if (clrObject is Int64)
+        else if (clrObject is long)
         {
             v8Type = V8Type.Number;
             IntPtr memoryLocation = Marshal.AllocHGlobal(sizeof(double));
@@ -703,7 +692,7 @@ public class CoreCLREmbedding
             return memoryLocation;
         }
 
-        else if (clrObject is Double)
+        else if (clrObject is double)
         {
             v8Type = V8Type.Number;
             IntPtr memoryLocation = Marshal.AllocHGlobal(sizeof(double));
@@ -712,7 +701,7 @@ public class CoreCLREmbedding
             return memoryLocation;
         }
 
-        else if (clrObject is Single)
+        else if (clrObject is float)
         {
             v8Type = V8Type.Number;
             IntPtr memoryLocation = Marshal.AllocHGlobal(sizeof(double));
@@ -721,7 +710,7 @@ public class CoreCLREmbedding
             return memoryLocation;
         }
 
-        else if (clrObject is Decimal)
+        else if (clrObject is decimal)
         {
             v8Type = V8Type.String;
             return Marshal.StringToHGlobalAnsi(clrObject.ToString());
@@ -756,7 +745,7 @@ public class CoreCLREmbedding
             Marshal.Copy(buffer, 0, bufferData.buffer, bufferData.bufferLength);
 
             IntPtr destinationPointer = Marshal.AllocHGlobal(V8BufferDataSize);
-            Marshal.StructureToPtr<V8BufferData>(bufferData, destinationPointer, false);
+            Marshal.StructureToPtr(bufferData, destinationPointer, false);
 
             return destinationPointer;
         }
@@ -775,7 +764,7 @@ public class CoreCLREmbedding
 
                 keys = objectDictionary.Keys;
                 keyCount = objectDictionary.Keys.Count;
-                getValue = (index) => objectDictionary[index.ToString()];
+                getValue = index => objectDictionary[index.ToString()];
             }
 
             else
@@ -784,12 +773,11 @@ public class CoreCLREmbedding
 
                 keys = objectDictionary.Keys;
                 keyCount = objectDictionary.Keys.Count;
-                getValue = (index) => objectDictionary[index];
+                getValue = index => objectDictionary[index];
             }
 
             V8ObjectData objectData = new V8ObjectData();
             int counter = 0;
-            V8Type propertyType;
 
             objectData.propertiesCount = keyCount;
             objectData.propertyNames = Marshal.AllocHGlobal(PointerSize * keyCount);
@@ -799,6 +787,7 @@ public class CoreCLREmbedding
             foreach (object key in keys)
             {
                 Marshal.WriteIntPtr(objectData.propertyNames, counter * PointerSize, Marshal.StringToHGlobalAnsi(key.ToString()));
+                V8Type propertyType;
                 Marshal.WriteIntPtr(objectData.propertyValues, counter * PointerSize, MarshalCLRToV8(getValue(key), out propertyType));
                 Marshal.WriteInt32(objectData.propertyTypes, counter * sizeof(int), (int)propertyType);
 
@@ -806,7 +795,7 @@ public class CoreCLREmbedding
             }
 
             IntPtr destinationPointer = Marshal.AllocHGlobal(V8ObjectDataSize);
-            Marshal.StructureToPtr<V8ObjectData>(objectData, destinationPointer, false);
+            Marshal.StructureToPtr(objectData, destinationPointer, false);
 
             return destinationPointer;
         }
@@ -818,10 +807,11 @@ public class CoreCLREmbedding
             V8ArrayData arrayData = new V8ArrayData();
             List<IntPtr> itemValues = new List<IntPtr>();
             List<int> itemTypes = new List<int>();
-            V8Type itemType;
 
             foreach (object item in (IEnumerable)clrObject)
             {
+                V8Type itemType;
+
                 itemValues.Add(MarshalCLRToV8(item, out itemType));
                 itemTypes.Add((int)itemType);
             }
@@ -834,7 +824,7 @@ public class CoreCLREmbedding
             Marshal.Copy(itemValues.ToArray(), 0, arrayData.itemValues, arrayData.arrayLength);
 
             IntPtr destinationPointer = Marshal.AllocHGlobal(V8ArrayDataSize);
-            Marshal.StructureToPtr<V8ArrayData>(arrayData, destinationPointer, false);
+            Marshal.StructureToPtr(arrayData, destinationPointer, false);
 
             return destinationPointer;
         }
@@ -860,7 +850,7 @@ public class CoreCLREmbedding
             {
                 AggregateException aggregateException = clrObject as AggregateException;
 
-                if (aggregateException != null && aggregateException.InnerExceptions != null && aggregateException.InnerExceptions.Count > 0)
+                if (aggregateException?.InnerExceptions != null && aggregateException.InnerExceptions.Count > 0)
                 {
                     clrObject = aggregateException.InnerExceptions[0];
                 }
@@ -869,7 +859,7 @@ public class CoreCLREmbedding
                 {
                     TargetInvocationException targetInvocationException = clrObject as TargetInvocationException;
 
-                    if (targetInvocationException != null && targetInvocationException.InnerException != null)
+                    if (targetInvocationException?.InnerException != null)
                     {
                         clrObject = targetInvocationException.InnerException;
                     }
@@ -879,7 +869,6 @@ public class CoreCLREmbedding
             List<Tuple<string, Func<object, object>>> propertyAccessors = GetPropertyAccessors(clrObject.GetType());
             V8ObjectData objectData = new V8ObjectData();
             int counter = 0;
-            V8Type propertyType;
 
             objectData.propertiesCount = propertyAccessors.Count;
             objectData.propertyNames = Marshal.AllocHGlobal(PointerSize * propertyAccessors.Count);
@@ -889,13 +878,16 @@ public class CoreCLREmbedding
             foreach (Tuple<string, Func<object, object>> propertyAccessor in propertyAccessors)
             {
                 Marshal.WriteIntPtr(objectData.propertyNames, counter * PointerSize, Marshal.StringToHGlobalAnsi(propertyAccessor.Item1));
+
+                V8Type propertyType;
+
                 Marshal.WriteIntPtr(objectData.propertyValues, counter * PointerSize, MarshalCLRToV8(propertyAccessor.Item2(clrObject), out propertyType));
                 Marshal.WriteInt32(objectData.propertyTypes, counter * sizeof(int), (int)propertyType);
                 counter++;
             }
 
             IntPtr destinationPointer = Marshal.AllocHGlobal(V8ObjectDataSize);
-            Marshal.StructureToPtr<V8ObjectData>(objectData, destinationPointer, false);
+            Marshal.StructureToPtr(objectData, destinationPointer, false);
 
             return destinationPointer;
         }
@@ -1035,7 +1027,7 @@ public class CoreCLREmbedding
     private static ExpandoObject V8ObjectToExpando(V8ObjectData v8Object)
     {
         ExpandoObject expando = new ExpandoObject();
-        IDictionary<string, object> expandoDictionary = (IDictionary<string, object>)expando;
+        IDictionary<string, object> expandoDictionary = expando;
 
         for (int i = 0; i < v8Object.propertiesCount; i++)
         {
@@ -1057,11 +1049,6 @@ public class CoreCLREmbedding
         {
             Console.WriteLine(message, parameters);
         }
-    }
-
-    public static void SetDebugMode(bool debugMode)
-    {
-        DebugMode = debugMode;
     }
 
     private static List<Tuple<string, Func<object, object>>> GetPropertyAccessors(Type type)
@@ -1095,7 +1082,7 @@ public class CoreCLREmbedding
 
         if (typeof(Exception).IsAssignableFrom(type) && !propertyAccessors.Any(a => a.Item1 == "Name"))
         {
-            propertyAccessors.Add(new Tuple<string, Func<object, object>>("Name", (o) => type.FullName));
+            propertyAccessors.Add(new Tuple<string, Func<object, object>>("Name", o => type.FullName));
         }
 
         TypePropertyAccessors[type] = propertyAccessors;
