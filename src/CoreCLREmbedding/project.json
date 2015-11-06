@@ -12,7 +12,7 @@
                 "System.Runtime.Loader": "4.0.0-beta-*",
                 "Microsoft.CSharp": "4.0.0-beta-*",
                 "System.Reflection": "4.1.0-beta-*",
-                "Microsoft.Dnx.Runtime": "1.0.0-beta7",
+                "Microsoft.Dnx.Runtime": "1.0.0-beta8",
                 "System.Xml.XPath.XmlDocument": "4.0.1-beta-*",
                 "System.Xml.ReaderWriter": "4.0.11-beta-*",
                 "System.Private.Uri": "4.0.1-beta-*",

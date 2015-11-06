@@ -516,7 +516,7 @@ describe('edge-cs', function () {
                         {
                             public async Task<object> Invoke(object input) 
                             {
-                                var assembly = AssemblyLoadContext.GetLoadContext(GetType().GetTypeInfo().Assembly).LoadFromAssemblyName(new AssemblyName("Package.Doesnt.Exist"));
+                                var assembly = AssemblyLoadContext.Default.LoadFromAssemblyName(new AssemblyName("Package.Doesnt.Exist"));
                                 return "Hello, " + input.ToString();
                             }
                         }           

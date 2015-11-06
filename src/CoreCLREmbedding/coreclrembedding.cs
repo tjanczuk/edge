@@ -13,47 +13,47 @@ using System.IO;
 using System.Diagnostics;
 using System.Runtime.Versioning;
 using Microsoft.Dnx.Runtime;
-using NuGet;
+using Microsoft.Dnx.Runtime.Loader;
 
 [StructLayout(LayoutKind.Sequential)]
 public struct V8ObjectData
 {
-	public int propertiesCount;
-	public IntPtr propertyTypes;
-	public IntPtr propertyNames;
-	public IntPtr propertyValues;
+    public int propertiesCount;
+    public IntPtr propertyTypes;
+    public IntPtr propertyNames;
+    public IntPtr propertyValues;
 }
 
 [StructLayout(LayoutKind.Sequential)]
 public struct V8ArrayData
 {
-	public int arrayLength;
-	public IntPtr itemTypes;
-	public IntPtr itemValues;
+    public int arrayLength;
+    public IntPtr itemTypes;
+    public IntPtr itemValues;
 }
 
 [StructLayout(LayoutKind.Sequential)]
 public struct V8BufferData
 {
-	public int bufferLength;
-	public IntPtr buffer;
+    public int bufferLength;
+    public IntPtr buffer;
 }
 
 public enum V8Type
 {
-	Function = 1,
-	Buffer = 2,
-	Array = 3,
-	Date = 4,
-	Object = 5,
-	String = 6,
-	Boolean = 7,
-	Int32 = 8,
-	UInt32 = 9,
-	Number = 10,
-	Null = 11,
-	Task = 12,
-	Exception = 13
+    Function = 1,
+    Buffer = 2,
+    Array = 3,
+    Date = 4,
+    Object = 5,
+    String = 6,
+    Boolean = 7,
+    Int32 = 8,
+    UInt32 = 9,
+    Number = 10,
+    Null = 11,
+    Task = 12,
+    Exception = 13
 }
 
 public delegate void CallV8FunctionDelegate(IntPtr payload, int payloadType, IntPtr v8FunctionContext, IntPtr callbackContext, IntPtr callbackDelegate);
@@ -62,27 +62,48 @@ public delegate void TaskCompleteDelegate(IntPtr result, int resultType, int tas
 [SecurityCritical]
 public class CoreCLREmbedding
 {
-	private class TaskState
-	{
-		public TaskCompleteDelegate Callback;
-		public IntPtr Context;
-
-		public TaskState(TaskCompleteDelegate callback, IntPtr context)
-		{
-			Callback = callback;
-			Context = context;
-		}
-	}
-
-    private class EdgeAssemblyLoadContext : AssemblyLoadContext
+    private class TaskState
     {
-        internal readonly Dictionary<string, string> RuntimeAssemblies = new Dictionary<string, string>();
+        public TaskCompleteDelegate Callback;
+        public IntPtr Context;
+
+        public TaskState(TaskCompleteDelegate callback, IntPtr context)
+        {
+            Callback = callback;
+            Context = context;
+        }
+    }
+
+    private class EdgeAssemblyLoadContextAccessor : LoadContextAccessor
+    {
+        private static EdgeAssemblyLoadContextAccessor _instance = new EdgeAssemblyLoadContextAccessor();
+        private EdgeAssemblyLoadContext _edgeAssemblyLoadContext = new EdgeAssemblyLoadContext();
+
+        public new EdgeAssemblyLoadContext Default
+        {
+            get
+            {
+                return _edgeAssemblyLoadContext;
+            }
+        }
+
+        public new static EdgeAssemblyLoadContextAccessor Instance
+        {
+            get
+            {
+                return _instance;
+            }
+        }
+    }
+
+    private class EdgeAssemblyLoadContext : AssemblyLoadContext, IAssemblyLoadContext
+    {
         internal readonly Dictionary<string, string> CompileAssemblies = new Dictionary<string, string>();
-        private readonly bool _noProjectJsonFile = false;
         private readonly string _applicationRoot;
         private readonly FrameworkName _targetFrameworkName = new FrameworkName("DNXCore,Version=v5.0");
-        private readonly Type _lockFileReaderType;
-        private readonly MethodInfo _readLockFileMethod;
+        private readonly ApplicationHostContext _applicationHostContext;
+        private readonly List<IAssemblyLoader> _loaders = new List<IAssemblyLoader>();
+        private readonly bool _noProjectJsonFile = false;
 
         public EdgeAssemblyLoadContext()
         {
@@ -91,112 +112,61 @@ public class CoreCLREmbedding
             _applicationRoot = Environment.GetEnvironmentVariable("EDGE_APP_ROOT") ?? Directory.GetCurrentDirectory();
             DebugMessage("EdgeAssemblyLoadContext::ctor (CLR) - Application root is {0}", _applicationRoot);
 
-            Assembly runtimeAssembly = Assembly.Load(new AssemblyName("Microsoft.Dnx.Runtime")
+            if (File.Exists(Path.Combine(_applicationRoot, "project.lock.json")))
             {
-                Version = new Version("1.0.0.0")
-            });
+                _applicationHostContext = new ApplicationHostContext
+                {
+                    ProjectDirectory = _applicationRoot,
+                    TargetFramework = _targetFrameworkName
+                };
 
-            _lockFileReaderType = runtimeAssembly.GetType("Microsoft.Dnx.Runtime.LockFileReader");
-            _readLockFileMethod = _lockFileReaderType.GetMethod("Read", new Type[]
-            {
-                typeof (string)
-            });
+                IList<LibraryDescription> libraries = ApplicationHostContext.GetRuntimeLibraries(_applicationHostContext);
+                Dictionary<string, ProjectDescription> projects = libraries.Where(p => p.Type == LibraryTypes.Project).ToDictionary(p => p.Identity.Name, p => (ProjectDescription)p);
+                Dictionary<AssemblyName, string> assemblies = PackageDependencyProvider.ResolvePackageAssemblyPaths(libraries);
 
-            if (!File.Exists(Path.Combine(_applicationRoot, "project.json")) || !File.Exists(Path.Combine(_applicationRoot, "project.lock.json")))
-            {
-                _noProjectJsonFile = true;
+                foreach (LibraryDescription libraryDescription in libraries.Where(l => l.Type == LibraryTypes.Package))
+                {
+                    PackageDescription packageDescription = (PackageDescription) libraryDescription;
+
+                    if (packageDescription.Target.CompileTimeAssemblies != null && packageDescription.Target.CompileTimeAssemblies.Count > 0)
+                    {
+                        CompileAssemblies[libraryDescription.Identity.Name] = Path.Combine(packageDescription.Path, packageDescription.Target.CompileTimeAssemblies[0].Path);
+                    }
+
+                    else
+                    {
+                        CompileAssemblies[libraryDescription.Identity.Name] = Path.Combine(packageDescription.Path, packageDescription.Target.RuntimeAssemblies[0].Path);
+                    }
+                }
+
+                _loaders.Add(new ProjectAssemblyLoader(EdgeAssemblyLoadContextAccessor.Instance, null, projects.Values));
+                _loaders.Add(new PackageAssemblyLoader(EdgeAssemblyLoadContextAccessor.Instance, assemblies));
             }
 
             else
             {
-                ResolveDependencies(_applicationRoot);
+                _noProjectJsonFile = true;
             }
 
             DebugMessage("EdgeAssemblyLoadContext::ctor (CLR) - Created the dependency providers for the application");
         }
 
-        private LockFile ReadLockFile(string lockFilePath)
-        {
-            object lockFileReader = Activator.CreateInstance(_lockFileReaderType);
-            return (LockFile) _readLockFileMethod.Invoke(lockFileReader, new object[]
-            {
-                lockFilePath
-            });
-        }
-
         internal void AddCompiler(string compilerDirectory)
         {
             DebugMessage("EdgeAssemblyLoadContext::AddCompiler (CLR) - Adding the compiler in {0}", compilerDirectory);
-            ResolveDependencies(compilerDirectory);
+
+            ApplicationHostContext compilerHostContext = new ApplicationHostContext
+            {
+                ProjectDirectory = _applicationRoot,
+                TargetFramework = _targetFrameworkName
+            };
+
+            IList<LibraryDescription> libraries = ApplicationHostContext.GetRuntimeLibraries(compilerHostContext);
+            Dictionary<AssemblyName, string> assemblies = PackageDependencyProvider.ResolvePackageAssemblyPaths(libraries);
+
+            _loaders.Add(new PackageAssemblyLoader(EdgeAssemblyLoadContextAccessor.Instance, assemblies));
+
             DebugMessage("EdgeAssemblyLoadContext::AddCompiler (CLR) - Finished");
-        }
-
-        private static string ResolveRepositoryPath(string rootDirectory)
-        {
-            GlobalSettings globalSettings;
-
-            if (GlobalSettings.TryGetGlobalSettings(rootDirectory, out globalSettings) && !string.IsNullOrEmpty(globalSettings.PackagesPath))
-            {
-                return Path.Combine(rootDirectory, globalSettings.PackagesPath);
-            }
-
-            string packagesPath = Environment.GetEnvironmentVariable("NUGET_PACKAGES");
-
-            if (string.IsNullOrEmpty(packagesPath))
-            {
-                packagesPath = Environment.GetEnvironmentVariable("DNX_PACKAGES");
-            }
-
-            if (!string.IsNullOrEmpty(packagesPath))
-            {
-                return packagesPath;
-            }
-
-            string profilePath = Environment.GetEnvironmentVariable("USERPROFILE");
-
-            if (string.IsNullOrEmpty(profilePath))
-            {
-                profilePath = Environment.GetEnvironmentVariable("HOME");
-            }
-
-            return Path.Combine(profilePath, ".dnx", "packages");
-        }
-
-        private void ResolveDependencies(string projectDirectory)
-        {
-            DebugMessage("EdgeAssemblyLoadContext::ResolveDependencies (CLR) - Getting the dependencies for the project in {0}", projectDirectory);
-
-            string packagesRepositoryPath = ResolveRepositoryPath(projectDirectory);
-            LockFile lockFile = ReadLockFile(Path.Combine(projectDirectory, "project.lock.json"));
-
-            if (!lockFile.Targets.Any(t => t.TargetFramework == _targetFrameworkName))
-            {
-                throw new Exception("The project.json file in " + projectDirectory + " does not have a framework entry for dnxcore50.");
-            }
-
-            foreach (LockFileTarget target in lockFile.Targets.Where(t => t.TargetFramework == _targetFrameworkName))
-            {
-                foreach (LockFileTargetLibrary library in target.Libraries)
-                {
-                    if (!RuntimeAssemblies.ContainsKey(library.Name) && library.RuntimeAssemblies.Count > 0)
-                    {
-                        string runtimeAssemblyPath = Path.Combine(packagesRepositoryPath, library.Name, library.Version.ToString(),
-                            library.RuntimeAssemblies[0].Path.Replace('/', Path.DirectorySeparatorChar));
-
-                        DebugMessage("EdgeAssemblyLoadContext::ResolveDependencies (CLR) - Resolved {0} to runtime assembly {1}", library.Name, runtimeAssemblyPath);
-                        RuntimeAssemblies[library.Name] = runtimeAssemblyPath;
-                    }
-
-                    if (!CompileAssemblies.ContainsKey(library.Name) && library.CompileTimeAssemblies.Count > 0)
-                    {
-                        string compileAssemblyPath = Path.Combine(packagesRepositoryPath, library.Name, library.Version.ToString(),
-                            library.CompileTimeAssemblies[0].Path.Replace('/', Path.DirectorySeparatorChar));
-
-                        DebugMessage("EdgeAssemblyLoadContext::ResolveDependencies (CLR) - Resolved {0} to compile assembly {1}", library.Name, compileAssemblyPath);
-                        CompileAssemblies[library.Name] = compileAssemblyPath;
-                    }
-                }
-            }
         }
 
         [SecuritySafeCritical]
@@ -204,13 +174,18 @@ public class CoreCLREmbedding
         {
             DebugMessage("EdgeAssemblyLoadContext::Load (CLR) - Trying to load {0}", assemblyName.Name);
 
-            if (RuntimeAssemblies.ContainsKey(assemblyName.Name))
+            foreach (IAssemblyLoader loader in _loaders)
             {
-                DebugMessage("EdgeAssemblyLoadContext::Load (CLR) - Found an entry in the resolved assemblies cache");
-                return LoadPath(RuntimeAssemblies[assemblyName.Name]);
+                Assembly assembly = loader.Load(assemblyName);
+
+                if (assembly != null)
+                {
+                    DebugMessage("EdgeAssemblyLoadContext::Load (CLR) - Successfully resolved assembly with {0}", loader.GetType().Name);
+                    return assembly;
+                }
             }
 
-            DebugMessage("EdgeAssemblyLoadContext::Load (CLR) - No entry in the resolved assemblies cache, calling Assembly.Load()");
+            DebugMessage("EdgeAssemblyLoadContext::Load (CLR) - Unable to resolve assembly with any of the loaders");
 
             try
             {
@@ -231,7 +206,7 @@ public class CoreCLREmbedding
             }
         }
 
-        public Assembly LoadPath(string assemblyPath)
+        public Assembly LoadFile(string assemblyPath)
         {
             if (!Path.IsPathRooted(assemblyPath))
             {
@@ -246,129 +221,138 @@ public class CoreCLREmbedding
             return LoadFromAssemblyPath(assemblyPath);
         }
 
-        public Assembly LoadStream(Stream assemblyStream)
+        public Assembly LoadStream(Stream assemblyStream, Stream assemblySymbols)
         {
             return LoadFromStream(assemblyStream);
+        }
+
+        public void Dispose()
+        {
+        }
+
+        Assembly IAssemblyLoadContext.Load(AssemblyName assemblyName)
+        {
+            return Load(assemblyName);
         }
     }
 
     private static bool DebugMode = Environment.GetEnvironmentVariable("EDGE_DEBUG") == "1";
-    private static EdgeAssemblyLoadContext AssemblyLoadContext = new EdgeAssemblyLoadContext();
-	private static long MinDateTimeTicks = 621355968000000000;
-	private static Dictionary<Type, List<Tuple<string, Func<object, object>>>> TypePropertyAccessors = new Dictionary<Type, List<Tuple<string, Func<object, object>>>>();
-	private static int PointerSize = Marshal.SizeOf<IntPtr>();
-	private static int V8BufferDataSize = Marshal.SizeOf<V8BufferData>();
-	private static int V8ObjectDataSize = Marshal.SizeOf<V8ObjectData>();
-	private static int V8ArrayDataSize = Marshal.SizeOf<V8ArrayData>();
+    private static EdgeAssemblyLoadContextAccessor LoadContextAccessor = EdgeAssemblyLoadContextAccessor.Instance;
+    private static long MinDateTimeTicks = 621355968000000000;
+    private static Dictionary<Type, List<Tuple<string, Func<object, object>>>> TypePropertyAccessors = new Dictionary<Type, List<Tuple<string, Func<object, object>>>>();
+    private static int PointerSize = Marshal.SizeOf<IntPtr>();
+    private static int V8BufferDataSize = Marshal.SizeOf<V8BufferData>();
+    private static int V8ObjectDataSize = Marshal.SizeOf<V8ObjectData>();
+    private static int V8ArrayDataSize = Marshal.SizeOf<V8ArrayData>();
     private static Dictionary<string, Tuple<Type, MethodInfo>> Compilers = new Dictionary<string, Tuple<Type, MethodInfo>>();
-        
+
     [SecurityCritical]
-	public static IntPtr GetFunc(string assemblyFile, string typeName, string methodName, IntPtr exception)
+    public static IntPtr GetFunc(string assemblyFile, string typeName, string methodName, IntPtr exception)
     {
-		try
-		{
-			Marshal.WriteIntPtr(exception, IntPtr.Zero);
+        try
+        {
+            Marshal.WriteIntPtr(exception, IntPtr.Zero);
 
-			if (!Path.IsPathRooted(assemblyFile))
-			{
-				assemblyFile = Path.Combine(Directory.GetCurrentDirectory(), assemblyFile);
-			}
+            if (!Path.IsPathRooted(assemblyFile))
+            {
+                assemblyFile = Path.Combine(Directory.GetCurrentDirectory(), assemblyFile);
+            }
 
-            Assembly assembly = AssemblyLoadContext.LoadPath(assemblyFile);
-			DebugMessage("CoreCLREmbedding::GetFunc (CLR) - Assembly {0} loaded successfully", assemblyFile);
+            Assembly assembly = LoadContextAccessor.Default.LoadFile(assemblyFile);
+            DebugMessage("CoreCLREmbedding::GetFunc (CLR) - Assembly {0} loaded successfully", assemblyFile);
 
-			ClrFuncReflectionWrap wrapper = ClrFuncReflectionWrap.Create(assembly, typeName, methodName);
-			DebugMessage("CoreCLREmbedding::GetFunc (CLR) - Method {0}.{1}() loaded successfully", typeName, methodName);
+            ClrFuncReflectionWrap wrapper = ClrFuncReflectionWrap.Create(assembly, typeName, methodName);
+            DebugMessage("CoreCLREmbedding::GetFunc (CLR) - Method {0}.{1}() loaded successfully", typeName, methodName);
 
-			Func<object, Task<object>> wrapperFunc = new Func<object, Task<object>>(wrapper.Call);
-			GCHandle wrapperHandle = GCHandle.Alloc(wrapperFunc);
+            Func<object, Task<object>> wrapperFunc = new Func<object, Task<object>>(wrapper.Call);
+            GCHandle wrapperHandle = GCHandle.Alloc(wrapperFunc);
 
-			return GCHandle.ToIntPtr(wrapperHandle);
-		}
+            return GCHandle.ToIntPtr(wrapperHandle);
+        }
 
-		catch (Exception e)
-		{
-			DebugMessage("CoreCLREmbedding::GetFunc (CLR) - Exception was thrown: {0}", e.Message);
+        catch (Exception e)
+        {
+            DebugMessage("CoreCLREmbedding::GetFunc (CLR) - Exception was thrown: {0}", e.Message);
 
-			V8Type v8type;
-			Marshal.WriteIntPtr(exception, MarshalCLRToV8(e, out v8type));
+            V8Type v8type;
+            Marshal.WriteIntPtr(exception, MarshalCLRToV8(e, out v8type));
 
-			return IntPtr.Zero;
-		}
+            return IntPtr.Zero;
+        }
     }
 
     [SecurityCritical]
     public static IntPtr CompileFunc(IntPtr v8Options, int payloadType, IntPtr exception)
     {
-    	try
-    	{
-    		Marshal.WriteIntPtr(exception, IntPtr.Zero);
+        try
+        {
+            Marshal.WriteIntPtr(exception, IntPtr.Zero);
 
-    		IDictionary<string, object> options = (IDictionary<string, object>) MarshalV8ToCLR(v8Options, (V8Type)payloadType);
-    		string compiler = (string) options["compiler"];
+            IDictionary<string, object> options = (IDictionary<string, object>)MarshalV8ToCLR(v8Options, (V8Type)payloadType);
+            string compiler = (string)options["compiler"];
 
-    		if (!Path.IsPathRooted(compiler))
-			{
-				compiler = Path.Combine(Directory.GetCurrentDirectory(), compiler);
-			}
+            if (!Path.IsPathRooted(compiler))
+            {
+                compiler = Path.Combine(Directory.GetCurrentDirectory(), compiler);
+            }
 
-    	    MethodInfo compileMethod;
-    	    Type compilerType;
+            MethodInfo compileMethod;
+            Type compilerType;
 
-    	    if (!Compilers.ContainsKey(compiler))
-    	    {
-    	        AssemblyLoadContext.AddCompiler(Directory.GetParent(compiler).FullName);
+            if (!Compilers.ContainsKey(compiler))
+            {
+                LoadContextAccessor.Default.AddCompiler(Directory.GetParent(compiler).FullName);
 
-    	        Assembly compilerAssembly = AssemblyLoadContext.LoadPath(compiler);
-    	        DebugMessage("CoreCLREmbedding::CompileFunc (CLR) - Compiler assembly {0} loaded successfully", compiler);
+                Assembly compilerAssembly = LoadContextAccessor.Default.LoadFile(compiler);
+                DebugMessage("CoreCLREmbedding::CompileFunc (CLR) - Compiler assembly {0} loaded successfully", compiler);
 
-    	        compilerType = compilerAssembly.GetType("EdgeCompiler");
+                compilerType = compilerAssembly.GetType("EdgeCompiler");
 
-    	        if (compilerType == null)
-    	        {
-    	            throw new TypeLoadException("Could not load type 'EdgeCompiler'");
-    	        }
-    	        
-    	        compileMethod = compilerType.GetMethod("CompileFunc", BindingFlags.Instance | BindingFlags.Public);
+                if (compilerType == null)
+                {
+                    throw new TypeLoadException("Could not load type 'EdgeCompiler'");
+                }
 
-    	        if (compileMethod == null)
-    	        {
-    	            throw new Exception("Unable to find the CompileFunc() method on " + compilerType.FullName + ".");
-    	        }
+                compileMethod = compilerType.GetMethod("CompileFunc", BindingFlags.Instance | BindingFlags.Public);
 
-    	        MethodInfo setAssemblyLoader = compilerType.GetMethod("SetAssemblyLoader", BindingFlags.Static | BindingFlags.Public);
+                if (compileMethod == null)
+                {
+                    throw new Exception("Unable to find the CompileFunc() method on " + compilerType.FullName + ".");
+                }
 
-    	        if (setAssemblyLoader != null)
-    	        {
-    	            setAssemblyLoader.Invoke(null, new object[]
-    	            {
-    	                new Func<Stream, Assembly>(AssemblyLoadContext.LoadStream)
-    	            });
-    	        }
+                MethodInfo setAssemblyLoader = compilerType.GetMethod("SetAssemblyLoader", BindingFlags.Static | BindingFlags.Public);
+
+                if (setAssemblyLoader != null)
+                {
+                    setAssemblyLoader.Invoke(null, new object[]
+                    {
+                        new Func<Stream, Assembly>(assemblyStream => LoadContextAccessor.Default.LoadStream(assemblyStream, null))
+                    });
+                }
 
                 Compilers[compiler] = new Tuple<Type, MethodInfo>(compilerType, compileMethod);
-    	    }
+            }
 
-    	    else
-    	    {
-    	        compilerType = Compilers[compiler].Item1;
-    	        compileMethod = Compilers[compiler].Item2;
-    	    }
+            else
+            {
+                compilerType = Compilers[compiler].Item1;
+                compileMethod = Compilers[compiler].Item2;
+            }
 
             object compilerInstance = Activator.CreateInstance(compilerType);
 
             DebugMessage("CoreCLREmbedding::CompileFunc (CLR) - Starting compilation");
-    	    Func<object, Task<object>> compiledFunction = (Func<object, Task<object>>) compileMethod.Invoke(compilerInstance, new object[]
-    	    {
-    	        options,
-                AssemblyLoadContext.CompileAssemblies
-    	    });
+            Func<object, Task<object>> compiledFunction = (Func<object, Task<object>>)compileMethod.Invoke(compilerInstance, new object[]
+            {
+                options,
+                LoadContextAccessor.Default.CompileAssemblies
+            });
             DebugMessage("CoreCLREmbedding::CompileFunc (CLR) - Compilation complete");
 
-    	    GCHandle handle = GCHandle.Alloc(compiledFunction);
+            GCHandle handle = GCHandle.Alloc(compiledFunction);
 
-    	    return GCHandle.ToIntPtr(handle);
-    	}
+            return GCHandle.ToIntPtr(handle);
+        }
 
         catch (TargetInvocationException e)
         {
@@ -381,741 +365,741 @@ public class CoreCLREmbedding
         }
 
         catch (Exception e)
-		{
-			DebugMessage("CoreCLREmbedding::CompileFunc (CLR) - Exception was thrown: {0}\n{1}", e.Message, e.StackTrace);
+        {
+            DebugMessage("CoreCLREmbedding::CompileFunc (CLR) - Exception was thrown: {0}\n{1}", e.Message, e.StackTrace);
 
-			V8Type v8type;
-			Marshal.WriteIntPtr(exception, MarshalCLRToV8(e, out v8type));
+            V8Type v8type;
+            Marshal.WriteIntPtr(exception, MarshalCLRToV8(e, out v8type));
 
-			return IntPtr.Zero;
-		}
+            return IntPtr.Zero;
+        }
     }
 
-	[SecurityCritical]
-	public static void FreeHandle(IntPtr gcHandle)
-	{
-		GCHandle actualHandle = GCHandle.FromIntPtr(gcHandle);
-		actualHandle.Free();
-	}
+    [SecurityCritical]
+    public static void FreeHandle(IntPtr gcHandle)
+    {
+        GCHandle actualHandle = GCHandle.FromIntPtr(gcHandle);
+        actualHandle.Free();
+    }
 
-	[SecurityCritical]
-	public static void CallFunc(IntPtr function, IntPtr payload, int payloadType, IntPtr taskState, IntPtr result, IntPtr resultType)
-	{
-		try
-		{
-			DebugMessage("CoreCLREmbedding::CallFunc (CLR) - Starting");
+    [SecurityCritical]
+    public static void CallFunc(IntPtr function, IntPtr payload, int payloadType, IntPtr taskState, IntPtr result, IntPtr resultType)
+    {
+        try
+        {
+            DebugMessage("CoreCLREmbedding::CallFunc (CLR) - Starting");
 
-			GCHandle wrapperHandle = GCHandle.FromIntPtr(function);
-			Func<object, Task<object>> wrapperFunc = (Func<object, Task<object>>)wrapperHandle.Target;
+            GCHandle wrapperHandle = GCHandle.FromIntPtr(function);
+            Func<object, Task<object>> wrapperFunc = (Func<object, Task<object>>)wrapperHandle.Target;
 
-			DebugMessage("CoreCLREmbedding::CallFunc (CLR) - Marshalling data of type {0} and calling the .NET method", ((V8Type)payloadType).ToString("G"));
-			Task<Object> functionTask = wrapperFunc(MarshalV8ToCLR(payload, (V8Type)payloadType));
+            DebugMessage("CoreCLREmbedding::CallFunc (CLR) - Marshalling data of type {0} and calling the .NET method", ((V8Type)payloadType).ToString("G"));
+            Task<Object> functionTask = wrapperFunc(MarshalV8ToCLR(payload, (V8Type)payloadType));
 
-			if (functionTask.IsFaulted)
-			{
-				DebugMessage("CoreCLREmbedding::CallFunc (CLR) - .NET method ran synchronously and faulted, marshalling exception data for V8");
+            if (functionTask.IsFaulted)
+            {
+                DebugMessage("CoreCLREmbedding::CallFunc (CLR) - .NET method ran synchronously and faulted, marshalling exception data for V8");
 
-				V8Type taskExceptionType;
+                V8Type taskExceptionType;
 
-				Marshal.WriteInt32(taskState, (int)TaskStatus.Faulted);
-				Marshal.WriteIntPtr(result, MarshalCLRToV8(functionTask.Exception, out taskExceptionType));
-				Marshal.WriteInt32(resultType, (int)V8Type.Exception);
-			}
+                Marshal.WriteInt32(taskState, (int)TaskStatus.Faulted);
+                Marshal.WriteIntPtr(result, MarshalCLRToV8(functionTask.Exception, out taskExceptionType));
+                Marshal.WriteInt32(resultType, (int)V8Type.Exception);
+            }
 
-			else if (functionTask.IsCompleted)
-			{
-				DebugMessage("CoreCLREmbedding::CallFunc (CLR) - .NET method ran synchronously, marshalling data for V8");
+            else if (functionTask.IsCompleted)
+            {
+                DebugMessage("CoreCLREmbedding::CallFunc (CLR) - .NET method ran synchronously, marshalling data for V8");
 
-				V8Type taskResultType;
-				IntPtr marshalData = MarshalCLRToV8(functionTask.Result, out taskResultType);
+                V8Type taskResultType;
+                IntPtr marshalData = MarshalCLRToV8(functionTask.Result, out taskResultType);
 
-				DebugMessage("CoreCLREmbedding::CallFunc (CLR) - Method return data is of type {0}", taskResultType.ToString("G"));
+                DebugMessage("CoreCLREmbedding::CallFunc (CLR) - Method return data is of type {0}", taskResultType.ToString("G"));
 
-				Marshal.WriteInt32(taskState, (int)TaskStatus.RanToCompletion);
-				Marshal.WriteIntPtr(result, marshalData);
-				Marshal.WriteInt32(resultType, (int)taskResultType);
-			}
+                Marshal.WriteInt32(taskState, (int)TaskStatus.RanToCompletion);
+                Marshal.WriteIntPtr(result, marshalData);
+                Marshal.WriteInt32(resultType, (int)taskResultType);
+            }
 
-			else
-			{
-				DebugMessage("CoreCLREmbedding::CallFunc (CLR) - .NET method ran asynchronously, returning task handle and status");
+            else
+            {
+                DebugMessage("CoreCLREmbedding::CallFunc (CLR) - .NET method ran asynchronously, returning task handle and status");
 
-				GCHandle taskHandle = GCHandle.Alloc(functionTask);
+                GCHandle taskHandle = GCHandle.Alloc(functionTask);
 
-				Marshal.WriteInt32(taskState, (int)functionTask.Status);
-				Marshal.WriteIntPtr(result, GCHandle.ToIntPtr(taskHandle));
-				Marshal.WriteInt32(resultType, (int)V8Type.Task);
-			}
+                Marshal.WriteInt32(taskState, (int)functionTask.Status);
+                Marshal.WriteIntPtr(result, GCHandle.ToIntPtr(taskHandle));
+                Marshal.WriteInt32(resultType, (int)V8Type.Task);
+            }
 
-			DebugMessage("CoreCLREmbedding::CallFunc (CLR) - Finished");
-		}
+            DebugMessage("CoreCLREmbedding::CallFunc (CLR) - Finished");
+        }
 
-		catch (Exception e)
-		{
-			DebugMessage("CoreCLREmbedding::CallFunc (CLR) - Exception was thrown: {0}", e.Message);
+        catch (Exception e)
+        {
+            DebugMessage("CoreCLREmbedding::CallFunc (CLR) - Exception was thrown: {0}", e.Message);
 
-			V8Type v8Type;
+            V8Type v8Type;
 
-			Marshal.WriteIntPtr(result, MarshalCLRToV8(e, out v8Type));
-			Marshal.WriteInt32(resultType, (int)v8Type);
-			Marshal.WriteInt32(taskState, (int)TaskStatus.Faulted);
-		}
-	}
+            Marshal.WriteIntPtr(result, MarshalCLRToV8(e, out v8Type));
+            Marshal.WriteInt32(resultType, (int)v8Type);
+            Marshal.WriteInt32(taskState, (int)TaskStatus.Faulted);
+        }
+    }
 
-	private static void TaskCompleted(Task<object> task, object state)
-	{
-		DebugMessage("CoreCLREmbedding::TaskCompleted (CLR) - Task completed with a state of {0}", task.Status.ToString("G"));
-		DebugMessage("CoreCLREmbedding::TaskCompleted (CLR) - Marshalling data to return to V8", task.Status.ToString("G"));
+    private static void TaskCompleted(Task<object> task, object state)
+    {
+        DebugMessage("CoreCLREmbedding::TaskCompleted (CLR) - Task completed with a state of {0}", task.Status.ToString("G"));
+        DebugMessage("CoreCLREmbedding::TaskCompleted (CLR) - Marshalling data to return to V8", task.Status.ToString("G"));
 
-		V8Type v8Type;
-		TaskState actualState = (TaskState)state;
-		IntPtr resultObject = IntPtr.Zero;
-		TaskStatus taskStatus;
+        V8Type v8Type;
+        TaskState actualState = (TaskState)state;
+        IntPtr resultObject = IntPtr.Zero;
+        TaskStatus taskStatus;
 
-		if (task.IsFaulted)
-		{
-			taskStatus = TaskStatus.Faulted;
+        if (task.IsFaulted)
+        {
+            taskStatus = TaskStatus.Faulted;
 
-			try
-			{
-				resultObject = MarshalCLRToV8(task.Exception, out v8Type);
-			}
+            try
+            {
+                resultObject = MarshalCLRToV8(task.Exception, out v8Type);
+            }
 
-			catch (Exception e)
-			{
-				taskStatus = TaskStatus.Faulted;
-				resultObject = MarshalCLRToV8(e, out v8Type);
-			}
-		}
+            catch (Exception e)
+            {
+                taskStatus = TaskStatus.Faulted;
+                resultObject = MarshalCLRToV8(e, out v8Type);
+            }
+        }
 
-		else
-		{
-			taskStatus = TaskStatus.RanToCompletion;
+        else
+        {
+            taskStatus = TaskStatus.RanToCompletion;
 
-			try
-			{
-				resultObject = MarshalCLRToV8(task.Result, out v8Type);
-			}
+            try
+            {
+                resultObject = MarshalCLRToV8(task.Result, out v8Type);
+            }
 
-			catch (Exception e)
-			{
-				taskStatus = TaskStatus.Faulted;
-				resultObject = MarshalCLRToV8(e, out v8Type);
-			}
-		}
+            catch (Exception e)
+            {
+                taskStatus = TaskStatus.Faulted;
+                resultObject = MarshalCLRToV8(e, out v8Type);
+            }
+        }
 
-		DebugMessage("CoreCLREmbedding::TaskCompleted (CLR) - Invoking unmanaged callback");
-		actualState.Callback(resultObject, (int)v8Type, (int)taskStatus, actualState.Context);
-	}
+        DebugMessage("CoreCLREmbedding::TaskCompleted (CLR) - Invoking unmanaged callback");
+        actualState.Callback(resultObject, (int)v8Type, (int)taskStatus, actualState.Context);
+    }
 
-	[SecurityCritical]
-	public static void ContinueTask(IntPtr task, IntPtr context, IntPtr callback, IntPtr exception)
-	{
-		try
-		{
-			Marshal.WriteIntPtr(exception, IntPtr.Zero);
+    [SecurityCritical]
+    public static void ContinueTask(IntPtr task, IntPtr context, IntPtr callback, IntPtr exception)
+    {
+        try
+        {
+            Marshal.WriteIntPtr(exception, IntPtr.Zero);
 
-			DebugMessage("CoreCLREmbedding::ContinueTask (CLR) - Starting");
+            DebugMessage("CoreCLREmbedding::ContinueTask (CLR) - Starting");
 
-			GCHandle taskHandle = GCHandle.FromIntPtr(task);
-			Task<Object> actualTask = (Task<Object>) taskHandle.Target;
+            GCHandle taskHandle = GCHandle.FromIntPtr(task);
+            Task<Object> actualTask = (Task<Object>)taskHandle.Target;
 
-			TaskCompleteDelegate taskCompleteDelegate = Marshal.GetDelegateForFunctionPointer<TaskCompleteDelegate>(callback);
-			DebugMessage("CoreCLREmbedding::ContinueTask (CLR) - Marshalled unmanaged callback successfully");
+            TaskCompleteDelegate taskCompleteDelegate = Marshal.GetDelegateForFunctionPointer<TaskCompleteDelegate>(callback);
+            DebugMessage("CoreCLREmbedding::ContinueTask (CLR) - Marshalled unmanaged callback successfully");
 
-			actualTask.ContinueWith(new Action<Task<object>, object>(TaskCompleted), new TaskState(taskCompleteDelegate, context));
+            actualTask.ContinueWith(new Action<Task<object>, object>(TaskCompleted), new TaskState(taskCompleteDelegate, context));
 
-			DebugMessage("CoreCLREmbedding::ContinueTask (CLR) - Finished");
-		}
+            DebugMessage("CoreCLREmbedding::ContinueTask (CLR) - Finished");
+        }
 
-		catch (Exception e)
-		{
-			DebugMessage("CoreCLREmbedding::ContinueTask (CLR) - Exception was thrown: {0}", e.Message);
+        catch (Exception e)
+        {
+            DebugMessage("CoreCLREmbedding::ContinueTask (CLR) - Exception was thrown: {0}", e.Message);
 
-			V8Type v8type;
-			Marshal.WriteIntPtr(exception, MarshalCLRToV8(e, out v8type));
-		}
-	}
+            V8Type v8type;
+            Marshal.WriteIntPtr(exception, MarshalCLRToV8(e, out v8type));
+        }
+    }
 
-	[SecurityCritical]
-	public static void SetCallV8FunctionDelegate(IntPtr callV8Function, IntPtr exception)
-	{
-		try
-		{
-			Marshal.WriteIntPtr(exception, IntPtr.Zero);
-			NodejsFuncInvokeContext.CallV8Function = Marshal.GetDelegateForFunctionPointer<CallV8FunctionDelegate>(callV8Function);
-		}
+    [SecurityCritical]
+    public static void SetCallV8FunctionDelegate(IntPtr callV8Function, IntPtr exception)
+    {
+        try
+        {
+            Marshal.WriteIntPtr(exception, IntPtr.Zero);
+            NodejsFuncInvokeContext.CallV8Function = Marshal.GetDelegateForFunctionPointer<CallV8FunctionDelegate>(callV8Function);
+        }
 
-		catch (Exception e)
-		{
-			DebugMessage("CoreCLREmbedding::SetCallV8FunctionDelegate (CLR) - Exception was thrown: {0}", e.Message);
+        catch (Exception e)
+        {
+            DebugMessage("CoreCLREmbedding::SetCallV8FunctionDelegate (CLR) - Exception was thrown: {0}", e.Message);
 
-			V8Type v8type;
-			Marshal.WriteIntPtr(exception, MarshalCLRToV8(e, out v8type));
-		}
-	}
+            V8Type v8type;
+            Marshal.WriteIntPtr(exception, MarshalCLRToV8(e, out v8type));
+        }
+    }
 
-	[SecurityCritical]
-	public static void FreeMarshalData(IntPtr marshalData, int v8Type)
-	{
-		switch ((V8Type)v8Type)
-		{
-			case V8Type.String:
-			case V8Type.Int32:
-			case V8Type.Boolean:
-			case V8Type.Number:
-			case V8Type.Date:
-				Marshal.FreeHGlobal(marshalData);
-				break;
+    [SecurityCritical]
+    public static void FreeMarshalData(IntPtr marshalData, int v8Type)
+    {
+        switch ((V8Type)v8Type)
+        {
+            case V8Type.String:
+            case V8Type.Int32:
+            case V8Type.Boolean:
+            case V8Type.Number:
+            case V8Type.Date:
+                Marshal.FreeHGlobal(marshalData);
+                break;
 
-			case V8Type.Object:
-			case V8Type.Exception:
-				V8ObjectData objectData = Marshal.PtrToStructure<V8ObjectData>(marshalData);
+            case V8Type.Object:
+            case V8Type.Exception:
+                V8ObjectData objectData = Marshal.PtrToStructure<V8ObjectData>(marshalData);
 
-				for (int i = 0; i < objectData.propertiesCount; i++)
-				{
-					int propertyType = Marshal.ReadInt32(objectData.propertyTypes, i * sizeof(int));
+                for (int i = 0; i < objectData.propertiesCount; i++)
+                {
+                    int propertyType = Marshal.ReadInt32(objectData.propertyTypes, i * sizeof(int));
                     IntPtr propertyValue = Marshal.ReadIntPtr(objectData.propertyValues, i * PointerSize);
                     IntPtr propertyName = Marshal.ReadIntPtr(objectData.propertyNames, i * PointerSize);
 
-					FreeMarshalData(propertyValue, propertyType);
-					Marshal.FreeHGlobal(propertyName);
-				}
+                    FreeMarshalData(propertyValue, propertyType);
+                    Marshal.FreeHGlobal(propertyName);
+                }
 
-				Marshal.FreeHGlobal(objectData.propertyTypes);
-				Marshal.FreeHGlobal(objectData.propertyValues);
-				Marshal.FreeHGlobal(objectData.propertyNames);
-				Marshal.FreeHGlobal(marshalData);
+                Marshal.FreeHGlobal(objectData.propertyTypes);
+                Marshal.FreeHGlobal(objectData.propertyValues);
+                Marshal.FreeHGlobal(objectData.propertyNames);
+                Marshal.FreeHGlobal(marshalData);
 
-				break;
+                break;
 
-			case V8Type.Array:
-				V8ArrayData arrayData = Marshal.PtrToStructure<V8ArrayData>(marshalData);
+            case V8Type.Array:
+                V8ArrayData arrayData = Marshal.PtrToStructure<V8ArrayData>(marshalData);
 
-				for (int i = 0; i < arrayData.arrayLength; i++)
-				{
-					int itemType = Marshal.ReadInt32(arrayData.itemTypes, i * sizeof(int));
+                for (int i = 0; i < arrayData.arrayLength; i++)
+                {
+                    int itemType = Marshal.ReadInt32(arrayData.itemTypes, i * sizeof(int));
                     IntPtr itemValue = Marshal.ReadIntPtr(arrayData.itemValues, i * PointerSize);
 
-					FreeMarshalData(itemValue, itemType);
-				}
+                    FreeMarshalData(itemValue, itemType);
+                }
 
-				Marshal.FreeHGlobal(arrayData.itemTypes);
-				Marshal.FreeHGlobal(arrayData.itemValues);
-				Marshal.FreeHGlobal(marshalData);
+                Marshal.FreeHGlobal(arrayData.itemTypes);
+                Marshal.FreeHGlobal(arrayData.itemValues);
+                Marshal.FreeHGlobal(marshalData);
 
-				break;
+                break;
 
-			case V8Type.Buffer:
-				V8BufferData bufferData = Marshal.PtrToStructure<V8BufferData>(marshalData);
+            case V8Type.Buffer:
+                V8BufferData bufferData = Marshal.PtrToStructure<V8BufferData>(marshalData);
 
-				Marshal.FreeHGlobal(bufferData.buffer);
-				Marshal.FreeHGlobal(marshalData);
+                Marshal.FreeHGlobal(bufferData.buffer);
+                Marshal.FreeHGlobal(marshalData);
 
-				break;
+                break;
 
-			case V8Type.Null:
-			case V8Type.Function:
-				break;
+            case V8Type.Null:
+            case V8Type.Function:
+                break;
 
-			default:
-				throw new Exception("Unsupported marshalled data type: " + v8Type);
-		}
-	}
+            default:
+                throw new Exception("Unsupported marshalled data type: " + v8Type);
+        }
+    }
 
-	public static IntPtr MarshalCLRToV8(object clrObject, out V8Type v8Type)
-	{	
-		if (clrObject == null)
-		{
-			v8Type = V8Type.Null;
-			return IntPtr.Zero;
-		}
-        
-		else if (clrObject is string)
-		{
-			v8Type = V8Type.String;
-			return Marshal.StringToHGlobalAnsi((string)clrObject);
-		}
+    public static IntPtr MarshalCLRToV8(object clrObject, out V8Type v8Type)
+    {
+        if (clrObject == null)
+        {
+            v8Type = V8Type.Null;
+            return IntPtr.Zero;
+        }
 
-		else if (clrObject is char)
-		{
-			v8Type = V8Type.String;
-			return Marshal.StringToHGlobalAnsi(clrObject.ToString());
-		}
+        else if (clrObject is string)
+        {
+            v8Type = V8Type.String;
+            return Marshal.StringToHGlobalAnsi((string)clrObject);
+        }
 
-		else if (clrObject is bool)
-		{
-			v8Type = V8Type.Boolean;
-			IntPtr memoryLocation = Marshal.AllocHGlobal(sizeof(int));
+        else if (clrObject is char)
+        {
+            v8Type = V8Type.String;
+            return Marshal.StringToHGlobalAnsi(clrObject.ToString());
+        }
 
-			Marshal.WriteInt32(memoryLocation, ((bool)clrObject) ? 1 : 0);
-			return memoryLocation;
-		}
+        else if (clrObject is bool)
+        {
+            v8Type = V8Type.Boolean;
+            IntPtr memoryLocation = Marshal.AllocHGlobal(sizeof(int));
 
-		else if (clrObject is Guid)
-		{
-			v8Type = V8Type.String;
-			return Marshal.StringToHGlobalAnsi(clrObject.ToString());
-		}
+            Marshal.WriteInt32(memoryLocation, ((bool)clrObject) ? 1 : 0);
+            return memoryLocation;
+        }
 
-		else if (clrObject is DateTime)
-		{
-			v8Type = V8Type.Date;
-			DateTime dateTime = (DateTime)clrObject;
+        else if (clrObject is Guid)
+        {
+            v8Type = V8Type.String;
+            return Marshal.StringToHGlobalAnsi(clrObject.ToString());
+        }
 
-			if (dateTime.Kind == DateTimeKind.Local)
-			{
-				dateTime = dateTime.ToUniversalTime();
-			}
+        else if (clrObject is DateTime)
+        {
+            v8Type = V8Type.Date;
+            DateTime dateTime = (DateTime)clrObject;
 
-			else if (dateTime.Kind == DateTimeKind.Unspecified)
-			{
-				dateTime = new DateTime(dateTime.Ticks, DateTimeKind.Utc);
-			}
+            if (dateTime.Kind == DateTimeKind.Local)
+            {
+                dateTime = dateTime.ToUniversalTime();
+            }
 
-			long ticks = (dateTime.Ticks - MinDateTimeTicks) / 10000;
-			IntPtr memoryLocation = Marshal.AllocHGlobal(sizeof(double));
+            else if (dateTime.Kind == DateTimeKind.Unspecified)
+            {
+                dateTime = new DateTime(dateTime.Ticks, DateTimeKind.Utc);
+            }
 
-			WriteDouble(memoryLocation, (double)ticks);
-			return memoryLocation;
-		}
+            long ticks = (dateTime.Ticks - MinDateTimeTicks) / 10000;
+            IntPtr memoryLocation = Marshal.AllocHGlobal(sizeof(double));
 
-		else if (clrObject is DateTimeOffset)
-		{
-			v8Type = V8Type.String;
-			return Marshal.StringToHGlobalAnsi(clrObject.ToString());
-		}
+            WriteDouble(memoryLocation, (double)ticks);
+            return memoryLocation;
+        }
 
-		else if (clrObject is Uri)
-		{
-			v8Type = V8Type.String;
-			return Marshal.StringToHGlobalAnsi(clrObject.ToString());
-		}
+        else if (clrObject is DateTimeOffset)
+        {
+            v8Type = V8Type.String;
+            return Marshal.StringToHGlobalAnsi(clrObject.ToString());
+        }
 
-		else if (clrObject is Int16)
-		{
-			v8Type = V8Type.Int32;
-			IntPtr memoryLocation = Marshal.AllocHGlobal(sizeof(int));
+        else if (clrObject is Uri)
+        {
+            v8Type = V8Type.String;
+            return Marshal.StringToHGlobalAnsi(clrObject.ToString());
+        }
 
-			Marshal.WriteInt32(memoryLocation, (int)clrObject);
-			return memoryLocation;
-		}
+        else if (clrObject is Int16)
+        {
+            v8Type = V8Type.Int32;
+            IntPtr memoryLocation = Marshal.AllocHGlobal(sizeof(int));
 
-		else if (clrObject is Int32)
-		{
-			v8Type = V8Type.Int32;
-			IntPtr memoryLocation = Marshal.AllocHGlobal(sizeof(int));
+            Marshal.WriteInt32(memoryLocation, (int)clrObject);
+            return memoryLocation;
+        }
 
-			Marshal.WriteInt32(memoryLocation, (int)clrObject);
-			return memoryLocation;
-		}
+        else if (clrObject is Int32)
+        {
+            v8Type = V8Type.Int32;
+            IntPtr memoryLocation = Marshal.AllocHGlobal(sizeof(int));
 
-		else if (clrObject is Int64)
-		{
-			v8Type = V8Type.Number;
-			IntPtr memoryLocation = Marshal.AllocHGlobal(sizeof(double));
+            Marshal.WriteInt32(memoryLocation, (int)clrObject);
+            return memoryLocation;
+        }
 
-			WriteDouble(memoryLocation, Convert.ToDouble((long)clrObject));
-			return memoryLocation;
-		}
+        else if (clrObject is Int64)
+        {
+            v8Type = V8Type.Number;
+            IntPtr memoryLocation = Marshal.AllocHGlobal(sizeof(double));
 
-		else if (clrObject is Double)
-		{
-			v8Type = V8Type.Number;
-			IntPtr memoryLocation = Marshal.AllocHGlobal(sizeof(double));
+            WriteDouble(memoryLocation, Convert.ToDouble((long)clrObject));
+            return memoryLocation;
+        }
 
-			WriteDouble(memoryLocation, (double)clrObject);
-			return memoryLocation;
-		}
+        else if (clrObject is Double)
+        {
+            v8Type = V8Type.Number;
+            IntPtr memoryLocation = Marshal.AllocHGlobal(sizeof(double));
 
-		else if (clrObject is Single)
-		{
-			v8Type = V8Type.Number;
-			IntPtr memoryLocation = Marshal.AllocHGlobal(sizeof(double));
+            WriteDouble(memoryLocation, (double)clrObject);
+            return memoryLocation;
+        }
 
-			WriteDouble(memoryLocation, Convert.ToDouble((Single)clrObject));
-			return memoryLocation;
-		}
+        else if (clrObject is Single)
+        {
+            v8Type = V8Type.Number;
+            IntPtr memoryLocation = Marshal.AllocHGlobal(sizeof(double));
 
-		else if (clrObject is Decimal)
-		{
-			v8Type = V8Type.String;
-			return Marshal.StringToHGlobalAnsi(clrObject.ToString());
-		}
+            WriteDouble(memoryLocation, Convert.ToDouble((Single)clrObject));
+            return memoryLocation;
+        }
 
-		else if (clrObject is Enum)
-		{
-			v8Type = V8Type.String;
-			return Marshal.StringToHGlobalAnsi(clrObject.ToString());
-		}
+        else if (clrObject is Decimal)
+        {
+            v8Type = V8Type.String;
+            return Marshal.StringToHGlobalAnsi(clrObject.ToString());
+        }
 
-		else if (clrObject is byte[] || clrObject is IEnumerable<byte>)
-		{
-			v8Type = V8Type.Buffer;
+        else if (clrObject is Enum)
+        {
+            v8Type = V8Type.String;
+            return Marshal.StringToHGlobalAnsi(clrObject.ToString());
+        }
 
-			V8BufferData bufferData = new V8BufferData();
-			byte[] buffer;
+        else if (clrObject is byte[] || clrObject is IEnumerable<byte>)
+        {
+            v8Type = V8Type.Buffer;
 
-			if (clrObject is byte[])
-			{
-				buffer = (byte[]) clrObject;
-			}
+            V8BufferData bufferData = new V8BufferData();
+            byte[] buffer;
 
-			else
-			{
-				buffer = ((IEnumerable<byte>) clrObject).ToArray();
-			}
+            if (clrObject is byte[])
+            {
+                buffer = (byte[])clrObject;
+            }
 
-			bufferData.bufferLength = buffer.Length;
-			bufferData.buffer = Marshal.AllocHGlobal(buffer.Length * sizeof(byte));
+            else
+            {
+                buffer = ((IEnumerable<byte>)clrObject).ToArray();
+            }
 
-			Marshal.Copy(buffer, 0, bufferData.buffer, bufferData.bufferLength);
+            bufferData.bufferLength = buffer.Length;
+            bufferData.buffer = Marshal.AllocHGlobal(buffer.Length * sizeof(byte));
+
+            Marshal.Copy(buffer, 0, bufferData.buffer, bufferData.bufferLength);
 
             IntPtr destinationPointer = Marshal.AllocHGlobal(V8BufferDataSize);
-			Marshal.StructureToPtr<V8BufferData>(bufferData, destinationPointer, false);
+            Marshal.StructureToPtr<V8BufferData>(bufferData, destinationPointer, false);
 
-			return destinationPointer;
-		}
+            return destinationPointer;
+        }
 
-		else if (clrObject is IDictionary || clrObject is ExpandoObject)
-		{
-			v8Type = V8Type.Object;
+        else if (clrObject is IDictionary || clrObject is ExpandoObject)
+        {
+            v8Type = V8Type.Object;
 
-			IEnumerable keys;
-			int keyCount;
-			Func<object, object> getValue;
+            IEnumerable keys;
+            int keyCount;
+            Func<object, object> getValue;
 
-			if (clrObject is ExpandoObject)
-			{
-				IDictionary<string, object> objectDictionary = (IDictionary<string, object>)clrObject;
+            if (clrObject is ExpandoObject)
+            {
+                IDictionary<string, object> objectDictionary = (IDictionary<string, object>)clrObject;
 
-				keys = objectDictionary.Keys;
-				keyCount = objectDictionary.Keys.Count;
-				getValue = (index) => objectDictionary[index.ToString()];
-			}
+                keys = objectDictionary.Keys;
+                keyCount = objectDictionary.Keys.Count;
+                getValue = (index) => objectDictionary[index.ToString()];
+            }
 
-			else
-			{
-				IDictionary objectDictionary = (IDictionary)clrObject;
+            else
+            {
+                IDictionary objectDictionary = (IDictionary)clrObject;
 
-				keys = objectDictionary.Keys;
-				keyCount = objectDictionary.Keys.Count;
-				getValue = (index) => objectDictionary[index];
-			}
+                keys = objectDictionary.Keys;
+                keyCount = objectDictionary.Keys.Count;
+                getValue = (index) => objectDictionary[index];
+            }
 
-			V8ObjectData objectData = new V8ObjectData();
-			int counter = 0;
-			V8Type propertyType;
+            V8ObjectData objectData = new V8ObjectData();
+            int counter = 0;
+            V8Type propertyType;
 
-			objectData.propertiesCount = keyCount;
-			objectData.propertyNames = Marshal.AllocHGlobal(PointerSize * keyCount);
-			objectData.propertyTypes = Marshal.AllocHGlobal(sizeof(int) * keyCount);
-			objectData.propertyValues = Marshal.AllocHGlobal(PointerSize * keyCount);
+            objectData.propertiesCount = keyCount;
+            objectData.propertyNames = Marshal.AllocHGlobal(PointerSize * keyCount);
+            objectData.propertyTypes = Marshal.AllocHGlobal(sizeof(int) * keyCount);
+            objectData.propertyValues = Marshal.AllocHGlobal(PointerSize * keyCount);
 
-			foreach (object key in keys)
-			{
-				Marshal.WriteIntPtr(objectData.propertyNames, counter * PointerSize, Marshal.StringToHGlobalAnsi(key.ToString()));
-				Marshal.WriteIntPtr(objectData.propertyValues, counter * PointerSize, MarshalCLRToV8(getValue(key), out propertyType));
-				Marshal.WriteInt32(objectData.propertyTypes, counter * sizeof(int), (int)propertyType);
+            foreach (object key in keys)
+            {
+                Marshal.WriteIntPtr(objectData.propertyNames, counter * PointerSize, Marshal.StringToHGlobalAnsi(key.ToString()));
+                Marshal.WriteIntPtr(objectData.propertyValues, counter * PointerSize, MarshalCLRToV8(getValue(key), out propertyType));
+                Marshal.WriteInt32(objectData.propertyTypes, counter * sizeof(int), (int)propertyType);
 
-				counter++;
-			}
+                counter++;
+            }
 
             IntPtr destinationPointer = Marshal.AllocHGlobal(V8ObjectDataSize);
-			Marshal.StructureToPtr<V8ObjectData>(objectData, destinationPointer, false);
+            Marshal.StructureToPtr<V8ObjectData>(objectData, destinationPointer, false);
 
-			return destinationPointer;
-		}
+            return destinationPointer;
+        }
 
-		else if (clrObject is IEnumerable)
-		{
-			v8Type = V8Type.Array;
+        else if (clrObject is IEnumerable)
+        {
+            v8Type = V8Type.Array;
 
-			V8ArrayData arrayData = new V8ArrayData();
-			List<IntPtr> itemValues = new List<IntPtr>();
-			List<int> itemTypes = new List<int>();
-			V8Type itemType;
+            V8ArrayData arrayData = new V8ArrayData();
+            List<IntPtr> itemValues = new List<IntPtr>();
+            List<int> itemTypes = new List<int>();
+            V8Type itemType;
 
-			foreach (object item in (IEnumerable)clrObject)
-			{
-				itemValues.Add(MarshalCLRToV8(item, out itemType));
-				itemTypes.Add((int)itemType);
-			}
+            foreach (object item in (IEnumerable)clrObject)
+            {
+                itemValues.Add(MarshalCLRToV8(item, out itemType));
+                itemTypes.Add((int)itemType);
+            }
 
-			arrayData.arrayLength = itemValues.Count;
-			arrayData.itemTypes = Marshal.AllocHGlobal(sizeof(int) * arrayData.arrayLength);
+            arrayData.arrayLength = itemValues.Count;
+            arrayData.itemTypes = Marshal.AllocHGlobal(sizeof(int) * arrayData.arrayLength);
             arrayData.itemValues = Marshal.AllocHGlobal(PointerSize * arrayData.arrayLength);
 
-			Marshal.Copy(itemTypes.ToArray(), 0, arrayData.itemTypes, arrayData.arrayLength);
-			Marshal.Copy(itemValues.ToArray(), 0, arrayData.itemValues, arrayData.arrayLength);
+            Marshal.Copy(itemTypes.ToArray(), 0, arrayData.itemTypes, arrayData.arrayLength);
+            Marshal.Copy(itemValues.ToArray(), 0, arrayData.itemValues, arrayData.arrayLength);
 
             IntPtr destinationPointer = Marshal.AllocHGlobal(V8ArrayDataSize);
-			Marshal.StructureToPtr<V8ArrayData>(arrayData, destinationPointer, false);
+            Marshal.StructureToPtr<V8ArrayData>(arrayData, destinationPointer, false);
 
-			return destinationPointer;
-		}
+            return destinationPointer;
+        }
 
-		else if (clrObject.GetType().GetTypeInfo().IsGenericType && clrObject.GetType().GetGenericTypeDefinition() == typeof(Func<,>))
-		{
-			Func<object, Task<object>> funcObject = clrObject as Func<object, Task<object>>;
+        else if (clrObject.GetType().GetTypeInfo().IsGenericType && clrObject.GetType().GetGenericTypeDefinition() == typeof(Func<,>))
+        {
+            Func<object, Task<object>> funcObject = clrObject as Func<object, Task<object>>;
 
-			if (clrObject == null)
-			{
-				throw new Exception("Properties that return Func<> instances must return Func<object, Task<object>> instances");
-			}
+            if (funcObject == null)
+            {
+                throw new Exception("Properties that return Func<> instances must return Func<object, Task<object>> instances");
+            }
 
-			v8Type = V8Type.Function;
-			return GCHandle.ToIntPtr(GCHandle.Alloc(funcObject));
-		}
+            v8Type = V8Type.Function;
+            return GCHandle.ToIntPtr(GCHandle.Alloc(funcObject));
+        }
 
-		else
-		{
-			v8Type = clrObject is Exception ? V8Type.Exception : V8Type.Object;
+        else
+        {
+            v8Type = clrObject is Exception ? V8Type.Exception : V8Type.Object;
 
-			if (clrObject is Exception)
-			{
-				AggregateException aggregateException = clrObject as AggregateException;
-					
-				if (aggregateException != null && aggregateException.InnerExceptions != null && aggregateException.InnerExceptions.Count > 0)
+            if (clrObject is Exception)
+            {
+                AggregateException aggregateException = clrObject as AggregateException;
+
+                if (aggregateException != null && aggregateException.InnerExceptions != null && aggregateException.InnerExceptions.Count > 0)
                 {
-					clrObject = aggregateException.InnerExceptions[0];
+                    clrObject = aggregateException.InnerExceptions[0];
                 }
-							
-				else 
-				{
-					TargetInvocationException targetInvocationException = clrObject as TargetInvocationException;
-							
-					if (targetInvocationException != null && targetInvocationException.InnerException != null)
-					{
-						clrObject = targetInvocationException.InnerException;
-					}
-				}
-			}
 
-			List<Tuple<string, Func<object, object>>> propertyAccessors = GetPropertyAccessors(clrObject.GetType());
-			V8ObjectData objectData = new V8ObjectData();
-			int counter = 0;
-			V8Type propertyType;
+                else
+                {
+                    TargetInvocationException targetInvocationException = clrObject as TargetInvocationException;
 
-			objectData.propertiesCount = propertyAccessors.Count;
-			objectData.propertyNames = Marshal.AllocHGlobal(PointerSize * propertyAccessors.Count);
-			objectData.propertyTypes = Marshal.AllocHGlobal(sizeof(int) * propertyAccessors.Count);
-			objectData.propertyValues = Marshal.AllocHGlobal(PointerSize * propertyAccessors.Count);
+                    if (targetInvocationException != null && targetInvocationException.InnerException != null)
+                    {
+                        clrObject = targetInvocationException.InnerException;
+                    }
+                }
+            }
 
-			foreach (Tuple<string, Func<object, object>> propertyAccessor in propertyAccessors)
-			{
-				Marshal.WriteIntPtr(objectData.propertyNames, counter * PointerSize, Marshal.StringToHGlobalAnsi(propertyAccessor.Item1));
-				Marshal.WriteIntPtr(objectData.propertyValues, counter * PointerSize, MarshalCLRToV8(propertyAccessor.Item2(clrObject), out propertyType));
-				Marshal.WriteInt32(objectData.propertyTypes, counter * sizeof(int), (int)propertyType);
-				counter++;
-			}
+            List<Tuple<string, Func<object, object>>> propertyAccessors = GetPropertyAccessors(clrObject.GetType());
+            V8ObjectData objectData = new V8ObjectData();
+            int counter = 0;
+            V8Type propertyType;
+
+            objectData.propertiesCount = propertyAccessors.Count;
+            objectData.propertyNames = Marshal.AllocHGlobal(PointerSize * propertyAccessors.Count);
+            objectData.propertyTypes = Marshal.AllocHGlobal(sizeof(int) * propertyAccessors.Count);
+            objectData.propertyValues = Marshal.AllocHGlobal(PointerSize * propertyAccessors.Count);
+
+            foreach (Tuple<string, Func<object, object>> propertyAccessor in propertyAccessors)
+            {
+                Marshal.WriteIntPtr(objectData.propertyNames, counter * PointerSize, Marshal.StringToHGlobalAnsi(propertyAccessor.Item1));
+                Marshal.WriteIntPtr(objectData.propertyValues, counter * PointerSize, MarshalCLRToV8(propertyAccessor.Item2(clrObject), out propertyType));
+                Marshal.WriteInt32(objectData.propertyTypes, counter * sizeof(int), (int)propertyType);
+                counter++;
+            }
 
             IntPtr destinationPointer = Marshal.AllocHGlobal(V8ObjectDataSize);
-			Marshal.StructureToPtr<V8ObjectData>(objectData, destinationPointer, false);
+            Marshal.StructureToPtr<V8ObjectData>(objectData, destinationPointer, false);
 
-			return destinationPointer;
-		}
-	}
+            return destinationPointer;
+        }
+    }
 
-	public static object MarshalV8ToCLR(IntPtr v8Object, V8Type objectType)
-	{
-		switch (objectType) 
-		{
-			case V8Type.String:
-				return Marshal.PtrToStringAnsi(v8Object);
+    public static object MarshalV8ToCLR(IntPtr v8Object, V8Type objectType)
+    {
+        switch (objectType)
+        {
+            case V8Type.String:
+                return Marshal.PtrToStringAnsi(v8Object);
 
-			case V8Type.Object:
-				return V8ObjectToExpando(Marshal.PtrToStructure<V8ObjectData>(v8Object));
+            case V8Type.Object:
+                return V8ObjectToExpando(Marshal.PtrToStructure<V8ObjectData>(v8Object));
 
-			case V8Type.Boolean:
-				return Marshal.ReadByte(v8Object) != 0;
+            case V8Type.Boolean:
+                return Marshal.ReadByte(v8Object) != 0;
 
-			case V8Type.Number:
-				return ReadDouble(v8Object);
+            case V8Type.Number:
+                return ReadDouble(v8Object);
 
-			case V8Type.Date:
-				double ticks = ReadDouble(v8Object);
-				return new DateTime(Convert.ToInt64(ticks) * 10000 + MinDateTimeTicks, DateTimeKind.Utc);
+            case V8Type.Date:
+                double ticks = ReadDouble(v8Object);
+                return new DateTime(Convert.ToInt64(ticks) * 10000 + MinDateTimeTicks, DateTimeKind.Utc);
 
-			case V8Type.Null:
-				return null;
+            case V8Type.Null:
+                return null;
 
-			case V8Type.Int32:
-				return Marshal.ReadInt32(v8Object);
+            case V8Type.Int32:
+                return Marshal.ReadInt32(v8Object);
 
-			case V8Type.UInt32:
-				return (uint) Marshal.ReadInt32(v8Object);
+            case V8Type.UInt32:
+                return (uint)Marshal.ReadInt32(v8Object);
 
-			case V8Type.Function:
-				NodejsFunc nodejsFunc = new NodejsFunc(v8Object);
-				return nodejsFunc.GetFunc();
+            case V8Type.Function:
+                NodejsFunc nodejsFunc = new NodejsFunc(v8Object);
+                return nodejsFunc.GetFunc();
 
-			case V8Type.Array:
-				V8ArrayData arrayData = Marshal.PtrToStructure<V8ArrayData>(v8Object);
-				object[] array = new object[arrayData.arrayLength];
+            case V8Type.Array:
+                V8ArrayData arrayData = Marshal.PtrToStructure<V8ArrayData>(v8Object);
+                object[] array = new object[arrayData.arrayLength];
 
-				for (int i = 0; i < arrayData.arrayLength; i++)
-				{
-					int itemType = Marshal.ReadInt32(arrayData.itemTypes, i * sizeof(int));
-					IntPtr itemValuePointer = Marshal.ReadIntPtr(arrayData.itemValues, i * PointerSize);
+                for (int i = 0; i < arrayData.arrayLength; i++)
+                {
+                    int itemType = Marshal.ReadInt32(arrayData.itemTypes, i * sizeof(int));
+                    IntPtr itemValuePointer = Marshal.ReadIntPtr(arrayData.itemValues, i * PointerSize);
 
-					array[i] = MarshalV8ToCLR(itemValuePointer, (V8Type)itemType);
-				}
+                    array[i] = MarshalV8ToCLR(itemValuePointer, (V8Type)itemType);
+                }
 
-				return array;
+                return array;
 
-			case V8Type.Buffer:
-				V8BufferData bufferData = Marshal.PtrToStructure<V8BufferData>(v8Object);
-				byte[] buffer = new byte[bufferData.bufferLength];
+            case V8Type.Buffer:
+                V8BufferData bufferData = Marshal.PtrToStructure<V8BufferData>(v8Object);
+                byte[] buffer = new byte[bufferData.bufferLength];
 
-				Marshal.Copy(bufferData.buffer, buffer, 0, bufferData.bufferLength);
+                Marshal.Copy(bufferData.buffer, buffer, 0, bufferData.bufferLength);
 
-				return buffer;
+                return buffer;
 
-			case V8Type.Exception:
-				string message = Marshal.PtrToStringAnsi(v8Object);
-				return new Exception(message);
+            case V8Type.Exception:
+                string message = Marshal.PtrToStringAnsi(v8Object);
+                return new Exception(message);
 
-			default:
-				throw new Exception("Unsupported V8 object type: " + objectType + ".");
-		}
-	}
+            default:
+                throw new Exception("Unsupported V8 object type: " + objectType + ".");
+        }
+    }
 
-	private static unsafe void WriteDouble(IntPtr pointer, double value)
-	{
-		try
-		{
-			byte* address = (byte*)pointer;
+    private static unsafe void WriteDouble(IntPtr pointer, double value)
+    {
+        try
+        {
+            byte* address = (byte*)pointer;
 
-			if ((unchecked((int)address) & 0x7) == 0)
-			{
-				*((double*)address) = value;
-			}
+            if ((unchecked((int)address) & 0x7) == 0)
+            {
+                *((double*)address) = value;
+            }
 
-			else
-			{
-				byte* valuePointer = (byte*) &value;
+            else
+            {
+                byte* valuePointer = (byte*)&value;
 
-				address[0] = valuePointer[0];
-				address[1] = valuePointer[1];
-				address[2] = valuePointer[2];
-				address[3] = valuePointer[3];
-				address[4] = valuePointer[4];
-				address[5] = valuePointer[5];
-				address[6] = valuePointer[6];
-				address[7] = valuePointer[7];
-			}
-		}
+                address[0] = valuePointer[0];
+                address[1] = valuePointer[1];
+                address[2] = valuePointer[2];
+                address[3] = valuePointer[3];
+                address[4] = valuePointer[4];
+                address[5] = valuePointer[5];
+                address[6] = valuePointer[6];
+                address[7] = valuePointer[7];
+            }
+        }
 
-		catch (NullReferenceException)
-		{
+        catch (NullReferenceException)
+        {
             throw new Exception("Access violation.");
-		}
-	}
+        }
+    }
 
-	private static unsafe double ReadDouble(IntPtr pointer)
-	{
-		try
-		{
-			byte* address = (byte*)pointer;
+    private static unsafe double ReadDouble(IntPtr pointer)
+    {
+        try
+        {
+            byte* address = (byte*)pointer;
 
-			if ((unchecked((int)address) & 0x7) == 0)
-			{
-				return *((double*)address);
-			}
+            if ((unchecked((int)address) & 0x7) == 0)
+            {
+                return *((double*)address);
+            }
 
-			else
-			{
-				double value;
-				byte* valuePointer = (byte*) &value;
+            else
+            {
+                double value;
+                byte* valuePointer = (byte*)&value;
 
-				valuePointer[0] = address[0];
-				valuePointer[1] = address[1];
-				valuePointer[2] = address[2];
-				valuePointer[3] = address[3];
-				valuePointer[4] = address[4];
-				valuePointer[5] = address[5];
-				valuePointer[6] = address[6];
-				valuePointer[7] = address[7];
+                valuePointer[0] = address[0];
+                valuePointer[1] = address[1];
+                valuePointer[2] = address[2];
+                valuePointer[3] = address[3];
+                valuePointer[4] = address[4];
+                valuePointer[5] = address[5];
+                valuePointer[6] = address[6];
+                valuePointer[7] = address[7];
 
-				return value;
-			}
-		}
+                return value;
+            }
+        }
 
-		catch (NullReferenceException)
-		{
+        catch (NullReferenceException)
+        {
             throw new Exception("Access violation.");
-		}
-	}
+        }
+    }
 
-	private static ExpandoObject V8ObjectToExpando(V8ObjectData v8Object)
-	{
-		ExpandoObject expando = new ExpandoObject();
-		IDictionary<string, object> expandoDictionary = (IDictionary<string, object>) expando;
+    private static ExpandoObject V8ObjectToExpando(V8ObjectData v8Object)
+    {
+        ExpandoObject expando = new ExpandoObject();
+        IDictionary<string, object> expandoDictionary = (IDictionary<string, object>)expando;
 
-		for (int i = 0; i < v8Object.propertiesCount; i++) 
-		{
-			int propertyType = Marshal.ReadInt32(v8Object.propertyTypes, i * sizeof(int));
-			IntPtr propertyNamePointer = Marshal.ReadIntPtr(v8Object.propertyNames, i * PointerSize);
-			string propertyName = Marshal.PtrToStringAnsi(propertyNamePointer);
-			IntPtr propertyValuePointer = Marshal.ReadIntPtr(v8Object.propertyValues, i * PointerSize);
+        for (int i = 0; i < v8Object.propertiesCount; i++)
+        {
+            int propertyType = Marshal.ReadInt32(v8Object.propertyTypes, i * sizeof(int));
+            IntPtr propertyNamePointer = Marshal.ReadIntPtr(v8Object.propertyNames, i * PointerSize);
+            string propertyName = Marshal.PtrToStringAnsi(propertyNamePointer);
+            IntPtr propertyValuePointer = Marshal.ReadIntPtr(v8Object.propertyValues, i * PointerSize);
 
-			expandoDictionary.Add(propertyName, MarshalV8ToCLR(propertyValuePointer, (V8Type) propertyType));
-		}
+            expandoDictionary.Add(propertyName, MarshalV8ToCLR(propertyValuePointer, (V8Type)propertyType));
+        }
 
-		return expando;
-	}
+        return expando;
+    }
 
-	[Conditional("DEBUG")]
-	internal static void DebugMessage(string message, params object[] parameters)
-	{
-	    if (DebugMode)
-	    {
-	        Console.WriteLine(message, parameters);
-	    }
-	}
+    [Conditional("DEBUG")]
+    internal static void DebugMessage(string message, params object[] parameters)
+    {
+        if (DebugMode)
+        {
+            Console.WriteLine(message, parameters);
+        }
+    }
 
-	public static void SetDebugMode(bool debugMode)
-	{
-		DebugMode = debugMode;
-	}
+    public static void SetDebugMode(bool debugMode)
+    {
+        DebugMode = debugMode;
+    }
 
-	private static List<Tuple<string, Func<object, object>>> GetPropertyAccessors(Type type)
-	{
-		if (TypePropertyAccessors.ContainsKey(type))
-		{
-			return TypePropertyAccessors[type];
-		}
+    private static List<Tuple<string, Func<object, object>>> GetPropertyAccessors(Type type)
+    {
+        if (TypePropertyAccessors.ContainsKey(type))
+        {
+            return TypePropertyAccessors[type];
+        }
 
-		List<Tuple<string, Func<object, object>>> propertyAccessors = new List<Tuple<string, Func<object, object>>>();
+        List<Tuple<string, Func<object, object>>> propertyAccessors = new List<Tuple<string, Func<object, object>>>();
 
-		foreach (PropertyInfo propertyInfo in type.GetProperties(BindingFlags.Instance | BindingFlags.Public))
-		{
-			ParameterExpression instance = Expression.Parameter(typeof(object));
-			UnaryExpression instanceConvert = Expression.TypeAs(instance, type);
-			MemberExpression property = Expression.Property(instanceConvert, propertyInfo);
-			UnaryExpression propertyConvert = Expression.TypeAs(property, typeof(object));
+        foreach (PropertyInfo propertyInfo in type.GetProperties(BindingFlags.Instance | BindingFlags.Public))
+        {
+            ParameterExpression instance = Expression.Parameter(typeof(object));
+            UnaryExpression instanceConvert = Expression.TypeAs(instance, type);
+            MemberExpression property = Expression.Property(instanceConvert, propertyInfo);
+            UnaryExpression propertyConvert = Expression.TypeAs(property, typeof(object));
 
-			propertyAccessors.Add(new Tuple<string, Func<object, object>>(propertyInfo.Name, (Func<object, object>) Expression.Lambda(propertyConvert, instance).Compile()));
-		}
+            propertyAccessors.Add(new Tuple<string, Func<object, object>>(propertyInfo.Name, (Func<object, object>)Expression.Lambda(propertyConvert, instance).Compile()));
+        }
 
-		foreach (FieldInfo fieldInfo in type.GetFields(BindingFlags.Instance | BindingFlags.Public))
-		{
-			ParameterExpression instance = Expression.Parameter(typeof(object));
-			UnaryExpression instanceConvert = Expression.TypeAs(instance, type);
-			MemberExpression field = Expression.Field(instanceConvert, fieldInfo);
-			UnaryExpression fieldConvert = Expression.TypeAs(field, typeof(object));
+        foreach (FieldInfo fieldInfo in type.GetFields(BindingFlags.Instance | BindingFlags.Public))
+        {
+            ParameterExpression instance = Expression.Parameter(typeof(object));
+            UnaryExpression instanceConvert = Expression.TypeAs(instance, type);
+            MemberExpression field = Expression.Field(instanceConvert, fieldInfo);
+            UnaryExpression fieldConvert = Expression.TypeAs(field, typeof(object));
 
-			propertyAccessors.Add(new Tuple<string, Func<object, object>>(fieldInfo.Name, (Func<object, object>) Expression.Lambda(fieldConvert, instance).Compile()));
-		}
+            propertyAccessors.Add(new Tuple<string, Func<object, object>>(fieldInfo.Name, (Func<object, object>)Expression.Lambda(fieldConvert, instance).Compile()));
+        }
 
-		if (typeof(Exception).IsAssignableFrom(type) && !propertyAccessors.Any(a => a.Item1 == "Name"))
-		{
-			propertyAccessors.Add(new Tuple<string, Func<object, object>>("Name", (o) => type.FullName));
-		}
+        if (typeof(Exception).IsAssignableFrom(type) && !propertyAccessors.Any(a => a.Item1 == "Name"))
+        {
+            propertyAccessors.Add(new Tuple<string, Func<object, object>>("Name", (o) => type.FullName));
+        }
 
-		TypePropertyAccessors[type] = propertyAccessors;
+        TypePropertyAccessors[type] = propertyAccessors;
 
-		return propertyAccessors;
-	}
+        return propertyAccessors;
+    }
 }
