@@ -23,6 +23,15 @@ const HRESULT E_FAIL = -1;
 
 typedef void* CoreClrGcHandle;
 
+typedef struct bootstrapperContext
+{
+	const char* operatingSystem;
+	const char* operatingSystemVersion;
+	const char* architecture;
+	const char* runtimeDirectory;
+	const char* applicationDirectory;
+} BootstrapperContext;
+
 typedef void (*CallFuncFunction)(
 		CoreClrGcHandle functionHandle,
 		void* payload,
@@ -42,6 +51,7 @@ typedef CoreClrGcHandle (*CompileFuncFunction)(
         const void* options,
         const int payloadType,
         void** exception);
+typedef void (*InitializeFunction)(BootstrapperContext* context, void** exception);
 
 typedef enum v8Type
 {

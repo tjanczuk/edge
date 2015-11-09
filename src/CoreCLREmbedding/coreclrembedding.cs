@@ -12,6 +12,8 @@ using System.Threading.Tasks;
 using System.IO;
 using System.Diagnostics;
 using System.Runtime.Versioning;
+using Microsoft.Dnx.Compilation;
+using Microsoft.Dnx.Compilation.Caching;
 using Microsoft.Dnx.Runtime;
 using Microsoft.Dnx.Runtime.Loader;
 
@@ -57,6 +59,25 @@ public enum V8Type
     Exception = 13
 }
 
+[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
+public struct EdgeBootstrapperContext
+{
+    [MarshalAs(UnmanagedType.LPStr)]
+    public string OperatingSystem;
+
+    [MarshalAs(UnmanagedType.LPStr)]
+    public string OperatingSystemVersion;
+
+    [MarshalAs(UnmanagedType.LPStr)]
+    public string Architecture;
+
+    [MarshalAs(UnmanagedType.LPStr)]
+    public string RuntimeDirectory;
+
+    [MarshalAs(UnmanagedType.LPStr)]
+    public string ApplicationDirectory;
+}
+
 public delegate void CallV8FunctionDelegate(IntPtr payload, int payloadType, IntPtr v8FunctionContext, IntPtr callbackContext, IntPtr callbackDelegate);
 public delegate void TaskCompleteDelegate(IntPtr result, int resultType, int taskState, IntPtr context);
 
@@ -75,45 +96,77 @@ public class CoreCLREmbedding
         }
     }
 
+    private class EdgeRuntimeEnvironment : IRuntimeEnvironment
+    {
+        public EdgeRuntimeEnvironment(EdgeBootstrapperContext bootstrapperContext)
+        {
+            OperatingSystem = bootstrapperContext.OperatingSystem;
+            OperatingSystemVersion = bootstrapperContext.OperatingSystemVersion;
+            RuntimeArchitecture = bootstrapperContext.Architecture;
+            ApplicationDirectory = bootstrapperContext.ApplicationDirectory;
+            RuntimeVersion = typeof(object).GetTypeInfo().Assembly.GetName().Version.ToString();
+        }
+
+        public string OperatingSystem
+        {
+            get;
+        }
+
+        public string OperatingSystemVersion
+        {
+            get;
+        }
+
+        public string RuntimeType => "CoreCLR";
+
+        public string RuntimeArchitecture
+        {
+            get;
+        }
+
+        public string RuntimeVersion
+        {
+            get;
+        }
+
+        public string ApplicationDirectory
+        {
+            get;
+        }
+    }
+
     private class EdgeAssemblyLoadContextAccessor : LoadContextAccessor
     {
+        public EdgeAssemblyLoadContextAccessor()
+        {
+            Default = new EdgeAssemblyLoadContext();
+        }
+
         public new EdgeAssemblyLoadContext Default
         {
             get;
-        } = new EdgeAssemblyLoadContext();
-
-        public new static EdgeAssemblyLoadContextAccessor Instance
-        {
-            get;
-        } = new EdgeAssemblyLoadContextAccessor();
+        }
     }
 
     private class EdgeAssemblyLoadContext : AssemblyLoadContext, IAssemblyLoadContext
     {
         internal readonly Dictionary<string, string> CompileAssemblies = new Dictionary<string, string>();
-        private readonly string _applicationRoot;
-        private readonly FrameworkName _targetFrameworkName = new FrameworkName("DNXCore,Version=v5.0");
         private readonly List<IAssemblyLoader> _loaders = new List<IAssemblyLoader>();
         private readonly bool _noProjectJsonFile;
 
         public EdgeAssemblyLoadContext()
         {
             DebugMessage("EdgeAssemblyLoadContext::ctor (CLR) - Starting");
+            DebugMessage("EdgeAssemblyLoadContext::ctor (CLR) - Application root is {0}", RuntimeEnvironment.ApplicationDirectory);
 
-            _applicationRoot = Environment.GetEnvironmentVariable("EDGE_APP_ROOT") ?? Directory.GetCurrentDirectory();
-            DebugMessage("EdgeAssemblyLoadContext::ctor (CLR) - Application root is {0}", _applicationRoot);
-
-            if (File.Exists(Path.Combine(_applicationRoot, "project.lock.json")))
+            if (File.Exists(Path.Combine(RuntimeEnvironment.ApplicationDirectory, "project.lock.json")))
             {
-                ApplicationHostContext applicationHostContext = new ApplicationHostContext
-                {
-                    ProjectDirectory = _applicationRoot,
-                    TargetFramework = _targetFrameworkName
-                };
-
-                IList<LibraryDescription> libraries = ApplicationHostContext.GetRuntimeLibraries(applicationHostContext);
+                IList<LibraryDescription> libraries = ApplicationHostContext.GetRuntimeLibraries(ApplicationHostContext);
                 Dictionary<string, ProjectDescription> projects = libraries.Where(p => p.Type == LibraryTypes.Project).ToDictionary(p => p.Identity.Name, p => (ProjectDescription)p);
                 Dictionary<AssemblyName, string> assemblies = PackageDependencyProvider.ResolvePackageAssemblyPaths(libraries);
+                
+                CompilationEngineContext compilationContext = new CompilationEngineContext(ApplicationEnvironment, RuntimeEnvironment, this, new CompilationCache());
+                CompilationEngine compilationEngine = new CompilationEngine(compilationContext);
 
                 foreach (LibraryDescription libraryDescription in libraries.Where(l => l.Type == LibraryTypes.Package))
                 {
@@ -130,8 +183,8 @@ public class CoreCLREmbedding
                     }
                 }
 
-                _loaders.Add(new ProjectAssemblyLoader(EdgeAssemblyLoadContextAccessor.Instance, null, projects.Values));
-                _loaders.Add(new PackageAssemblyLoader(EdgeAssemblyLoadContextAccessor.Instance, assemblies));
+                _loaders.Add(new ProjectAssemblyLoader(LoadContextAccessor, compilationEngine, projects.Values));
+                _loaders.Add(new PackageAssemblyLoader(LoadContextAccessor, assemblies));
             }
 
             else
@@ -148,14 +201,14 @@ public class CoreCLREmbedding
 
             ApplicationHostContext compilerHostContext = new ApplicationHostContext
             {
-                ProjectDirectory = _applicationRoot,
-                TargetFramework = _targetFrameworkName
+                ProjectDirectory = compilerDirectory,
+                TargetFramework = TargetFrameworkName
             };
 
             IList<LibraryDescription> libraries = ApplicationHostContext.GetRuntimeLibraries(compilerHostContext);
             Dictionary<AssemblyName, string> assemblies = PackageDependencyProvider.ResolvePackageAssemblyPaths(libraries);
 
-            _loaders.Add(new PackageAssemblyLoader(EdgeAssemblyLoadContextAccessor.Instance, assemblies));
+            _loaders.Add(new PackageAssemblyLoader(LoadContextAccessor, assemblies));
 
             DebugMessage("EdgeAssemblyLoadContext::AddCompiler (CLR) - Finished");
         }
@@ -201,7 +254,7 @@ public class CoreCLREmbedding
         {
             if (!Path.IsPathRooted(assemblyPath))
             {
-                assemblyPath = Path.Combine(_applicationRoot, assemblyPath);
+                assemblyPath = Path.Combine(RuntimeEnvironment.ApplicationDirectory, assemblyPath);
             }
 
             if (!File.Exists(assemblyPath))
@@ -226,9 +279,14 @@ public class CoreCLREmbedding
             return Load(assemblyName);
         }
     }
+    
+    private static EdgeAssemblyLoadContextAccessor LoadContextAccessor;
+    private static ApplicationHostContext ApplicationHostContext;
+    private static ApplicationEnvironment ApplicationEnvironment;
+    private static EdgeRuntimeEnvironment RuntimeEnvironment;
 
     private static readonly bool DebugMode = Environment.GetEnvironmentVariable("EDGE_DEBUG") == "1";
-    private static readonly EdgeAssemblyLoadContextAccessor LoadContextAccessor = EdgeAssemblyLoadContextAccessor.Instance;
+    private static readonly FrameworkName TargetFrameworkName = new FrameworkName("DNXCore,Version=v5.0");
     private static readonly long MinDateTimeTicks = 621355968000000000;
     private static readonly Dictionary<Type, List<Tuple<string, Func<object, object>>>> TypePropertyAccessors = new Dictionary<Type, List<Tuple<string, Func<object, object>>>>();
     private static readonly int PointerSize = Marshal.SizeOf<IntPtr>();
@@ -236,6 +294,39 @@ public class CoreCLREmbedding
     private static readonly int V8ObjectDataSize = Marshal.SizeOf<V8ObjectData>();
     private static readonly int V8ArrayDataSize = Marshal.SizeOf<V8ArrayData>();
     private static readonly Dictionary<string, Tuple<Type, MethodInfo>> Compilers = new Dictionary<string, Tuple<Type, MethodInfo>>();
+
+    public static void Initialize(IntPtr context, IntPtr exception)
+    {
+        try
+        {
+            DebugMessage("CoreCLREmbedding::Initialize (CLR) - Starting");
+
+            RuntimeEnvironment = new EdgeRuntimeEnvironment(Marshal.PtrToStructure<EdgeBootstrapperContext>(context));
+
+            Project project;
+            Project.TryGetProject(RuntimeEnvironment.ApplicationDirectory, out project);
+
+            ApplicationHostContext = new ApplicationHostContext
+            {
+                ProjectDirectory = RuntimeEnvironment.ApplicationDirectory,
+                TargetFramework = TargetFrameworkName,
+                Project = project
+            };
+
+            ApplicationEnvironment = new ApplicationEnvironment(ApplicationHostContext.Project, TargetFrameworkName, "Release", null);
+            LoadContextAccessor = new EdgeAssemblyLoadContextAccessor();
+
+            DebugMessage("CoreCLREmbedding::Initialize (CLR) - Complete");
+        }
+
+        catch (Exception e)
+        {
+            DebugMessage("CoreCLREmbedding::Initialize (CLR) - Exception was thrown: {0}", e.Message);
+
+            V8Type v8Type;
+            Marshal.WriteIntPtr(exception, MarshalCLRToV8(e, out v8Type));
+        }
+    }
 
     [SecurityCritical]
     public static IntPtr GetFunc(string assemblyFile, string typeName, string methodName, IntPtr exception)

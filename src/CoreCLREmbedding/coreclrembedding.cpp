@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <libgen.h>
 #include <dirent.h>
+#include <sys/utsname.h>
 #else
 #include <direct.h>
 #include <shlwapi.h>
@@ -50,6 +51,7 @@ ContinueTaskFunction continueTask;
 FreeHandleFunction freeHandle;
 FreeMarshalDataFunction freeMarshalData;
 CompileFuncFunction compileFunc;
+InitializeFunction initialize;
 
 #define CREATE_DELEGATE(functionName, functionPointer)\
 	result = createDelegate(\
@@ -67,6 +69,119 @@ CompileFuncFunction compileFunc;
 	}\
 	\
 	DBG("CoreClrEmbedding::Initialize - CoreCLREmbedding.%s() loaded successfully", functionName);\
+
+std::string GetOSName()
+{
+#if EDGE_PLATFORM_WINDOWS
+	return "Windows";
+#else
+	struct utsname unameData;
+
+	if (uname(&unameData) == 0)
+	{
+		return uname_data.sysname;
+	}
+
+	// uname() failed, falling back to defaults
+	else
+	{
+#if EDGE_PLATFORM_LINUX
+		return "Linux";
+#elif EDGE_PLATFORM_APPLE
+		return "Darwin";
+#endif
+	}
+#endif
+}
+
+char* GetOSArchitecture()
+{
+#if defined __X86__ || defined __i386__ || defined i386 || defined _M_IX86 || defined __386__
+	return "x86";
+#elif defined __ia64 || defined _M_IA64 || defined __ia64__ || defined __x86_64__ || defined _M_X64
+	return "x64";
+#elif defined ARM || defined __arm__ || defined _ARM
+	return "arm";
+#endif
+}
+
+std::string GetOSVersion()
+{
+#if EDGE_PLATFORM_WINDOWS
+	OSVERSIONINFO version_info;
+	ZeroMemory(&version_info, sizeof(OSVERSIONINFO));
+	version_info.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
+
+#pragma warning(disable:4996)
+	GetVersionEx(&version_info);
+#pragma warning(default:4996)
+	return std::to_string(version_info.dwMajorVersion).append(".").append(std::to_string(version_info.dwMinorVersion));
+#elif EDGE_PLATFORM_LINUX
+	std::vector<std::string> qualifiers{ "ID=", "VERSION_ID=" };
+
+	std::ifstream lsbRelease;
+	lsb_release.open("/etc/os-release", std::ifstream::in);
+
+	if (lsbRelease.is_open())
+	{
+		std::string osVersion;
+
+		for (std::string line; std::getline(lsbRelease, line); )
+		{
+			for (auto& qualifier : qualifiers)
+			{
+				if (line.compare(0, qualifier.length(), qualifier) == 0)
+				{
+					auto value = line.substr(qualifier.length());
+
+					if (value.length() >= 2 && ((value[0] == '"'  && value[value.length() - 1] == '"') || (value[0] == '\'' && value[value.length() - 1] == '\'')))
+					{
+						value = value.substr(1, value.length() - 2);
+					}
+
+					if (value.length() == 0)
+					{
+						continue;
+					}
+
+					if (osVersion.length() > 0)
+					{
+						osVersion += " ";
+					}
+
+					osVersion += value;
+				}
+			}
+		}
+
+		return osVersion;
+	}
+
+	return "";
+#elif EDGE_PLATFORM_APPLE
+	struct utsname unameData;
+
+	if (uname(&unameData) == 0)
+	{
+		std::string release = unameData.release;
+
+		auto dot_position = release.find(".");
+
+		if (dot_position == std::string::npos)
+		{
+			return "10.1";
+		}
+
+		auto version = stoi(release.substr(0, dot_position));
+		return std::string("10.").append(std::to_string(version - 4));
+	}
+
+	else
+	{
+		return "10.1";
+	}
+#endif
+}
 
 HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 {
@@ -274,8 +389,49 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
     CREATE_DELEGATE("FreeMarshalData", &freeMarshalData);
     CREATE_DELEGATE("SetCallV8FunctionDelegate", &setCallV8Function);
     CREATE_DELEGATE("CompileFunc", &compileFunc);
+	CREATE_DELEGATE("Initialize", &initialize);
+
+	DBG("CoreClrEmbedding::Initialize - Getting runtime info");
 
 	CoreClrGcHandle exception = NULL;
+	BootstrapperContext context;
+
+	context.runtimeDirectory = &coreClrDirectory[0];
+	context.applicationDirectory = getenv("EDGE_APP_ROOT");
+
+	if (!context.applicationDirectory)
+	{
+		context.applicationDirectory = &currentDirectory[0];
+	}
+
+	context.architecture = GetOSArchitecture();
+	context.operatingSystem = GetOSName().c_str();
+	context.operatingSystemVersion = GetOSVersion().c_str();
+
+	DBG("CoreClrEmbedding::Initialize - Operating system: %s", context.operatingSystem);
+	DBG("CoreClrEmbedding::Initialize - Operating system version: %s", context.operatingSystemVersion);
+	DBG("CoreClrEmbedding::Initialize - Architecture: %s", context.architecture);
+	DBG("CoreClrEmbedding::Initialize - Runtime directory: %s", context.runtimeDirectory);
+	DBG("CoreClrEmbedding::Initialize - Application directory: %s", context.applicationDirectory);
+
+	DBG("CoreClrEmbedding::Initialize - Calling CLR Initialize() function", context.operatingSystem);
+
+	initialize(&context, &exception);
+
+	if (exception)
+	{
+		v8::Local<v8::Value> v8Exception = CoreClrFunc::MarshalCLRToV8(exception, V8TypeException);
+		FreeMarshalData(exception, V8TypeException);
+
+		throwV8Exception(v8Exception);
+	}
+
+	else
+	{
+		DBG("CoreClrEmbedding::Initialize - CLR Initialize() function called successfully")
+	}
+
+	exception = NULL;
 	setCallV8Function(CoreClrNodejsFunc::Call, &exception);
 
 	if (exception)
