@@ -404,9 +404,12 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 		context.applicationDirectory = &currentDirectory[0];
 	}
 
+	std::string operatingSystem = GetOSName();
+	std::string operatingSystemVersion = GetOSVersion();
+
 	context.architecture = GetOSArchitecture();
-	context.operatingSystem = GetOSName().c_str();
-	context.operatingSystemVersion = GetOSVersion().c_str();
+	context.operatingSystem = operatingSystem.c_str();
+	context.operatingSystemVersion = operatingSystemVersion.c_str();
 
 	DBG("CoreClrEmbedding::Initialize - Operating system: %s", context.operatingSystem);
 	DBG("CoreClrEmbedding::Initialize - Operating system version: %s", context.operatingSystemVersion);
