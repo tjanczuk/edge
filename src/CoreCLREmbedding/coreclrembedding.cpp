@@ -10,6 +10,7 @@
 #include <dirent.h>
 #include <sys/utsname.h>
 #include <fstream>
+#include <sstream>
 #else
 #include <direct.h>
 #include <shlwapi.h>
@@ -173,8 +174,11 @@ std::string GetOSVersion()
 			return "10.1";
 		}
 
-		auto version = stoi(release.substr(0, dot_position));
-		return std::string("10.").append(std::to_string(version - 4));
+		auto version = atoi(release.substr(0, dot_position).c_str());
+        std::stringstream versionStringStream;
+        versionStringStream << (version - 4);
+
+		return std::string("10.").append(versionStringStream.str());
 	}
 
 	else
