@@ -15,6 +15,7 @@ using System.Runtime.Versioning;
 using Microsoft.Dnx.Compilation;
 using Microsoft.Dnx.Compilation.Caching;
 using Microsoft.Dnx.Runtime;
+using Microsoft.Dnx.Runtime.Infrastructure;
 using Microsoft.Dnx.Runtime.Loader;
 
 [StructLayout(LayoutKind.Sequential)]
@@ -96,6 +97,46 @@ public class CoreCLREmbedding
         }
     }
 
+    private class EdgeServiceProviderLocator : IServiceProviderLocator
+    {
+        public IServiceProvider ServiceProvider
+        {
+            get;
+            set;
+        }
+    }
+
+    private class EdgeServiceProvider : IServiceProvider
+    {
+        private readonly Dictionary<Type, object> _entries = new Dictionary<Type, object>();
+
+        public EdgeServiceProvider()
+        {
+            Add(typeof(IServiceProvider), this);
+        }
+
+        public void Add(Type type, object instance)
+        {
+            _entries[type] = instance;
+        }
+
+        public bool TryAdd(Type type, object instance)
+        {
+            if (GetService(type) == null)
+            {
+                Add(type, instance);
+                return true;
+            }
+
+            return false;
+        }
+
+        public object GetService(Type serviceType)
+        {
+            return _entries[serviceType];
+        }
+    }
+
     private class EdgeRuntimeEnvironment : IRuntimeEnvironment
     {
         public EdgeRuntimeEnvironment(EdgeBootstrapperContext bootstrapperContext)
@@ -135,17 +176,24 @@ public class CoreCLREmbedding
         }
     }
 
-    private class EdgeAssemblyLoadContextAccessor : LoadContextAccessor
+    private class EdgeAssemblyLoadContextAccessor : IAssemblyLoadContextAccessor
     {
         public EdgeAssemblyLoadContextAccessor()
         {
-            Default = new EdgeAssemblyLoadContext();
+            Default = new EdgeAssemblyLoadContext(this);
         }
 
-        public new EdgeAssemblyLoadContext Default
+        public IAssemblyLoadContext GetLoadContext(Assembly assembly)
+        {
+            return (IAssemblyLoadContext) AssemblyLoadContext.GetLoadContext(assembly);
+        }
+
+        public IAssemblyLoadContext Default
         {
             get;
         }
+
+        public EdgeAssemblyLoadContext TypedDefault => (EdgeAssemblyLoadContext) Default;
     }
 
     private class EdgeAssemblyLoadContext : AssemblyLoadContext, IAssemblyLoadContext
@@ -153,11 +201,15 @@ public class CoreCLREmbedding
         internal readonly Dictionary<string, string> CompileAssemblies = new Dictionary<string, string>();
         private readonly List<IAssemblyLoader> _loaders = new List<IAssemblyLoader>();
         private readonly bool _noProjectJsonFile;
+        private readonly EdgeAssemblyLoadContextAccessor _loadContextAccessor;
+        private readonly Dictionary<string, Assembly> _loadedAssemblies = new Dictionary<string, Assembly>();
 
-        public EdgeAssemblyLoadContext()
+        public EdgeAssemblyLoadContext(EdgeAssemblyLoadContextAccessor loadContextAccessor)
         {
             DebugMessage("EdgeAssemblyLoadContext::ctor (CLR) - Starting");
             DebugMessage("EdgeAssemblyLoadContext::ctor (CLR) - Application root is {0}", RuntimeEnvironment.ApplicationDirectory);
+
+            _loadContextAccessor = loadContextAccessor;
 
             if (File.Exists(Path.Combine(RuntimeEnvironment.ApplicationDirectory, "project.lock.json")))
             {
@@ -183,8 +235,8 @@ public class CoreCLREmbedding
                     }
                 }
 
-                _loaders.Add(new ProjectAssemblyLoader(LoadContextAccessor, compilationEngine, projects.Values));
-                _loaders.Add(new PackageAssemblyLoader(LoadContextAccessor, assemblies));
+                _loaders.Add(new ProjectAssemblyLoader(_loadContextAccessor, compilationEngine, projects.Values));
+                _loaders.Add(new PackageAssemblyLoader(_loadContextAccessor, assemblies));
             }
 
             else
@@ -208,7 +260,7 @@ public class CoreCLREmbedding
             IList<LibraryDescription> libraries = ApplicationHostContext.GetRuntimeLibraries(compilerHostContext);
             Dictionary<AssemblyName, string> assemblies = PackageDependencyProvider.ResolvePackageAssemblyPaths(libraries);
 
-            _loaders.Add(new PackageAssemblyLoader(LoadContextAccessor, assemblies));
+            _loaders.Add(new PackageAssemblyLoader(_loadContextAccessor, assemblies));
 
             DebugMessage("EdgeAssemblyLoadContext::AddCompiler (CLR) - Finished");
         }
@@ -218,14 +270,31 @@ public class CoreCLREmbedding
         {
             DebugMessage("EdgeAssemblyLoadContext::Load (CLR) - Trying to load {0}", assemblyName.Name);
 
+            if (_loadedAssemblies.ContainsKey(assemblyName.Name))
+            {
+                DebugMessage("EdgeAssemblyLoadContext::Load (CLR) - Returning previously loaded assembly");
+                return _loadedAssemblies[assemblyName.Name];
+            }
+
             foreach (IAssemblyLoader loader in _loaders)
             {
-                Assembly assembly = loader.Load(assemblyName);
-
-                if (assembly != null)
+                try
                 {
-                    DebugMessage("EdgeAssemblyLoadContext::Load (CLR) - Successfully resolved assembly with {0}", loader.GetType().Name);
-                    return assembly;
+                    Assembly assembly = loader.Load(assemblyName);
+
+                    if (assembly != null)
+                    {
+                        DebugMessage("EdgeAssemblyLoadContext::Load (CLR) - Successfully resolved assembly with {0}", loader.GetType().Name);
+                        _loadedAssemblies[assemblyName.Name] = assembly;
+
+                        return assembly;
+                    }
+                }
+
+                catch (Exception e)
+                {
+                    DebugMessage("EdgeAssemblyLoadContext::Load (CLR) - Error trying to load {0} with {1}: {2}{3}{4}", assemblyName.Name, loader.GetType().Name, e.Message, Environment.NewLine, e.StackTrace);
+                    throw;
                 }
             }
 
@@ -280,10 +349,12 @@ public class CoreCLREmbedding
         }
     }
     
+    // ReSharper disable InconsistentNaming
     private static EdgeAssemblyLoadContextAccessor LoadContextAccessor;
     private static ApplicationHostContext ApplicationHostContext;
     private static ApplicationEnvironment ApplicationEnvironment;
     private static EdgeRuntimeEnvironment RuntimeEnvironment;
+    // ReSharper enable InconsistentNaming
 
     private static readonly bool DebugMode = Environment.GetEnvironmentVariable("EDGE_DEBUG") == "1";
     private static readonly FrameworkName TargetFrameworkName = new FrameworkName("DNXCore,Version=v5.0");
@@ -316,6 +387,17 @@ public class CoreCLREmbedding
             ApplicationEnvironment = new ApplicationEnvironment(ApplicationHostContext.Project, TargetFrameworkName, "Release", null);
             LoadContextAccessor = new EdgeAssemblyLoadContextAccessor();
 
+            EdgeServiceProvider serviceProvider = new EdgeServiceProvider();
+
+            serviceProvider.Add(typeof(IRuntimeEnvironment), RuntimeEnvironment);
+            serviceProvider.Add(typeof(IApplicationEnvironment), ApplicationEnvironment);
+            serviceProvider.Add(typeof(IAssemblyLoadContextAccessor), LoadContextAccessor);
+
+            CallContextServiceLocator.Locator = new EdgeServiceProviderLocator
+            {
+                ServiceProvider = serviceProvider
+            };
+
             DebugMessage("CoreCLREmbedding::Initialize (CLR) - Complete");
         }
 
@@ -335,12 +417,23 @@ public class CoreCLREmbedding
         {
             Marshal.WriteIntPtr(exception, IntPtr.Zero);
 
-            if (!Path.IsPathRooted(assemblyFile))
+            Assembly assembly;
+
+            if (assemblyFile.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) || assemblyFile.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
             {
-                assemblyFile = Path.Combine(Directory.GetCurrentDirectory(), assemblyFile);
+                if (!Path.IsPathRooted(assemblyFile))
+                {
+                    assemblyFile = Path.Combine(Directory.GetCurrentDirectory(), assemblyFile);
+                }
+
+                assembly = LoadContextAccessor.Default.LoadFile(assemblyFile);
             }
 
-            Assembly assembly = LoadContextAccessor.Default.LoadFile(assemblyFile);
+            else
+            {
+                assembly = LoadContextAccessor.Default.Load(new AssemblyName(assemblyFile));
+            }
+
             DebugMessage("CoreCLREmbedding::GetFunc (CLR) - Assembly {0} loaded successfully", assemblyFile);
 
             ClrFuncReflectionWrap wrapper = ClrFuncReflectionWrap.Create(assembly, typeName, methodName);
@@ -383,7 +476,7 @@ public class CoreCLREmbedding
 
             if (!Compilers.ContainsKey(compiler))
             {
-                LoadContextAccessor.Default.AddCompiler(Directory.GetParent(compiler).FullName);
+                LoadContextAccessor.TypedDefault.AddCompiler(Directory.GetParent(compiler).FullName);
 
                 Assembly compilerAssembly = LoadContextAccessor.Default.LoadFile(compiler);
                 DebugMessage("CoreCLREmbedding::CompileFunc (CLR) - Compiler assembly {0} loaded successfully", compiler);
@@ -424,7 +517,7 @@ public class CoreCLREmbedding
             Func<object, Task<object>> compiledFunction = (Func<object, Task<object>>)compileMethod.Invoke(compilerInstance, new object[]
             {
                 options,
-                LoadContextAccessor.Default.CompileAssemblies
+                LoadContextAccessor.TypedDefault.CompileAssemblies
             });
             DebugMessage("CoreCLREmbedding::CompileFunc (CLR) - Compilation complete");
 
@@ -698,7 +791,7 @@ public class CoreCLREmbedding
         else if (clrObject is string)
         {
             v8Type = V8Type.String;
-            return Marshal.StringToHGlobalAnsi((string)clrObject);
+            return Marshal.StringToHGlobalAnsi((string) clrObject);
         }
 
         else if (clrObject is char)
@@ -710,9 +803,11 @@ public class CoreCLREmbedding
         else if (clrObject is bool)
         {
             v8Type = V8Type.Boolean;
-            IntPtr memoryLocation = Marshal.AllocHGlobal(sizeof(int));
+            IntPtr memoryLocation = Marshal.AllocHGlobal(sizeof (int));
 
-            Marshal.WriteInt32(memoryLocation, ((bool)clrObject) ? 1 : 0);
+            Marshal.WriteInt32(memoryLocation, ((bool) clrObject)
+                ? 1
+                : 0);
             return memoryLocation;
         }
 
@@ -725,7 +820,7 @@ public class CoreCLREmbedding
         else if (clrObject is DateTime)
         {
             v8Type = V8Type.Date;
-            DateTime dateTime = (DateTime)clrObject;
+            DateTime dateTime = (DateTime) clrObject;
 
             if (dateTime.Kind == DateTimeKind.Local)
             {
@@ -737,8 +832,8 @@ public class CoreCLREmbedding
                 dateTime = new DateTime(dateTime.Ticks, DateTimeKind.Utc);
             }
 
-            long ticks = (dateTime.Ticks - MinDateTimeTicks) / 10000;
-            IntPtr memoryLocation = Marshal.AllocHGlobal(sizeof(double));
+            long ticks = (dateTime.Ticks - MinDateTimeTicks)/10000;
+            IntPtr memoryLocation = Marshal.AllocHGlobal(sizeof (double));
 
             WriteDouble(memoryLocation, ticks);
             return memoryLocation;
@@ -759,7 +854,7 @@ public class CoreCLREmbedding
         else if (clrObject is short)
         {
             v8Type = V8Type.Int32;
-            IntPtr memoryLocation = Marshal.AllocHGlobal(sizeof(int));
+            IntPtr memoryLocation = Marshal.AllocHGlobal(sizeof (int));
 
             Marshal.WriteInt32(memoryLocation, Convert.ToInt32(clrObject));
             return memoryLocation;
@@ -768,36 +863,36 @@ public class CoreCLREmbedding
         else if (clrObject is int)
         {
             v8Type = V8Type.Int32;
-            IntPtr memoryLocation = Marshal.AllocHGlobal(sizeof(int));
+            IntPtr memoryLocation = Marshal.AllocHGlobal(sizeof (int));
 
-            Marshal.WriteInt32(memoryLocation, (int)clrObject);
+            Marshal.WriteInt32(memoryLocation, (int) clrObject);
             return memoryLocation;
         }
 
         else if (clrObject is long)
         {
             v8Type = V8Type.Number;
-            IntPtr memoryLocation = Marshal.AllocHGlobal(sizeof(double));
+            IntPtr memoryLocation = Marshal.AllocHGlobal(sizeof (double));
 
-            WriteDouble(memoryLocation, Convert.ToDouble((long)clrObject));
+            WriteDouble(memoryLocation, Convert.ToDouble((long) clrObject));
             return memoryLocation;
         }
 
         else if (clrObject is double)
         {
             v8Type = V8Type.Number;
-            IntPtr memoryLocation = Marshal.AllocHGlobal(sizeof(double));
+            IntPtr memoryLocation = Marshal.AllocHGlobal(sizeof (double));
 
-            WriteDouble(memoryLocation, (double)clrObject);
+            WriteDouble(memoryLocation, (double) clrObject);
             return memoryLocation;
         }
 
         else if (clrObject is float)
         {
             v8Type = V8Type.Number;
-            IntPtr memoryLocation = Marshal.AllocHGlobal(sizeof(double));
+            IntPtr memoryLocation = Marshal.AllocHGlobal(sizeof (double));
 
-            WriteDouble(memoryLocation, Convert.ToDouble((Single)clrObject));
+            WriteDouble(memoryLocation, Convert.ToDouble((Single) clrObject));
             return memoryLocation;
         }
 
@@ -822,16 +917,16 @@ public class CoreCLREmbedding
 
             if (clrObject is byte[])
             {
-                buffer = (byte[])clrObject;
+                buffer = (byte[]) clrObject;
             }
 
             else
             {
-                buffer = ((IEnumerable<byte>)clrObject).ToArray();
+                buffer = ((IEnumerable<byte>) clrObject).ToArray();
             }
 
             bufferData.bufferLength = buffer.Length;
-            bufferData.buffer = Marshal.AllocHGlobal(buffer.Length * sizeof(byte));
+            bufferData.buffer = Marshal.AllocHGlobal(buffer.Length*sizeof (byte));
 
             Marshal.Copy(buffer, 0, bufferData.buffer, bufferData.bufferLength);
 
@@ -851,7 +946,7 @@ public class CoreCLREmbedding
 
             if (clrObject is ExpandoObject)
             {
-                IDictionary<string, object> objectDictionary = (IDictionary<string, object>)clrObject;
+                IDictionary<string, object> objectDictionary = (IDictionary<string, object>) clrObject;
 
                 keys = objectDictionary.Keys;
                 keyCount = objectDictionary.Keys.Count;
@@ -860,7 +955,7 @@ public class CoreCLREmbedding
 
             else
             {
-                IDictionary objectDictionary = (IDictionary)clrObject;
+                IDictionary objectDictionary = (IDictionary) clrObject;
 
                 keys = objectDictionary.Keys;
                 keyCount = objectDictionary.Keys.Count;
@@ -871,16 +966,16 @@ public class CoreCLREmbedding
             int counter = 0;
 
             objectData.propertiesCount = keyCount;
-            objectData.propertyNames = Marshal.AllocHGlobal(PointerSize * keyCount);
-            objectData.propertyTypes = Marshal.AllocHGlobal(sizeof(int) * keyCount);
-            objectData.propertyValues = Marshal.AllocHGlobal(PointerSize * keyCount);
+            objectData.propertyNames = Marshal.AllocHGlobal(PointerSize*keyCount);
+            objectData.propertyTypes = Marshal.AllocHGlobal(sizeof (int)*keyCount);
+            objectData.propertyValues = Marshal.AllocHGlobal(PointerSize*keyCount);
 
             foreach (object key in keys)
             {
-                Marshal.WriteIntPtr(objectData.propertyNames, counter * PointerSize, Marshal.StringToHGlobalAnsi(key.ToString()));
+                Marshal.WriteIntPtr(objectData.propertyNames, counter*PointerSize, Marshal.StringToHGlobalAnsi(key.ToString()));
                 V8Type propertyType;
-                Marshal.WriteIntPtr(objectData.propertyValues, counter * PointerSize, MarshalCLRToV8(getValue(key), out propertyType));
-                Marshal.WriteInt32(objectData.propertyTypes, counter * sizeof(int), (int)propertyType);
+                Marshal.WriteIntPtr(objectData.propertyValues, counter*PointerSize, MarshalCLRToV8(getValue(key), out propertyType));
+                Marshal.WriteInt32(objectData.propertyTypes, counter*sizeof (int), (int) propertyType);
 
                 counter++;
             }
@@ -899,17 +994,17 @@ public class CoreCLREmbedding
             List<IntPtr> itemValues = new List<IntPtr>();
             List<int> itemTypes = new List<int>();
 
-            foreach (object item in (IEnumerable)clrObject)
+            foreach (object item in (IEnumerable) clrObject)
             {
                 V8Type itemType;
 
                 itemValues.Add(MarshalCLRToV8(item, out itemType));
-                itemTypes.Add((int)itemType);
+                itemTypes.Add((int) itemType);
             }
 
             arrayData.arrayLength = itemValues.Count;
-            arrayData.itemTypes = Marshal.AllocHGlobal(sizeof(int) * arrayData.arrayLength);
-            arrayData.itemValues = Marshal.AllocHGlobal(PointerSize * arrayData.arrayLength);
+            arrayData.itemTypes = Marshal.AllocHGlobal(sizeof (int)*arrayData.arrayLength);
+            arrayData.itemValues = Marshal.AllocHGlobal(PointerSize*arrayData.arrayLength);
 
             Marshal.Copy(itemTypes.ToArray(), 0, arrayData.itemTypes, arrayData.arrayLength);
             Marshal.Copy(itemValues.ToArray(), 0, arrayData.itemValues, arrayData.arrayLength);
@@ -920,7 +1015,7 @@ public class CoreCLREmbedding
             return destinationPointer;
         }
 
-        else if (clrObject.GetType().GetTypeInfo().IsGenericType && clrObject.GetType().GetGenericTypeDefinition() == typeof(Func<,>))
+        else if (clrObject.GetType().GetTypeInfo().IsGenericType && clrObject.GetType().GetGenericTypeDefinition() == typeof (Func<,>))
         {
             Func<object, Task<object>> funcObject = clrObject as Func<object, Task<object>>;
 
@@ -935,7 +1030,9 @@ public class CoreCLREmbedding
 
         else
         {
-            v8Type = clrObject is Exception ? V8Type.Exception : V8Type.Object;
+            v8Type = clrObject is Exception
+                ? V8Type.Exception
+                : V8Type.Object;
 
             if (clrObject is Exception)
             {
@@ -962,18 +1059,18 @@ public class CoreCLREmbedding
             int counter = 0;
 
             objectData.propertiesCount = propertyAccessors.Count;
-            objectData.propertyNames = Marshal.AllocHGlobal(PointerSize * propertyAccessors.Count);
-            objectData.propertyTypes = Marshal.AllocHGlobal(sizeof(int) * propertyAccessors.Count);
-            objectData.propertyValues = Marshal.AllocHGlobal(PointerSize * propertyAccessors.Count);
+            objectData.propertyNames = Marshal.AllocHGlobal(PointerSize*propertyAccessors.Count);
+            objectData.propertyTypes = Marshal.AllocHGlobal(sizeof (int)*propertyAccessors.Count);
+            objectData.propertyValues = Marshal.AllocHGlobal(PointerSize*propertyAccessors.Count);
 
             foreach (Tuple<string, Func<object, object>> propertyAccessor in propertyAccessors)
             {
-                Marshal.WriteIntPtr(objectData.propertyNames, counter * PointerSize, Marshal.StringToHGlobalAnsi(propertyAccessor.Item1));
+                Marshal.WriteIntPtr(objectData.propertyNames, counter*PointerSize, Marshal.StringToHGlobalAnsi(propertyAccessor.Item1));
 
                 V8Type propertyType;
 
-                Marshal.WriteIntPtr(objectData.propertyValues, counter * PointerSize, MarshalCLRToV8(propertyAccessor.Item2(clrObject), out propertyType));
-                Marshal.WriteInt32(objectData.propertyTypes, counter * sizeof(int), (int)propertyType);
+                Marshal.WriteIntPtr(objectData.propertyValues, counter*PointerSize, MarshalCLRToV8(propertyAccessor.Item2(clrObject), out propertyType));
+                Marshal.WriteInt32(objectData.propertyTypes, counter*sizeof (int), (int) propertyType);
                 counter++;
             }
 

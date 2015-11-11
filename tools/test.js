@@ -21,21 +21,7 @@ else {
 	spawn('dnu', ['restore'], { 
 		stdio: 'inherit', 
 		cwd: testDir 
-	}).on('close', function(code, signal) {
-		if (code === 0) {
-			spawn('dnu', ['build'], { 
-				stdio: 'inherit', 
-				cwd: testDir 
-			}).on('close', function(code, signal) {
-				var outputStream = fs.createWriteStream(output);
-				fs.createReadStream(path.join(testDir, 'bin', 'Debug', 'dnxcore50', 'test.dll')).pipe(outputStream);
-
-				outputStream.on('close', function() {
-					runOnSuccess(0);
-				});
-			});
-		}
-	});
+	}).on('close', runOnSuccess);
 }
 
 function runOnSuccess(code, signal) {
