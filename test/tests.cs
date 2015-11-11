@@ -264,14 +264,12 @@ namespace Edge.Tests
 
         public Task<object> NetStructuredExceptionCLRThread(dynamic input)
         {
-            Task<object> task = new Task<object>(() =>
+            Task<object> task = Task.Delay(200).ContinueWith(new Func<Task, object>((antecedant) =>
                 {
-                    throw new InvalidOperationException(
+		    throw new InvalidOperationException(
                         "Outer exception", 
                         new ArgumentException("Inner exception", "input"));
-                });
-
-            task.Start();
+                }));
 
             return task; 
         }
