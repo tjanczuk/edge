@@ -9,6 +9,7 @@
 #include <libgen.h>
 #include <dirent.h>
 #include <sys/utsname.h>
+#include <fstream>
 #else
 #include <direct.h>
 #include <shlwapi.h>
@@ -75,17 +76,17 @@ std::string GetOSName()
 #if EDGE_PLATFORM_WINDOWS
 	return "Windows";
 #else
-	struct utsname unameData;
+	utsname unameData;
 
 	if (uname(&unameData) == 0)
 	{
-		return uname_data.sysname;
+		return unameData.sysname;
 	}
 
 	// uname() failed, falling back to defaults
 	else
 	{
-#if EDGE_PLATFORM_LINUX
+#if EDGE_PLATFORM_NIX
 		return "Linux";
 #elif EDGE_PLATFORM_APPLE
 		return "Darwin";
@@ -94,7 +95,7 @@ std::string GetOSName()
 #endif
 }
 
-char* GetOSArchitecture()
+const char* GetOSArchitecture()
 {
 #if defined __X86__ || defined __i386__ || defined i386 || defined _M_IX86 || defined __386__
 	return "x86";
@@ -116,11 +117,11 @@ std::string GetOSVersion()
 	GetVersionEx(&version_info);
 #pragma warning(default:4996)
 	return std::to_string(version_info.dwMajorVersion).append(".").append(std::to_string(version_info.dwMinorVersion));
-#elif EDGE_PLATFORM_LINUX
+#elif EDGE_PLATFORM_NIX
 	std::vector<std::string> qualifiers{ "ID=", "VERSION_ID=" };
 
 	std::ifstream lsbRelease;
-	lsb_release.open("/etc/os-release", std::ifstream::in);
+	lsbRelease.open("/etc/os-release", std::ifstream::in);
 
 	if (lsbRelease.is_open())
 	{
@@ -159,7 +160,7 @@ std::string GetOSVersion()
 
 	return "";
 #elif EDGE_PLATFORM_APPLE
-	struct utsname unameData;
+	utsname unameData;
 
 	if (uname(&unameData) == 0)
 	{
@@ -417,7 +418,7 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 	DBG("CoreClrEmbedding::Initialize - Runtime directory: %s", context.runtimeDirectory);
 	DBG("CoreClrEmbedding::Initialize - Application directory: %s", context.applicationDirectory);
 
-	DBG("CoreClrEmbedding::Initialize - Calling CLR Initialize() function", context.operatingSystem);
+	DBG("CoreClrEmbedding::Initialize - Calling CLR Initialize() function");
 
 	initialize(&context, &exception);
 
