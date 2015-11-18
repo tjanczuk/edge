@@ -15,8 +15,8 @@ using System.Runtime.Versioning;
 using Microsoft.Dnx.Compilation;
 using Microsoft.Dnx.Compilation.Caching;
 using Microsoft.Dnx.Runtime;
-using Microsoft.Dnx.Runtime.Infrastructure;
 using Microsoft.Dnx.Runtime.Loader;
+using Microsoft.Extensions.PlatformAbstractions;
 
 [StructLayout(LayoutKind.Sequential)]
 // ReSharper disable once CheckNamespace
@@ -146,6 +146,7 @@ public class CoreCLREmbedding
             RuntimeArchitecture = bootstrapperContext.Architecture;
             ApplicationDirectory = bootstrapperContext.ApplicationDirectory;
             RuntimeVersion = typeof(object).GetTypeInfo().Assembly.GetName().Version.ToString();
+            RuntimePath = bootstrapperContext.RuntimeDirectory;
         }
 
         public string OperatingSystem
@@ -170,6 +171,11 @@ public class CoreCLREmbedding
             get;
         }
 
+        public string RuntimePath
+        {
+            get;
+        }
+
         public string ApplicationDirectory
         {
             get;
@@ -178,9 +184,11 @@ public class CoreCLREmbedding
 
     private class EdgeAssemblyLoadContextAccessor : IAssemblyLoadContextAccessor
     {
+        private readonly Lazy<EdgeAssemblyLoadContext> _context;
+
         public EdgeAssemblyLoadContextAccessor()
         {
-            Default = new EdgeAssemblyLoadContext(this);
+            _context = new Lazy<EdgeAssemblyLoadContext>(() => new EdgeAssemblyLoadContext(this));
         }
 
         public IAssemblyLoadContext GetLoadContext(Assembly assembly)
@@ -188,12 +196,9 @@ public class CoreCLREmbedding
             return (IAssemblyLoadContext) AssemblyLoadContext.GetLoadContext(assembly);
         }
 
-        public IAssemblyLoadContext Default
-        {
-            get;
-        }
+        public IAssemblyLoadContext Default => _context.Value;
 
-        public EdgeAssemblyLoadContext TypedDefault => (EdgeAssemblyLoadContext) Default;
+        public EdgeAssemblyLoadContext TypedDefault => _context.Value;
     }
 
     private class EdgeAssemblyLoadContext : AssemblyLoadContext, IAssemblyLoadContext
@@ -236,7 +241,7 @@ public class CoreCLREmbedding
                 }
 
                 _loaders.Add(new ProjectAssemblyLoader(_loadContextAccessor, compilationEngine, projects.Values));
-                _loaders.Add(new PackageAssemblyLoader(_loadContextAccessor, assemblies));
+                _loaders.Add(new PackageAssemblyLoader(_loadContextAccessor, assemblies, libraries));
             }
 
             else
@@ -260,7 +265,7 @@ public class CoreCLREmbedding
             IList<LibraryDescription> libraries = ApplicationHostContext.GetRuntimeLibraries(compilerHostContext);
             Dictionary<AssemblyName, string> assemblies = PackageDependencyProvider.ResolvePackageAssemblyPaths(libraries);
 
-            _loaders.Add(new PackageAssemblyLoader(_loadContextAccessor, assemblies));
+            _loaders.Add(new PackageAssemblyLoader(_loadContextAccessor, assemblies, libraries));
 
             DebugMessage("EdgeAssemblyLoadContext::AddCompiler (CLR) - Finished");
         }
@@ -339,6 +344,16 @@ public class CoreCLREmbedding
             return LoadFromStream(assemblyStream);
         }
 
+        public IntPtr LoadUnmanagedLibrary(string name)
+        {
+            return LoadUnmanagedDll(name);
+        }
+
+        public IntPtr LoadUnmanagedLibraryFromPath(string path)
+        {
+            return LoadUnmanagedDllFromPath(path);
+        }
+
         public void Dispose()
         {
         }
@@ -397,6 +412,8 @@ public class CoreCLREmbedding
             {
                 ServiceProvider = serviceProvider
             };
+
+            PlatformServices.SetDefault(PlatformServices.Create(null, ApplicationEnvironment, RuntimeEnvironment, null, LoadContextAccessor, null));
 
             DebugMessage("CoreCLREmbedding::Initialize (CLR) - Complete");
         }
