@@ -130,12 +130,12 @@ If you are writing a Node.js application, this section explains how you include 
 
 ### What you need
 
-Edge.js runs on Windows, Linux, and OSX and requires Node.js 4.x, 0.12.x, 0.10.x, or 0.8.x, as well as .NET Framework 4.5 (Windows) or Mono 4.0.4.1 (OSX, Linux). 
+Edge.js runs on Windows, Linux, and OSX and requires Node.js 4.x, 0.12.x, 0.10.x, or 0.8.x, as well as .NET Framework 4.5 (Windows), Mono 4.0.4.1 (OSX, Linux), or Microsoft's CoreCLR (Windows, OSX, Linux). 
 
 #### Windows
 
 * Node.js 4.x, 0.12.x, 0.10.x, or 0.8.x 
-* [.NET 4.5](http://www.microsoft.com/en-us/download/details.aspx?id=30653)  
+* [.NET 4.5](http://www.microsoft.com/en-us/download/details.aspx?id=30653) and/or [CoreCLR](http://dotnet.github.io/core/getting-started/)
 * to use Python, you also need [IronPython 2.7.3 or later](http://ironpython.codeplex.com/releases/view/81726)  
 * to use F#, read [Dave Thomas blog post](http://7sharpnine.com/posts/i-node-something/)
 
@@ -144,15 +144,15 @@ Edge.js runs on Windows, Linux, and OSX and requires Node.js 4.x, 0.12.x, 0.10.x
 #### Linux
 
 * Node.js 4.x, 0.12.x, 0.10.x, or 0.8.x
-* Mono 4.0.4.1 x64  
-* Check out [Ubuntu 12.04 setup instructions](#building-on-linux)
+* Mono 4.0.4.1 x64 and/or Microsoft's CoreCLR
+* Check out [Ubuntu setup instructions](#building-on-linux)
 
 ![image](https://cloud.githubusercontent.com/assets/822369/2808077/03f92874-cd0e-11e3-88ea-79f67b8b1d49.png)
 
 #### MacOS  
 
 * Node.js 4.x, 0.12.x, 0.10.x, or 0.8.x  
-* Mono 4.0.4.1 x64  
+* Mono 4.0.4.1 x64 and/or Microsoft's CoreCLR
 * Check out [Mac OS setup instructions](#building-on-osx)  
 
 ![image](https://cloud.githubusercontent.com/assets/822369/2808046/8f4ce378-cd0b-11e3-95dc-ef0842c28821.png)
@@ -200,6 +200,13 @@ Run and enjoy:
 ```
 $>node server.js
 .NET welcomes JavaScript
+```
+
+If you want to use CoreCLR as your .NET runtime and are running in a dual runtime environment (i.e. Windows with .NET 4.5 installed as well or Linux with Mono installed), you will need to tell edge to use CoreCLR by setting the `EDGE_USE_CORECLR` environment variable:
+
+```
+$>EDGE_USE_CORECLR=1 node server.js
+.NET Welcomes JavaScript
 ```
 
 ### How to: integrate C# code into Node.js code
@@ -301,7 +308,7 @@ In that case the default typeName of `My.Edge.Samples.Startup` and methodName of
 
 ### How to: specify additional CLR assembly references in C# code
 
-When you provide C# source code and let edge compile it for you at runtime, edge will by default reference only mscorlib.dll and System.dll assemblies. In applications that require additional assemblies you can specify them in C# code using a special hash pattern, similar to Roslyn. For example, to use ADO.NET you must reference System.Data.dll:
+When you provide C# source code and let edge compile it for you at runtime, edge will by default reference only mscorlib.dll and System.dll assemblies.  If you're using CoreCLR, we automatically reference the most recent versions of the System.Runtime, System.Threading.Tasks, System.Dynamic.Runtime, and the compiler language packages, like Microsoft.CSharp. In applications that require additional assemblies you can specify them in C# code using a special hash pattern, similar to Roslyn. For example, to use ADO.NET you must reference System.Data.dll:
 
 ```javascript
 var add7 = edge.func(function() {/*
@@ -340,6 +347,13 @@ var add7 = edge.func({
     */},
     references: [ 'System.Data.dll' ]
 );
+```
+
+If you are using CoreCLR, you must have a `project.json` file (specification [here](https://github.com/aspnet/Home/wiki/Project.json-file)) that specifies the dependencies for the application and you must have run the `dnu restore` command in that project's directory to generate a `project.lock.json` file.  This file must either be in the current working directory that `node` is executed in or you must specify its directory by setting the `EDGE_APP_ROOT` environment variable.  For example, if the `project.json` file is in the `c:\DotNet\MyProject` directory, you would run something like:
+
+```
+set EDGE_APP_ROOT=c:\DotNet\MyProject
+node app.js
 ```
 
 ### How to: marshal data between C# and Node.js
@@ -1144,7 +1158,7 @@ cd tools
 build.bat release 0.10.0
 ```
 
-Note: the Node.js version number you provide must be version number corresponding to one of the subdirectories of http://nodejs.org/dist. The command will build both x32 and x64 architectures (assuming you use x64 machine). The command will also copy the edge.node executables to appropriate locations under lib\native directory where they are looked up from at runtime. The `npm install` step copies the C standard library shared DLL to the location of the edge.node for the component to be ready to go.
+Note: the Node.js version number you provide must be version number corresponding to one of the subdirectories of http://nodejs.org/dist. The command will build both x32 and x64 architectures (assuming you use x64 machine). The command will also copy the edge\_\*.node executables to appropriate locations under lib\native directory where they are looked up from at runtime. The `npm install` step copies the C standard library shared DLL to the location of the edge\_\*.node files for the component to be ready to go.
 
 To build the C++\CLI native extension using the version of Node.js installed on your machine, issue the following command:
 
@@ -1154,10 +1168,10 @@ node-gyp configure --msvs_version=2013
 node-gyp build -debug
 ```
 
-You can then set the EDGE_NATIVE environment variable to the fully qualified file name of the built edge.node binary. It is useful during development, for example:
+You can then set the EDGE_NATIVE environment variable to the fully qualified file name of the built edge_\*.node binary (edge\_nativeclr.node if you're using the native CLR runtime or edge\_coreclr.node if you're using CoreCLR). It is useful during development, for example:
 
 ```
-set EDGE_NATIVE=C:\projects\edge\build\Debug\edge.node
+set EDGE_NATIVE=C:\projects\edge\build\Debug\edge_nativeclr.node
 ``` 
 
 You can also set the `EDGE_DEBUG` environment variable to 1 to have the edge module generate debug traces to the console when it runs.
@@ -1212,17 +1226,29 @@ Prerequisities:
 First build Mono 4.0.4.1 x64:
 
 ```bash
-brew install https://raw.githubusercontent.com/tjanczuk/edge/master/tools/mono64.rb
+brew install https://raw.githubusercontent.com/medicomp/edge/master/tools/mono64.rb
 
 # at this point I fried an omelette on the lid of my Mac Book Air which was running hot 
 # for about 15 minutes, compiling and installing Mono 64bit; 
 # it was delicious (the omelette, not the MacBook)
 ```
 
+Then install CoreCLR:
+
+```bash
+brew tap aspnet/dnx
+brew update
+brew install dnvm
+source dnvm.sh
+dnvm install latest -r coreclr -alias edge-coreclr
+dnvm install latest -r mono -alias edge-mono
+```
+
 Then install and build Edge.js:
 
 ```bash
 brew install pkg-config
+dnvm use edge-mono
 sudo npm install node-gyp -g
 npm install edge
 ```
@@ -1237,12 +1263,24 @@ To build a debug build instead of release, you need to:
 
 ```bash
 node-gyp configure build -debug
-export EDGE_NATIVE=/Users/tomek/edge/build/Debug/edge.node
+export EDGE_NATIVE=/Users/tomek/edge/build/Debug/edge_nativeclr.node
 ```
+
+After installation, if you wish to run using CoreCLR, switch to it using:
+
+````bash
+dnvm use edge-coreclr
+````
+
+If you wish to run using Mono, switch to it using:
+
+````bash
+dnvm use edge-mono
+````
 
 ### Building on Linux 
 
-These instructions were tested on Ubuntu 12.04 x64 and Debian Wheezy x64. High level, you must have Node.js x64 and Mono x64 installed on the machine before you can install Edge.js. There are two ways of getting there.
+These instructions were tested on Ubuntu 14.04 x64 and Debian Wheezy x64. High level, you must have Node.js x64 and either Mono x64 or Microsoft's CoreCLR (or both!) installed on the machine before you can install Edge.js. There are two ways of getting there.
 
 ### Debian, starting from a clean VM (i.e. taking the high road)
 
@@ -1250,43 +1288,45 @@ If you have a fresh Debian Wheezy x64 installation, the most convenient way of i
 
 ```bash
 export USERNAME=YourUserNameHere
-sudo bash -c 'bash <(wget -qO- https://raw.githubusercontent.com/tjanczuk/edge/master/tools/debian_wheezy_clean_install.sh)'
+sudo bash -c 'bash <(wget -qO- https://raw.githubusercontent.com/medicomp/edge/master/tools/debian_wheezy_clean_install.sh)'
 ```
 
 This will do the following:
 
 * Download Node.js v4.1.1 sources, build, and install Node.js x64
-* Download Mono 4.0.4.1 sources, build, and install Mono x64
+* Install the Xamarin Mono apt repository and install the latest Mono x64
+* Download and install the latest version of Microsoft's CoreCLR
 * Download and install node-gyp and mocha
 * Download Edge.js sources and build x64 release
-* Run Edge.js tests
+* Run Edge.js tests using both Mono and CoreCLR
 
-This process takes about 15 minutes on a Debian Wheezy x64 running on a 4 core with 16GB RAM. If successful, your machine will have all the prerequisites to `npm install edge`.
+If successful, your machine will have all the prerequisites to `npm install edge`.
 
 
 ### Ubuntu, starting from a clean VM (i.e. taking the high road)
 
-If you have a fresh Ubuntu 12.04 x64 installation, the most convenient way of installing Edge.js with all prerequisites is by running:
+If you have a fresh Ubuntu 14.04 x64 installation, the most convenient way of installing Edge.js with all prerequisites is by running:
 
 ```bash
-sudo bash -c 'bash <(wget -qO- https://raw.githubusercontent.com/tjanczuk/edge/master/tools/ubuntu_12.04_clean_install.sh)'
+sudo bash -c 'bash <(wget -qO- https://raw.githubusercontent.com/medicomp/edge/master/tools/ubuntu_12.04_clean_install.sh)'
 ```
 
 This will do the following:
 
 * Download Node.js v4.1.1 sources, build, and install Node.js x64  
-* Download Mono 4.0.4.1 sources, build, and install Mono x64  
+* Install the Xamarin Mono apt repository and install the latest Mono x64
+* Download and install the latest version of Microsoft's CoreCLR
 * Download and install node-gyp and mocha  
 * Download Edge.js sources and build x64 release  
-* Run Edge.js tests  
+* Run Edge.js tests using both Mono and CoreCLR
 
-This process takes about 25 minutes on a Ubuntu 12.04 x64 VM running on a 2 core VM with 4GB RAM within Fusion on a MacBook Pro. If successful, your machine will have all the prerequisites to `npm install edge`. 
+If successful, your machine will have all the prerequisites to `npm install edge`. 
 
 #### Ubuntu, manual install 
 
-This method is adequate if you already have a Mono x64 or Node.js x64 install on the machine and need to incrementally add Edge to it. 
+This method is adequate if you already have a Mono x64, CoreCLR, and/or Node.js x64 install on the machine and need to incrementally add Edge to it. 
 
-Read through the [install script](https://raw.githubusercontent.com/tjanczuk/edge/mono/tools/ubuntu_12.04_clean_install.sh) and cherry pick the steps you need. Here are some gotchas:
+Read through the [install script](https://raw.githubusercontent.com/medicomp/edge/mono/tools/ubuntu_12.04_clean_install.sh) and cherry pick the steps you need. Here are some gotchas:
 
 * If you need to build Mono, make sure to run `ldconfig` afterwards, otherwise the garbage collection libraries may not load.  
 * To make sure Mono can load the standard C library, run `sudo ln -s -f /lib/x86_64-linux-gnu/libc.so.6 /lib/x86_64-linux-gnu/libc.so`. For background on that step, see how [Mono loads native libraries](http://www.mono-project.com/Interop_with_Native_Libraries) or just [cut to the chase](http://stackoverflow.com/questions/14359981/mono-and-unmanaged-code-in-ubuntu).  
@@ -1297,7 +1337,28 @@ To build a debug build instead of release, you need to:
 
 ```bash
 node-gyp configure build -debug
-export EDGE_NATIVE=/home/tomek/edge/build/Debug/edge.node
+export EDGE_NATIVE=/home/tomek/edge/build/Debug/edge_nativeclr.node
+```
+
+### Using CoreCLR
+
+If you have only CoreCLR installed on your system and not Mono, you can run Edge with no changes.  However, if you have BOTH runtimes installed, Edge will automatically use Mono unless directed otherwise.  To use CoreCLR in a dual-runtime entironment, set the `EDGE_USE_CORECLR=1` environment variable when starting node, i.e.
+
+```bash
+EDGE_USE_CORECLR=1 node sample.js
+```
+
+Edge will try to find the CLR runtime in the following locations:
+
+ * The path in the `CORECLR_DIR` environment variable, if provided
+ * The current directory
+ * The directory containing `edge_*.node`
+ * Directories in the `PATH` environment variable
+  
+If you've used `dnvm install` and `dnvm use` to set your preferred version of the CLR, you don't have to supply any additional parameters or environment variables when starting node.  However, if the CLR is another location or you want to use a version of the CLR other than the default that you've set, the best way to specify that is through the `CORECLR_DIR` environment variable, i.e.
+
+```bash
+EDGE_USE_CORECLR=1 CORECLR_DIR=/home/user/.dnx/runtimes/dnx-coreclr-linux-x64.1.0.0-beta6-11944/bin node sample.js
 ```
 
 ## Scripting Node.js from CLR

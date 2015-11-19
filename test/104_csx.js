@@ -1,7 +1,7 @@
 var edge = require('../lib/edge.js'), assert = require('assert')
     , path = require('path');
 
-var edgeTestDll = path.join(__dirname, 'Edge.Tests.dll');
+var edgeTestDll = process.env.EDGE_USE_CORECLR ? 'test' : path.join(__dirname, 'Edge.Tests.dll');
 
 describe('edge-cs', function () {
 
@@ -10,6 +10,7 @@ describe('edge-cs', function () {
         func("JavaScript", function (error, result) {
             assert.ifError(error);
             assert.equal(result, 'Hello, JavaScript');
+
             done();
         });
     });
@@ -109,7 +110,7 @@ describe('edge-cs', function () {
         assert.throws(
             function () { edge.func('async_foo (input) => { return "Hello, " + input.ToString(); }'); },
             function (error) {
-                if ((error instanceof Error) && error.message.match(/Invalid expression term '=>'|Unexpected symbol `=>'/)) {
+                if ((error instanceof Error) && error.message.match(/Invalid expression term '=>'|Unexpected symbol `=>'|The name 'async_foo' does not exist in the current context/)) {
                     return true;
                 }
                 return false;
@@ -134,7 +135,7 @@ describe('edge-cs', function () {
                 */});
             },
             function (error) {
-                if ((error instanceof Error) && error.message.match(/Expected class, delegate, enum, interface, or|expecting `class', `delegate', `enum', `interface', `partial', or `struct'/)) {
+                if ((error instanceof Error) && error.message.match(/Expected class, delegate, enum, interface, or|expecting `class', `delegate', `enum', `interface', `partial', or `struct'|The type or namespace name 'classes' could not be found/)) {
                     return true;
                 }
                 return false;
@@ -195,20 +196,35 @@ describe('edge-cs', function () {
 
     it('succeeds with System.Data.dll reference as comment in class', function (done) {
         var func = edge.func({
-            source: function () {/* 
-                //#r "System.Data.dll"
+            source: process.env.EDGE_USE_CORECLR ?
+                function () {/* 
+                    //#r "System.Data.Common"
 
-                using System.Threading.Tasks;
-                using System.Data;
+                    using System.Threading.Tasks;
+                    using System.Data;
 
-                public class Startup 
-                {
-                    public async Task<object> Invoke(object input) 
+                    public class Startup 
                     {
-                        return "Hello, " + input.ToString();
-                    }
-                }           
-            */}
+                        public async Task<object> Invoke(object input) 
+                        {
+                            return "Hello, " + input.ToString();
+                        }
+                    }           
+                */} :
+                function () {/* 
+                    //#r "System.Data.dll"
+
+                    using System.Threading.Tasks;
+                    using System.Data;
+
+                    public class Startup 
+                    {
+                        public async Task<object> Invoke(object input) 
+                        {
+                            return "Hello, " + input.ToString();
+                        }
+                    }           
+                */}
         });
         func("JavaScript", function (error, result) {
             assert.ifError(error);
@@ -219,20 +235,35 @@ describe('edge-cs', function () {
 
     it('succeeds with System.Data.dll reference without comment in class', function (done) {
         var func = edge.func({
-            source: function () {/* 
-                #r "System.Data.dll"
+            source: process.env.EDGE_USE_CORECLR ?
+                function () {/* 
+                    #r "System.Data.Common"
 
-                using System.Threading.Tasks;
-                using System.Data;
+                    using System.Threading.Tasks;
+                    using System.Data;
 
-                public class Startup 
-                {
-                    public async Task<object> Invoke(object input) 
+                    public class Startup 
                     {
-                        return "Hello, " + input.ToString();
-                    }
-                }           
-            */}
+                        public async Task<object> Invoke(object input) 
+                        {
+                            return "Hello, " + input.ToString();
+                        }
+                    }           
+                */} :
+                function () {/* 
+                    #r "System.Data.dll"
+
+                    using System.Threading.Tasks;
+                    using System.Data;
+
+                    public class Startup 
+                    {
+                        public async Task<object> Invoke(object input) 
+                        {
+                            return "Hello, " + input.ToString();
+                        }
+                    }           
+                */}
         });
         func("JavaScript", function (error, result) {
             assert.ifError(error);
@@ -243,14 +274,23 @@ describe('edge-cs', function () {
 
     it('succeeds with System.Data.dll reference as comment in async lambda', function (done) {
         var func = edge.func({
-            source: function () {/* 
-                //#r "System.Data.dll"
-                
-                async (input) => 
-                {
-                    return "Hello, " + input.ToString();
-                }
-            */}
+            source: process.env.EDGE_USE_CORECLR ?
+                function () {/* 
+                    //#r "System.Data.Common"
+                    
+                    async (input) => 
+                    {
+                        return "Hello, " + input.ToString();
+                    }
+                */} :
+                function () {/* 
+                    //#r "System.Data.dll"
+                    
+                    async (input) => 
+                    {
+                        return "Hello, " + input.ToString();
+                    }
+                */}
         });
         func("JavaScript", function (error, result) {
             assert.ifError(error);
@@ -261,14 +301,23 @@ describe('edge-cs', function () {
 
     it('succeeds with System.Data.dll reference without comment in async lambda', function (done) {
         var func = edge.func({
-            source: function () {/* 
-                #r "System.Data.dll"
-                
-                async (input) => 
-                {
-                    return "Hello, " + input.ToString();
-                }
-            */}
+            source: process.env.EDGE_USE_CORECLR ?
+                function () {/* 
+                    #r "System.Data.Common"
+                    
+                    async (input) => 
+                    {
+                        return "Hello, " + input.ToString();
+                    }
+                */} :
+                function () {/* 
+                    #r "System.Data.dll"
+                    
+                    async (input) => 
+                    {
+                        return "Hello, " + input.ToString();
+                    }
+                */}
         });
         func("JavaScript", function (error, result) {
             assert.ifError(error);
@@ -279,20 +328,31 @@ describe('edge-cs', function () {
 
     it('succeeds with System.Data.dll reference and a using statement in async lambda', function (done) {
         var func = edge.func({
-            source: function () {/* 
-                #r "System.Data.dll"
+            source: process.env.EDGE_USE_CORECLR ?
+                function () {/* 
+                    #r "System.Data.Common"
 
-                using System.Data;
-                
-                async (input) => 
-                {
-                    return input.ToString() + " is " + SqlDbType.Real.ToString();
-                }
-            */}
+                    using System.Data;
+                    
+                    async (input) => 
+                    {
+                        return input.ToString() + " is " + DbType.Single.ToString();
+                    }
+                */} :
+                function () {/* 
+                    #r "System.Data.dll"
+
+                    using System.Data;
+                    
+                    async (input) => 
+                    {
+                        return input.ToString() + " is " + DbType.Single.ToString();
+                    }
+                */}
         });
         func("JavaScript", function (error, result) {
             assert.ifError(error);
-            assert.equal(result, 'JavaScript is Real');
+            assert.equal(result, 'JavaScript is Single');
             done();
         });
     });
@@ -302,7 +362,8 @@ describe('edge-cs', function () {
             source: function () {/* 
                 async (dynamic input) => 
                 {
-                    return input.text + " works";
+                    string inputText = input.text;
+                    return inputText + " works";
                 }
             */}
         });
@@ -318,7 +379,8 @@ describe('edge-cs', function () {
             source: function () {/* 
                 async (dynamic input) => 
                 {
-                    return input.nested.text + " works";
+                    string inputText = input.nested.text;
+                    return inputText + " works";
                 }
             */}
         });
@@ -338,7 +400,8 @@ describe('edge-cs', function () {
                 {
                     public async Task<object> Invoke(dynamic input) 
                     {
-                        return input.text + " works";
+                        string inputText = input.text;
+                        return inputText + " works";
                     }
                 }    
             */}
@@ -359,7 +422,8 @@ describe('edge-cs', function () {
                 {
                     public async Task<object> Invoke(dynamic input) 
                     {
-                        return input.nested.text + " works";
+                        string inputText = input.nested.text;
+                        return inputText + " works";
                     }
                 }    
             */}
@@ -391,5 +455,83 @@ describe('edge-cs', function () {
             assert.equal(result, 'Dictionary works');
             done();
         });
-    });    
+    });   
+
+    it('fails with a reference to a non-existent assembly without comment in class', function () {
+        assert.throws(function() {
+            edge.func({
+                source: process.env.EDGE_USE_CORECLR ?
+                    function () {/* 
+                        #r "Package.Doesnt.Exist"
+
+                        using System.Threading.Tasks;
+                        using System.Data;
+
+                        public class Startup 
+                        {
+                            public async Task<object> Invoke(object input) 
+                            {
+                                return "Hello, " + input.ToString();
+                            }
+                        }           
+                    */} :
+                    function () {/* 
+                        #r "Package.Doesnt.Exist.dll"
+
+                        using System.Threading.Tasks;
+                        using System.Data;
+
+                        public class Startup 
+                        {
+                            public async Task<object> Invoke(object input) 
+                            {
+                                return "Hello, " + input.ToString();
+                            }
+                        }           
+                    */}
+            });
+        },
+        function (error) {
+            if ((error instanceof Error) && error.message.match(/Unable to resolve reference to Package\.Doesnt\.Exist|Package\.Doesnt\.Exist\.dll' could not be found/)) {
+                return true;
+            }
+            return false;
+        },
+        'Unexpected result');
+    });
+
+    if (process.env.EDGE_USE_CORECLR) {
+        it('fails when dynamically loading an assembly that doesn\'t exist', function () {
+            assert.throws(function() {
+                var func = edge.func({
+                    source: function () {/* 
+                        #r "System.Reflection"
+                        #r "System.Runtime.Loader"
+
+                        using System.Runtime.Loader;
+                        using System.Threading.Tasks;
+                        using System.Reflection;
+
+                        public class Startup 
+                        {
+                            public async Task<object> Invoke(object input) 
+                            {
+                                var assembly = AssemblyLoadContext.Default.LoadFromAssemblyName(new AssemblyName("Package.Doesnt.Exist"));
+                                return "Hello, " + input.ToString();
+                            }
+                        }           
+                    */}
+                });
+
+                func("JavaScript");
+            },
+            function (error) {
+                if ((error instanceof Error) && error.message.match(/Could not load file or assembly 'Package\.Doesnt\.Exist/)) {
+                    return true;
+                }
+                return false;
+            },
+            'Unexpected result');
+        });
+    }
 });

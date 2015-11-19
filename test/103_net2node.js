@@ -17,13 +17,14 @@
 var edge = require('../lib/edge.js'), assert = require('assert')
 	, path = require('path');
 
-var edgeTestDll = path.join(__dirname, 'Edge.Tests.dll');
+var edgeTestDll = process.env.EDGE_USE_CORECLR ? 'test' : path.join(__dirname, 'Edge.Tests.dll');
 
 describe('async call from .net to node.js', function () {
 
 	it('succeeds for hello world', function (done) {
 		var func = edge.func({
 			assemblyFile: edgeTestDll,
+			typeName: 'Edge.Tests.Startup',
 			methodName: 'InvokeBack'
 		});
 		var payload = {
@@ -41,6 +42,7 @@ describe('async call from .net to node.js', function () {
 	it('successfuly marshals data from .net to node.js', function (done) {
 		var func = edge.func({
 			assemblyFile: edgeTestDll,
+			typeName: 'Edge.Tests.Startup',
 			methodName: 'MarshalInFromNet'
 		});
 		var payload = {
@@ -78,6 +80,7 @@ describe('async call from .net to node.js', function () {
 	it('successfuly marshals object hierarchy from .net to node.js', function (done) {
 		var func = edge.func({
 			assemblyFile: edgeTestDll,
+			typeName: 'Edge.Tests.Startup',
 			methodName: 'MarshalObjectHierarchy'
 		});
 		func(null, function (error, result) {
@@ -93,6 +96,7 @@ describe('async call from .net to node.js', function () {
 	it('successfuly marshals data from node.js to .net', function (done) {
 		var func = edge.func({
 			assemblyFile: edgeTestDll,
+			typeName: 'Edge.Tests.Startup',
 			methodName: 'MarshalBackToNet'
 		});
 		var payload = {
@@ -121,6 +125,7 @@ describe('async call from .net to node.js', function () {
 	it('successfuly marshals v8 exception on invoking thread', function (done) {
 		var func = edge.func({
 			assemblyFile: edgeTestDll,
+			typeName: 'Edge.Tests.Startup',
 			methodName: 'MarshalException'
 		});
 		var payload = {
@@ -139,6 +144,7 @@ describe('async call from .net to node.js', function () {
 	it('successfuly marshals v8 exception in callback', function (done) {
 		var func = edge.func({
 			assemblyFile: edgeTestDll,
+			typeName: 'Edge.Tests.Startup',
 			methodName: 'MarshalException'
 		});
 		var payload = {
@@ -158,11 +164,11 @@ describe('async call from .net to node.js', function () {
 	});		
 
 	it('successfuly marshals empty buffer', function (done) {
-		var func = edge.func(function () {/*
-			async (object input) => {
-				return new byte[] {};
-			}
-		*/});
+		var func = edge.func({
+			assemblyFile: edgeTestDll,
+			typeName: 'Edge.Tests.Startup',
+			methodName: 'ReturnEmptyBuffer'
+		});
 
 		func(null, function (error, result) {
 			assert.ifError(error);
@@ -185,11 +191,13 @@ describe('delayed call from node.js to .net', function () {
 
 		var func = edge.func({
 			assemblyFile: edgeTestDll,
+			typeName: 'Edge.Tests.Startup',
 			methodName: 'InvokeBackAfterCLRCallHasFinished'
 		});
 
 		var ensureNodejsFuncIsCollected = edge.func({
 			assemblyFile: edgeTestDll,
+			typeName: 'Edge.Tests.Startup',
 			methodName: 'EnsureNodejsFuncIsCollected'
 		});
 

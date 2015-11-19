@@ -1,14 +1,15 @@
-var edge = require('../lib/edge.js'), assert = require('assert');
+var edge = require('../lib/edge.js'), assert = require('assert'), path = require('path');
+
+var edgeTestDll = process.env.EDGE_USE_CORECLR ? 'test' : path.join(__dirname, 'Edge.Tests.dll');
 
 describe('call patterns', function () {
 
     it('sync call to exported .NET lambda', function () {
-        var func = edge.func(function () {/*
-            async (input) =>
-            {
-                return (Func<object,Task<object>>)(async (i) => { return ".NET welcomes " + i.ToString(); });
-            }
-        */});
+        var func = edge.func({
+            assemblyFile: edgeTestDll,
+            typeName: 'Edge.Tests.Startup',
+            methodName: 'ReturnAsyncLambda'
+        });
 
         var lambda = func(null, true);
         assert.equal(typeof lambda, 'function');
@@ -17,12 +18,11 @@ describe('call patterns', function () {
     });
 
     it('async call to exported .NET lambda', function (done) {
-        var func = edge.func(function () {/*
-            async (input) =>
-            {
-                return (Func<object,Task<object>>)(async (i) => { return ".NET welcomes " + i.ToString(); });
-            }
-        */});
+        var func = edge.func({
+            assemblyFile: edgeTestDll,
+            typeName: 'Edge.Tests.Startup',
+            methodName: 'ReturnAsyncLambda'
+        });
 
         var lambda = func(null, true);
         assert.equal(typeof lambda, 'function');
@@ -34,13 +34,11 @@ describe('call patterns', function () {
     });
 
     it('call exported .NET lambda with closure over CLR state', function () {
-        var func = edge.func(function () {/*
-            async (input) =>
-            {
-                var k = (int)input;
-                return (Func<object,Task<object>>)(async (i) => { return ++k; });
-            }
-        */});
+        var func = edge.func({
+            assemblyFile: edgeTestDll,
+            typeName: 'Edge.Tests.Startup',
+            methodName: 'ReturnLambdaWithClosureOverState'
+        });
 
         var lambda = func(12, true);
         assert.equal(typeof lambda, 'function');
@@ -49,12 +47,11 @@ describe('call patterns', function () {
     });
 
     it('successfuly marshals .net exception thrown on V8 thread from exported CLR lambda', function () {
-        var func = edge.func(function() {/*
-            async (input) => 
-            {
-                return (Func<object,Task<object>>)(async (i) => { throw new Exception("Test .NET exception"); });
-            }
-        */});
+        var func = edge.func({
+            assemblyFile: edgeTestDll,
+            typeName: 'Edge.Tests.Startup',
+            methodName: 'ReturnLambdaThatThrowsException'
+        });
 
         var lambda = func(null, true);
         assert.equal(typeof lambda, 'function');
@@ -71,21 +68,11 @@ describe('call patterns', function () {
     });
 
     it('successfuly marshals .net exception thrown on CLR thread from exported CLR lambda', function (done) {
-        var func = edge.func(function() {/*
-            async (input) => 
-            {
-                return (Func<object,Task<object>>)((i) => { 
-                    Task<object> task = new Task<object>(() =>
-                    {
-                        throw new Exception("Test .NET exception");
-                    });
-
-                    task.Start();
-
-                    return task; 
-                });
-            }
-        */});
+        var func = edge.func({
+            assemblyFile: edgeTestDll,
+            typeName: 'Edge.Tests.Startup',
+            methodName: 'ReturnLambdaThatThrowsAsyncException'
+        });
 
         var lambda = func(null, true);
         assert.equal(typeof lambda, 'function');
@@ -98,31 +85,11 @@ describe('call patterns', function () {
 
     // Regression test for https://github.com/tjanczuk/edge/issues/39
     it('large number of concurrent callbacks from C# to JavaScript (issue #39)', function (done) {
-        var edgetest = edge.func(function () {/*
-            using System;
-            using System.Collections.Generic;
-            using System.Threading.Tasks;
-
-            public class Startup
-            {
-                public async Task<object> Invoke(object input)
-                {
-                    Func<object, Task<object>> rowCallback = (Func<object, Task<object>>)input;
-                    IList<Task<object>> rowEvents = new List<Task<object>>();
-
-                    for (int i = 0; i < 5000; ++i)
-                    {
-                        IDictionary<string, object> row = new Dictionary<string, object>();
-                        for (int j = 0; j < 25; j++) row.Add(j.ToString(), j);
-                        rowEvents.Add(rowCallback(row));
-                    }
-
-                    await Task.WhenAll(rowEvents);
-
-                    return rowEvents.Count;
-                }
-            }            
-        */});
+        var edgetest = edge.func({
+            assemblyFile: edgeTestDll,
+            typeName: 'Edge.Tests.Startup',
+            methodName: 'LargeNumberOfConcurrentCallbacks'
+        });
 
         var results = [];
 
@@ -138,7 +105,7 @@ describe('call patterns', function () {
                 done();
             }
         );
-    });    
+    }); 
 
     // Regression test for https://github.com/tjanczuk/edge/issues/22
     it('two async callouts each with async callin (issue #22)', function (done) {
@@ -149,19 +116,11 @@ describe('call patterns', function () {
             callback();
         };
 
-        var callout = edge.func(function () {/*
-            using System;
-            using System.Collections.Generic;
-            using System.Threading.Tasks;
-
-            public class Startup {
-                public async Task<object> Invoke(IDictionary<string, object> input) {
-                    Func<object, Task<object>> callin = (Func<object, Task<object>>)input["callin"];
-                    await callin(input["payload"]);
-                    return input["payload"];
-                }
-            }
-        */});
+        var callout = edge.func({
+            assemblyFile: edgeTestDll,
+            typeName: 'Edge.Tests.Startup',
+            methodName: 'CallbackToNodejs'
+        });
 
         var tryFinish = function() {
             if (log.length === 4) {
@@ -178,16 +137,14 @@ describe('call patterns', function () {
 
         callout({ payload: 'callin1', callin: callin }, callback);
         callout({ payload: 'callin2', callin: callin }, callback);
-    }); 
+    });
 
     it('call JS func exported to .NET as a result of calling a JS func from .NET', function (done) {
-        var callout = edge.func(function () {/*
-            async (input) => {
-                Func<object,Task<object>> func1 = (Func<object,Task<object>>)input;
-                Func<object,Task<object>> func2 = (Func<object,Task<object>>)(await func1(null));
-                return await func2(null);
-            }
-        */});
+        var callout = edge.func({
+            assemblyFile: edgeTestDll,
+            typeName: 'Edge.Tests.Startup',
+            methodName: 'DoubleLayerCallbackToNodejs'
+        });
 
         callout(
             function (data, callback) {
@@ -201,50 +158,14 @@ describe('call patterns', function () {
                 done();
             }
         );
-    }); 
+    });
 
     it('exception when marshaling CLR data to V8 when calling exported JS function', function (done) {
-        var callout = edge.func(function () {/*
-            using System;
-            using System.Collections.Generic;
-            using System.Threading.Tasks;
-
-            public class BadPerson 
-            {
-                public string Name 
-                {
-                    get 
-                    {
-                        throw new InvalidOperationException("I have no name");
-                    }
-                }
-            }
-
-            public class Startup {
-                public async Task<object> Invoke(Func<object, Task<object>> callin) 
-                {
-                    try 
-                    {
-                        await callin(new BadPerson());
-                        return "Unexpected success";
-                    }
-                    catch (Exception e)
-                    {
-                        while (e.InnerException != null)
-                            e = e.InnerException;
-
-                        if (e.Message == "I have no name")
-                        {
-                            return "Expected failure";
-                        }   
-                        else 
-                        {
-                            return "Unexpected failure: " + e.ToString();
-                        }
-                    }
-                }
-            }
-        */});
+        var callout = edge.func({
+            assemblyFile: edgeTestDll,
+            typeName: 'Edge.Tests.Startup',
+            methodName: 'ThrowExceptionMarshallingForCallback'
+        });
 
         callout(
             function (data, callback) {
@@ -259,29 +180,11 @@ describe('call patterns', function () {
     }); 
 
     it('exception when marshaling CLR data to V8 when completing a synchronous call from JS to .NET', function () {
-        var callout = edge.func(function () {/*
-            using System;
-            using System.Collections.Generic;
-            using System.Threading.Tasks;
-
-            public class BadPerson 
-            {
-                public string Name 
-                {
-                    get 
-                    {
-                        throw new InvalidOperationException("I have no name");
-                    }
-                }
-            }
-
-            public class Startup {
-                public async Task<object> Invoke(object input) 
-                {
-                    return new BadPerson();
-                }
-            }
-        */});
+        var callout = edge.func({
+            assemblyFile: edgeTestDll,
+            typeName: 'Edge.Tests.Startup',
+            methodName: 'ThrowExceptionMarshallingForReturn'
+        });
 
         assert.throws(
             function () { callout(null, true); }, 
@@ -293,33 +196,14 @@ describe('call patterns', function () {
             },
             'Unexpected result'
         );
-    }); 
+    });
 
     it('exception when marshaling CLR data to V8 when completing an asynchronous call from JS to .NET', function (done) {
-        var callout = edge.func(function () {/*
-            using System;
-            using System.Collections.Generic;
-            using System.Threading.Tasks;
-
-            public class BadPerson 
-            {
-                public string Name 
-                {
-                    get 
-                    {
-                        throw new InvalidOperationException("I have no name");
-                    }
-                }
-            }
-
-            public class Startup {
-                public async Task<object> Invoke(object input) 
-                {
-                    await Task.Delay(200);
-                    return new BadPerson();
-                }
-            }
-        */});
+        var callout = edge.func({
+            assemblyFile: edgeTestDll,
+            typeName: 'Edge.Tests.Startup',
+            methodName: 'ThrowExceptionMarshallingForAsyncReturn'
+        });
 
         callout(false, function (error, result) {
             assert.equal(true, error instanceof Error);
@@ -327,6 +211,6 @@ describe('call patterns', function () {
             done();
         });
 
-    }); 
+    });
 
 });

@@ -105,7 +105,7 @@ v8::Local<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread(bool completedSync
     default:
         argv[0] = Nan::New<v8::String>("The operation reported completion in an unexpected state.").ToLocalChecked();
         break;
-    case Task::Faulted:
+    case TaskStatusFaulted:
         if (Task::Exception(this->Task()) != NULL) {
             argv[0] = ClrFunc::MarshalCLRExceptionToV8(Task::Exception(this->Task()));
         }
@@ -113,10 +113,10 @@ v8::Local<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread(bool completedSync
             argv[0] = Nan::New<v8::String>("The operation has failed with an undetermined error.").ToLocalChecked();
         }
         break;
-    case Task::Canceled:
+    case TaskStatusCanceled:
         argv[0] = Nan::New<v8::String>("The operation was cancelled.").ToLocalChecked();
         break;
-    case Task::RanToCompletion:
+    case TaskStatusRanToCompletion:
         argc = 2;
         MonoException* exc = NULL;
         argv[1] = ClrFunc::MarshalCLRToV8(Task::Result(this->Task()), &exc);

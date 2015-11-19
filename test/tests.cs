@@ -130,7 +130,18 @@ namespace Edge.Tests
         public Task<object> NetExceptionTaskStart(dynamic input)
         {
             throw new Exception("Test .NET exception");
-        }                   
+        }    
+
+        public async Task<object> DelayedReturn(dynamic input)
+        {
+            await Task.Delay(1000);
+            return null;
+        }
+
+        public Task<object> ReturnAsyncLambda(dynamic input)
+        {
+            return Task.FromResult((object)(new Func<object,Task<object>>(async (i) => { return ".NET welcomes " + i.ToString(); })));
+        }
 
         public Task<object> NetExceptionCLRThread(dynamic input)
         {
@@ -249,6 +260,129 @@ namespace Edge.Tests
             result.B_prop = "b_prop";
 
             return result;
+        }
+
+        public Task<object> NetStructuredExceptionCLRThread(dynamic input)
+        {
+            Task<object> task = Task.Delay(200).ContinueWith(new Func<Task, object>((antecedant) =>
+                {
+		    throw new InvalidOperationException(
+                        "Outer exception", 
+                        new ArgumentException("Inner exception", "input"));
+                }));
+
+            return task; 
+        }
+
+        public async Task<object> MarshalEmptyBuffer(dynamic input)
+        {
+            return ((byte[])input).Length == 0;
+        }
+
+        public async Task<object> ReturnEmptyBuffer(dynamic input)
+        {
+            return new byte[] {};
+        }
+
+        public async Task<object> ReturnInput(dynamic input)
+        {
+            return input;
+        }
+
+        public async Task<object> ReturnLambdaWithClosureOverState(dynamic input)
+        {
+            var k = (int)input;
+            return (Func<object,Task<object>>)(async (i) => { return ++k; });
+        }
+
+        public async Task<object> ReturnLambdaThatThrowsException(dynamic input)
+        {
+            return (Func<object,Task<object>>)(async (i) => { throw new Exception("Test .NET exception"); });
+        }
+
+        public async Task<object> ReturnLambdaThatThrowsAsyncException(dynamic input)
+        {
+            return (Func<object,Task<object>>)((i) => { 
+                return Task.Delay(200).ContinueWith(new Func<Task, object>((antecedant) => {
+                    throw new Exception("Test .NET exception");
+                }));
+            });
+        }
+
+        public async Task<object> LargeNumberOfConcurrentCallbacks(dynamic input)
+        {
+            Func<object, Task<object>> rowCallback = (Func<object, Task<object>>)input;
+            IList<Task<object>> rowEvents = new List<Task<object>>();
+
+            for (int i = 0; i < 5000; ++i)
+            {
+                IDictionary<string, object> row = new Dictionary<string, object>();
+                for (int j = 0; j < 25; j++) row.Add(j.ToString(), j);
+                rowEvents.Add(rowCallback(row));
+            }
+
+            await Task.WhenAll(rowEvents);
+
+            return rowEvents.Count;
+        }
+
+        public async Task<object> CallbackToNodejs(IDictionary<string, object> input) 
+        {
+            Func<object, Task<object>> callin = (Func<object, Task<object>>)input["callin"];
+            await callin(input["payload"]);
+            return input["payload"];
+        }
+
+        public async Task<object> DoubleLayerCallbackToNodejs(dynamic input)
+        {
+            Func<object,Task<object>> func1 = (Func<object,Task<object>>)input;
+            Func<object,Task<object>> func2 = (Func<object,Task<object>>)(await func1(null));
+            return await func2(null);
+        }
+
+        public async Task<object> ThrowExceptionMarshallingForCallback(Func<object, Task<object>> callin) 
+        {
+            try 
+            {
+                await callin(new BadPerson());
+                return "Unexpected success";
+            }
+            catch (Exception e)
+            {
+                while (e.InnerException != null)
+                    e = e.InnerException;
+
+                if (e.Message == "I have no name")
+                {
+                    return "Expected failure";
+                }   
+                else 
+                {
+                    return "Unexpected failure: " + e.ToString();
+                }
+            }
+        }
+
+        public async Task<object> ThrowExceptionMarshallingForAsyncReturn(object input) 
+        {
+            await Task.Delay(200);
+            return new BadPerson();
+        }
+
+        public async Task<object> ThrowExceptionMarshallingForReturn(object input) 
+        {
+            return new BadPerson();
+        }
+
+        public class BadPerson 
+        {
+            public string Name 
+            {
+                get 
+                {
+                    throw new InvalidOperationException("I have no name");
+                }
+            }
         }
 
         class A 

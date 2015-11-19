@@ -1,7 +1,7 @@
 var edge = require('../lib/edge.js'), assert = require('assert')
 	, path = require('path');
 
-var edgeTestDll = path.join(__dirname, 'Edge.Tests.dll');
+var edgeTestDll = process.env.EDGE_USE_CORECLR ? 'test' : path.join(__dirname, 'Edge.Tests.dll');
 
 describe('edge.func', function () {
 
@@ -58,15 +58,17 @@ describe('edge.func', function () {
 		);
 	});
 
-	it('succeeds with assemblyFile as string', function () {
-		var func = edge.func(edgeTestDll);
-		assert.equal(typeof func, 'function');
-	});
+	if (!process.env.EDGE_USE_CORECLR) {
+		it('succeeds with assemblyFile as string', function () {
+			var func = edge.func(edgeTestDll);
+			assert.equal(typeof func, 'function');
+		});
 
-	it('succeeds with assemblyFile as options property', function () {
-		var func = edge.func({ assemblyFile: edgeTestDll });
-		assert.equal(typeof func, 'function');
-	});
+		it('succeeds with assemblyFile as options property', function () {
+			var func = edge.func({ assemblyFile: edgeTestDll });
+			assert.equal(typeof func, 'function');
+		});
+	}
 
 	it('succeeds with assemblyFile and type name', function () {
 		var func = edge.func({

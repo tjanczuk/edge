@@ -1,2 +1,18 @@
-csc /target:library /debug /out:"%~dp0\Edge.Tests.dll" "%~dp0\tests.cs" 
-if %ERRORLEVEL% NEQ 0 echo Test build failed & exit /b -1
+set SELF=%~dp0
+ver > nul
+
+IF "%EDGE_USE_CORECLR%"=="1" (
+	cmd /c "cd ""%SELF%"" && dnu restore"
+	
+	IF %ERRORLEVEL% NEQ 0 (
+		ECHO Test restore failed
+		EXIT /b -1
+	)
+) ELSE (
+	csc /target:library /debug /out:"%SELF%\Edge.Tests.dll" "%SELF%\tests.cs" 
+	
+	IF %ERRORLEVEL% NEQ 0 (
+		ECHO Test build failed
+		EXIT /b -1
+	)
+)
