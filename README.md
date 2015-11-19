@@ -130,11 +130,11 @@ If you are writing a Node.js application, this section explains how you include 
 
 ### What you need
 
-Edge.js runs on Windows, Linux, and OSX and requires Node.js 4.x, 0.12.x, 0.10.x, or 0.8.x, as well as .NET Framework 4.5 (Windows), Mono 4.0.4.1 (OSX, Linux), or Microsoft's CoreCLR (Windows, OSX, Linux). 
+Edge.js runs on Windows, Linux, and OSX and requires Node.js 5.x, 4.x, 0.12.x, 0.10.x, or 0.8.x, as well as .NET Framework 4.5 (Windows), Mono 4.0.4.1 (OSX, Linux), or Microsoft's CoreCLR (Windows, OSX, Linux). 
 
 #### Windows
 
-* Node.js 4.x, 0.12.x, 0.10.x, or 0.8.x 
+* Node.js 5.x, 4.x, 0.12.x, 0.10.x, or 0.8.x 
 * [.NET 4.5](http://www.microsoft.com/en-us/download/details.aspx?id=30653) and/or [CoreCLR](http://dotnet.github.io/core/getting-started/)
 * to use Python, you also need [IronPython 2.7.3 or later](http://ironpython.codeplex.com/releases/view/81726)  
 * to use F#, read [Dave Thomas blog post](http://7sharpnine.com/posts/i-node-something/)
@@ -143,7 +143,7 @@ Edge.js runs on Windows, Linux, and OSX and requires Node.js 4.x, 0.12.x, 0.10.x
 
 #### Linux
 
-* Node.js 4.x, 0.12.x, 0.10.x, or 0.8.x
+* Node.js 5.x, 4.x, 0.12.x, 0.10.x, or 0.8.x
 * Mono 4.0.4.1 x64 and/or Microsoft's CoreCLR
 * Check out [Ubuntu setup instructions](#building-on-linux)
 
@@ -151,7 +151,7 @@ Edge.js runs on Windows, Linux, and OSX and requires Node.js 4.x, 0.12.x, 0.10.x
 
 #### MacOS  
 
-* Node.js 4.x, 0.12.x, 0.10.x, or 0.8.x  
+* Node.js 5.x, 4.x, 0.12.x, 0.10.x, or 0.8.x  
 * Mono 4.0.4.1 x64 and/or Microsoft's CoreCLR
 * Check out [Mac OS setup instructions](#building-on-osx)  
 
