@@ -18,7 +18,7 @@ if (!process.env.EDGE_USE_CORECLR) {
 } 
 
 else {
-	spawn('dnu', ['restore'], { 
+	spawn(process.platform === 'win32' ? 'dnu.cmd' : 'dnu', ['restore'], { 
 		stdio: 'inherit', 
 		cwd: testDir 
 	}).on('close', runOnSuccess);
