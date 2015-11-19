@@ -1,7 +1,7 @@
 Edge.js: .NET and Node.js in-process [![Build Status](https://travis-ci.org/tjanczuk/edge.svg)](https://travis-ci.org/tjanczuk/edge)
 ====
  
-An edge connects two nodes. This edge connects Node.js and .NET. V8 and CLR/Mono - in process. On Windows, MacOS, and Linux. 
+An edge connects two nodes. This edge connects Node.js and .NET. V8 and CLR/CoreCLR/Mono - in process. On Windows, MacOS, and Linux. 
 
 ![image](https://cloud.githubusercontent.com/assets/822369/2807996/94b3ff4e-cd07-11e3-833c-b0474d25119a.png)
 
@@ -1226,7 +1226,7 @@ Prerequisities:
 First build Mono 4.0.4.1 x64:
 
 ```bash
-brew install https://raw.githubusercontent.com/medicomp/edge/master/tools/mono64.rb
+brew install https://raw.githubusercontent.com/tjanczuk/edge/master/tools/mono64.rb
 
 # at this point I fried an omelette on the lid of my Mac Book Air which was running hot 
 # for about 15 minutes, compiling and installing Mono 64bit; 
@@ -1288,7 +1288,7 @@ If you have a fresh Debian Wheezy x64 installation, the most convenient way of i
 
 ```bash
 export USERNAME=YourUserNameHere
-sudo bash -c 'bash <(wget -qO- https://raw.githubusercontent.com/medicomp/edge/master/tools/debian_wheezy_clean_install.sh)'
+sudo bash -c 'bash <(wget -qO- https://raw.githubusercontent.com/tjanczuk/edge/master/tools/debian_wheezy_clean_install.sh)'
 ```
 
 This will do the following:
@@ -1308,7 +1308,7 @@ If successful, your machine will have all the prerequisites to `npm install edge
 If you have a fresh Ubuntu 14.04 x64 installation, the most convenient way of installing Edge.js with all prerequisites is by running:
 
 ```bash
-sudo bash -c 'bash <(wget -qO- https://raw.githubusercontent.com/medicomp/edge/master/tools/ubuntu_12.04_clean_install.sh)'
+sudo bash -c 'bash <(wget -qO- https://raw.githubusercontent.com/tjanczuk/edge/master/tools/ubuntu_12.04_clean_install.sh)'
 ```
 
 This will do the following:
@@ -1326,7 +1326,7 @@ If successful, your machine will have all the prerequisites to `npm install edge
 
 This method is adequate if you already have a Mono x64, CoreCLR, and/or Node.js x64 install on the machine and need to incrementally add Edge to it. 
 
-Read through the [install script](https://raw.githubusercontent.com/medicomp/edge/mono/tools/ubuntu_12.04_clean_install.sh) and cherry pick the steps you need. Here are some gotchas:
+Read through the [install script](https://raw.githubusercontent.com/tjanczuk/edge/mono/tools/ubuntu_12.04_clean_install.sh) and cherry pick the steps you need. Here are some gotchas:
 
 * If you need to build Mono, make sure to run `ldconfig` afterwards, otherwise the garbage collection libraries may not load.  
 * To make sure Mono can load the standard C library, run `sudo ln -s -f /lib/x86_64-linux-gnu/libc.so.6 /lib/x86_64-linux-gnu/libc.so`. For background on that step, see how [Mono loads native libraries](http://www.mono-project.com/Interop_with_Native_Libraries) or just [cut to the chase](http://stackoverflow.com/questions/14359981/mono-and-unmanaged-code-in-ubuntu).  

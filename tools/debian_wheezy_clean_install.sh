@@ -35,7 +35,7 @@ su ${THE_USER} -l -s /bin/bash -c "source .dnx/dnvm/dnvm.sh && dnvm install late
 
 # download and build Edge.js
 
-sudo -u ${THE_USER} curl https://codeload.github.com/medicomp/edge/zip/master > edge.js.zip
+sudo -u ${THE_USER} curl https://codeload.github.com/tjanczuk/edge/zip/master > edge.js.zip
 sudo -u ${THE_USER} unzip edge.js.zip 
 cd edge-master/
 EDGE_DIRECTORY=$(pwd)

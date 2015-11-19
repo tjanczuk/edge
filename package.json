@@ -5,13 +5,14 @@
     "url": "http://tomasz.janczuk.org",
     "twitter": "tjanczuk"
   },
-  "version": "4.0.1-pre",
+  "version": "5.0.0-pre",
   "description": "Edge.js: run .NET and Node.js in-process on Windows, Mac OS, and Linux",
   "tags": [
     "owin",
     "edge",
     "net",
     "clr",
+    "coreclr",
     "c#",
     "mono",
     "managed",
@@ -28,7 +29,7 @@
     }
   ],
   "dependencies": {
-    "edge-cs": "medicomp/edge-cs",
+    "edge-cs": "0.3.0",
     "nan": "^2.0.9"
   },
   "devDependencies": {
