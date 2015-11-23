@@ -403,6 +403,7 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 
 	context.runtimeDirectory = &coreClrDirectory[0];
 	context.applicationDirectory = getenv("EDGE_APP_ROOT");
+	context.edgeNodePath = &edgeNodePath[0];
 
 	if (!context.applicationDirectory)
 	{

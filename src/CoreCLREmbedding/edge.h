@@ -30,6 +30,7 @@ typedef struct bootstrapperContext
 	const char* architecture;
 	const char* runtimeDirectory;
 	const char* applicationDirectory;
+	const char* edgeNodePath;
 } BootstrapperContext;
 
 typedef void (*CallFuncFunction)(
