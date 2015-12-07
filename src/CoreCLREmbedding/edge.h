@@ -20,7 +20,7 @@ typedef int32_t HRESULT;
 const HRESULT S_OK = 0;
 const HRESULT E_FAIL = -1;
 
-typedef STDMETHODCALLTYPE __stdcall;
+#define STDMETHODCALLTYPE 
 #endif
 
 typedef void* CoreClrGcHandle;
