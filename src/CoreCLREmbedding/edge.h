@@ -19,6 +19,8 @@ typedef int32_t HRESULT;
 
 const HRESULT S_OK = 0;
 const HRESULT E_FAIL = -1;
+
+#define STDMETHODCALLTYPE 
 #endif
 
 typedef void* CoreClrGcHandle;
@@ -30,28 +32,29 @@ typedef struct bootstrapperContext
 	const char* architecture;
 	const char* runtimeDirectory;
 	const char* applicationDirectory;
+	const char* edgeNodePath;
 } BootstrapperContext;
 
-typedef void (*CallFuncFunction)(
+typedef void (STDMETHODCALLTYPE *CallFuncFunction)(
 		CoreClrGcHandle functionHandle,
 		void* payload,
 		int payloadType,
 		int* taskState,
 		void** result,
 		int* resultType);
-typedef CoreClrGcHandle (*GetFuncFunction)(
+typedef CoreClrGcHandle (STDMETHODCALLTYPE *GetFuncFunction)(
 		const char* assemblyFile,
 		const char* typeName,
 		const char* methodName,
 		void** exception);
-typedef void (*FreeHandleFunction)(CoreClrGcHandle handle);
-typedef void (*FreeMarshalDataFunction)(void* marshalData, int marshalDataType);
-typedef void (*NodejsFuncCompleteFunction)(CoreClrGcHandle context, int taskStatus, void* result, int resultType);
-typedef CoreClrGcHandle (*CompileFuncFunction)(
+typedef void (STDMETHODCALLTYPE *FreeHandleFunction)(CoreClrGcHandle handle);
+typedef void (STDMETHODCALLTYPE *FreeMarshalDataFunction)(void* marshalData, int marshalDataType);
+typedef void (STDMETHODCALLTYPE *NodejsFuncCompleteFunction)(CoreClrGcHandle context, int taskStatus, void* result, int resultType);
+typedef CoreClrGcHandle (STDMETHODCALLTYPE *CompileFuncFunction)(
         const void* options,
         const int payloadType,
         void** exception);
-typedef void (*InitializeFunction)(BootstrapperContext* context, void** exception);
+typedef void (STDMETHODCALLTYPE *InitializeFunction)(BootstrapperContext* context, void** exception);
 
 typedef enum v8Type
 {
@@ -95,7 +98,7 @@ class CoreClrFuncInvokeContext
 };
 
 typedef void (*TaskCompleteFunction)(void* result, int resultType, int taskState, CoreClrFuncInvokeContext* context);
-typedef void (*ContinueTaskFunction)(void* task, void* context, TaskCompleteFunction callback, void** exception);
+typedef void (STDMETHODCALLTYPE *ContinueTaskFunction)(void* task, void* context, TaskCompleteFunction callback, void** exception);
 
 class CoreClrEmbedding
 {
@@ -246,6 +249,6 @@ typedef struct coreClrFuncWrap
 } CoreClrFuncWrap;
 
 typedef void (*CallV8FunctionFunction)(void* payload, int payloadType, CoreClrNodejsFunc* functionContext, CoreClrGcHandle callbackContext, NodejsFuncCompleteFunction callbackFunction);
-typedef void (*SetCallV8FunctionDelegateFunction)(CallV8FunctionFunction callV8Function, void** exception);
+typedef void (STDMETHODCALLTYPE *SetCallV8FunctionDelegateFunction)(CallV8FunctionFunction callV8Function, void** exception);
 
 #endif

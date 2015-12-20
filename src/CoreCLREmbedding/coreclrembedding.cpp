@@ -29,14 +29,14 @@ const char* LIBCORECLR_NAME = "coreclr.dll";
 const char* LIBCORECLR_NAME = "libcoreclr.so";
 #endif
 
-typedef HRESULT (*coreclr_create_delegateFunction)(
+typedef HRESULT (STDMETHODCALLTYPE *coreclr_create_delegateFunction)(
 		void* hostHandle,
 		unsigned int domainId,
 		const char* assemblyName,
 		const char* typeName,
 		const char* methodName,
 		void** delegate);
-typedef HRESULT (*coreclr_initializeFunction)(
+typedef HRESULT (STDMETHODCALLTYPE *coreclr_initializeFunction)(
 		const char *exePath,
 		const char *appDomainFriendlyName,
 		int propertyCount,
@@ -403,6 +403,7 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 
 	context.runtimeDirectory = &coreClrDirectory[0];
 	context.applicationDirectory = getenv("EDGE_APP_ROOT");
+	context.edgeNodePath = &edgeNodePath[0];
 
 	if (!context.applicationDirectory)
 	{

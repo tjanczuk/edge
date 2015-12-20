@@ -77,6 +77,9 @@ public struct EdgeBootstrapperContext
 
     [MarshalAs(UnmanagedType.LPStr)]
     public string ApplicationDirectory;
+
+    [MarshalAs(UnmanagedType.LPStr)]
+    public string EdgeNodePath;
 }
 
 public delegate void CallV8FunctionDelegate(IntPtr payload, int payloadType, IntPtr v8FunctionContext, IntPtr callbackContext, IntPtr callbackDelegate);
@@ -147,6 +150,7 @@ public class CoreCLREmbedding
             ApplicationDirectory = bootstrapperContext.ApplicationDirectory;
             RuntimeVersion = typeof(object).GetTypeInfo().Assembly.GetName().Version.ToString();
             RuntimePath = bootstrapperContext.RuntimeDirectory;
+            EdgeNodePath = bootstrapperContext.EdgeNodePath;
         }
 
         public string OperatingSystem
@@ -177,6 +181,11 @@ public class CoreCLREmbedding
         }
 
         public string ApplicationDirectory
+        {
+            get;
+        }
+
+        public string EdgeNodePath
         {
             get;
         }
@@ -225,20 +234,7 @@ public class CoreCLREmbedding
                 CompilationEngineContext compilationContext = new CompilationEngineContext(ApplicationEnvironment, RuntimeEnvironment, this, new CompilationCache());
                 CompilationEngine compilationEngine = new CompilationEngine(compilationContext);
 
-                foreach (LibraryDescription libraryDescription in libraries.Where(l => l.Type == LibraryTypes.Package))
-                {
-                    PackageDescription packageDescription = (PackageDescription) libraryDescription;
-
-                    if (packageDescription.Target.CompileTimeAssemblies != null && packageDescription.Target.CompileTimeAssemblies.Count > 0)
-                    {
-                        CompileAssemblies[libraryDescription.Identity.Name] = Path.Combine(packageDescription.Path, packageDescription.Target.CompileTimeAssemblies[0].Path);
-                    }
-
-                    else
-                    {
-                        CompileAssemblies[libraryDescription.Identity.Name] = Path.Combine(packageDescription.Path, packageDescription.Target.RuntimeAssemblies[0].Path);
-                    }
-                }
+                AddCompileAssemblies(libraries);
 
                 _loaders.Add(new ProjectAssemblyLoader(_loadContextAccessor, compilationEngine, projects.Values));
                 _loaders.Add(new PackageAssemblyLoader(_loadContextAccessor, assemblies, libraries));
@@ -247,9 +243,48 @@ public class CoreCLREmbedding
             else
             {
                 _noProjectJsonFile = true;
+
+                if (File.Exists(Path.Combine(RuntimeEnvironment.EdgeNodePath, "project.lock.json")))
+                {
+                    ApplicationHostContext stockHostContext = new ApplicationHostContext
+                    {
+                        ProjectDirectory = RuntimeEnvironment.EdgeNodePath,
+                        TargetFramework = TargetFrameworkName
+                    };
+
+                    IList<LibraryDescription> libraries = ApplicationHostContext.GetRuntimeLibraries(stockHostContext);
+                    Dictionary<AssemblyName, string> assemblies = PackageDependencyProvider.ResolvePackageAssemblyPaths(libraries);
+
+                    AddCompileAssemblies(libraries);
+
+                    _loaders.Add(new PackageAssemblyLoader(_loadContextAccessor, assemblies, libraries));
+                }
             }
 
             DebugMessage("EdgeAssemblyLoadContext::ctor (CLR) - Created the dependency providers for the application");
+        }
+
+        protected void AddCompileAssemblies(IList<LibraryDescription> libraries)
+        {
+            foreach (LibraryDescription libraryDescription in libraries.Where(l => l.Type == LibraryTypes.Package))
+            {
+                if (CompileAssemblies.ContainsKey(libraryDescription.Identity.Name))
+                {
+                    continue;
+                }
+
+                PackageDescription packageDescription = (PackageDescription)libraryDescription;
+
+                if (packageDescription.Target.CompileTimeAssemblies != null && packageDescription.Target.CompileTimeAssemblies.Count > 0)
+                {
+                    CompileAssemblies[libraryDescription.Identity.Name] = Path.Combine(packageDescription.Path, packageDescription.Target.CompileTimeAssemblies[0].Path);
+                }
+
+                else if (packageDescription.Target.RuntimeAssemblies != null && packageDescription.Target.RuntimeAssemblies.Count > 0)
+                {
+                    CompileAssemblies[libraryDescription.Identity.Name] = Path.Combine(packageDescription.Path, packageDescription.Target.RuntimeAssemblies[0].Path);
+                }
+            }
         }
 
         internal void AddCompiler(string compilerDirectory)
@@ -264,6 +299,8 @@ public class CoreCLREmbedding
 
             IList<LibraryDescription> libraries = ApplicationHostContext.GetRuntimeLibraries(compilerHostContext);
             Dictionary<AssemblyName, string> assemblies = PackageDependencyProvider.ResolvePackageAssemblyPaths(libraries);
+
+            AddCompileAssemblies(libraries);
 
             _loaders.Add(new PackageAssemblyLoader(_loadContextAccessor, assemblies, libraries));
 

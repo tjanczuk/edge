@@ -338,7 +338,9 @@
                     {
                       'destination': '<(module_root_dir)/build/$(BUILDTYPE)',
                       'files': [
-                        '<(module_root_dir)/src/CoreCLREmbedding/bin/$(BUILDTYPE)/dnxcore50/CoreCLREmbedding.dll'
+                        '<(module_root_dir)/src/CoreCLREmbedding/bin/$(BUILDTYPE)/dnxcore50/CoreCLREmbedding.dll',
+                        '<(module_root_dir)/src/CoreCLREmbedding/project.json',
+                        '<(module_root_dir)/src/CoreCLREmbedding/project.lock.json'
                       ]
                     }
                   ]
