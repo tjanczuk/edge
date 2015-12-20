@@ -48,6 +48,9 @@
                     'src/CoreCLREmbedding/coreclrnodejsfuncinvokecontext.cpp',
                     'src/common/utils.cpp'
                   ]
+                },
+                {
+                  'type': 'none'
                 }
               ]
             ]
@@ -67,6 +70,9 @@
                     'src/CoreCLREmbedding/coreclrnodejsfuncinvokecontext.cpp',
                     'src/common/utils.cpp'
                   ]
+                },
+                {
+                  'type': 'none'
                 }
               ]
             ]
@@ -180,6 +186,9 @@
                       '<!@(pkg-config mono-2 --libs)'
                     ],
                   }
+                },
+                {
+                  'type': 'none'
                 }
               ]
             ]
