@@ -23,7 +23,7 @@
         "<!(node -e \"require('nan')\")"
       ],
       'cflags+': [
-        '-DHAVE_CORECLR'
+        '-DHAVE_CORECLR -std=c++11'
       ],
       'xcode_settings': {
         'OTHER_CFLAGS': [
@@ -135,7 +135,7 @@
         "<!(node -e \"require('nan')\")"
       ],
       'cflags+': [
-        '-DHAVE_NATIVECLR'
+        '-DHAVE_NATIVECLR -std=c++11'
       ],
       'xcode_settings': {
         'OTHER_CFLAGS': [
