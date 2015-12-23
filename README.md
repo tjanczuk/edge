@@ -165,13 +165,30 @@ If you have both desktop CLR and CoreCLR installed, read [using CoreCLR](#using-
 
 #### Docker
 
-Edge.js is available as a Docker image on the [tjanczuk/edgejs repository on Docker Hub](https://registry.hub.docker.com/u/tjanczuk/edgejs/). The image is based on Ubuntu 14.04, and contains Node.js 0.10.30 x64, Mono 3.4.0 x64, and globally installed Edge.js:
+Edge.js is available as a Docker image on the [tjanczuk/edgejs repository on Docker Hub](https://registry.hub.docker.com/u/tjanczuk/edgejs/). The image is based on Debian Jessie, and contains Node.js 4.2.3 x64, Mono 4.2.1 x64, CoreCLR 1.0.0 RC1 x64, and Edge.js:
+
+By default Edge uses Mono to execute CLR code: 
 
 ```
-> docker run -it tjanczuk/edgejs:0.9.3
+> docker run -it tjanczuk/edgejs:5.0.0
 > cd samples
 > node 101_hello_lambda.js
 .NET welcomes Node.js
+```
+
+Specify the EDGE_USE_CORECLR=1 environment variable to use CoreCLR instead: 
+
+```
+> docker run -it tjanczuk/edgejs:5.0.0
+> cd samples
+> EDGE_USE_CORECLR=1 node 101_hello_lambda.js
+.NET welcomes Node.js
+```
+
+Alternatively, you can also specify the EDGE_USE_CORECLR when starting the container: 
+
+```
+> docker run -it -e EDGE_USE_CORECLR=1 tjanczuk/edgejs:5.0.0
 ```
 
 ### How to: C# hello, world
