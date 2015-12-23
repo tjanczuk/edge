@@ -3,7 +3,9 @@ Edge.js: .NET and Node.js in-process [![Build Status](https://travis-ci.org/tjan
  
 An edge connects two nodes. This edge connects Node.js and .NET. V8 and CLR/CoreCLR/Mono - in process. On Windows, MacOS, and Linux. 
 
-![image](https://cloud.githubusercontent.com/assets/822369/2807996/94b3ff4e-cd07-11e3-833c-b0474d25119a.png)
+## Can I script...
+
+![image](https://cloud.githubusercontent.com/assets/822369/11969640/66e0b86c-a8d1-11e5-9999-3ae4d9fb03c5.png)
 
 You can script C# from a Node.js process:
 
@@ -1362,7 +1364,9 @@ Edge will try to find the CLR runtime in the following locations:
 If you've used `dnvm install` and `dnvm use` to set your preferred version of the CLR, you don't have to supply any additional parameters or environment variables when starting node.  However, if the CLR is another location or you want to use a version of the CLR other than the default that you've set, the best way to specify that is through the `CORECLR_DIR` environment variable, i.e.
 
 ```bash
-EDGE_USE_CORECLR=1 CORECLR_DIR=/home/user/.dnx/runtimes/dnx-coreclr-linux-x64.1.0.0-beta6-11944/bin node sample.js
+EDGE_USE_CORECLR=1 \
+CORECLR_DIR=/home/user/.dnx/runtimes/dnx-coreclr-linux-x64.1.0.0-beta6-11944/bin \
+node sample.js
 ```
 
 ## Scripting Node.js from CLR
