@@ -3,9 +3,7 @@ Edge.js: .NET and Node.js in-process [![Build Status](https://travis-ci.org/tjan
  
 An edge connects two nodes. This edge connects Node.js and .NET. V8 and CLR/CoreCLR/Mono - in process. On Windows, MacOS, and Linux. 
 
-## Can I script...
-
-![image](https://cloud.githubusercontent.com/assets/822369/11969640/66e0b86c-a8d1-11e5-9999-3ae4d9fb03c5.png)
+![image](https://cloud.githubusercontent.com/assets/822369/11969685/e9476f3a-a8d1-11e5-94d4-847bfc4ed960.png)
 
 You can script C# from a Node.js process:
 
