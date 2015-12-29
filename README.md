@@ -1,3 +1,25 @@
+electron-edge
+=============
+
+Run .NET and Node.js code in-process on Electron. forked from [Edge.js](https://github.com/tjanczuk/edge).
+
+It is currently compatible with Electon-0.36.2.
+
+The usage is same as Edge.js. just replace `require('edge')` with `require('electron-edge')`:
+
+```diff
+-var edge = require('edge');
++var edge = require('electron-edge');
+
+var helloWorld = edge.func(function () {/*
+    async (input) => { 
+        return ".NET Welcomes " + input.ToString(); 
+    }
+*/});
+```
+
+
+
 Edge.js: .NET and Node.js in-process [![Build Status](https://travis-ci.org/tjanczuk/edge.svg)](https://travis-ci.org/tjanczuk/edge)
 ====
  
