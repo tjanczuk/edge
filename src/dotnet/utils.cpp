@@ -30,6 +30,19 @@ System::String^ stringV82CLR(v8::Local<v8::String> text)
     }
 }
 
+System::String^ stringV82CLR(v8::String::Utf8Value& utf8text)
+{
+    Nan::HandleScope scope;
+    if (*utf8text)
+    {
+        return gcnew System::String(
+            *utf8text, 0, utf8text.length(), System::Text::Encoding::UTF8);
+    }
+    else
+    {
+        return System::String::Empty;
+    }
+}
 System::String^ exceptionV82stringCLR(v8::Local<v8::Value> exception)
 {
     Nan::HandleScope scope;
