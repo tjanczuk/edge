@@ -1413,7 +1413,7 @@ using EdgeJs;
 
 class Program
 {
-    public static async void Start()
+    public static async Task Start()
     {
         var func = Edge.Func(@"
             return function (data, callback) {
@@ -1426,7 +1426,7 @@ class Program
 
     static void Main(string[] args)
     {
-        Task.Run((Action)Start).Wait();
+        Task.Run(Start).Wait();
     }
 }
 ```
