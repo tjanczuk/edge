@@ -1,5 +1,7 @@
 Edge.js: .NET and Node.js in-process [![Build Status](https://travis-ci.org/tjanczuk/edge.svg)](https://travis-ci.org/tjanczuk/edge)
 ====
+
+**NEW** Edge.js is now on Slack at https://edgejs.slack.com. Join [here](https://webtask.it.auth0.com/api/run/tjanczuk/edgejs-slack-invite). 
  
 An edge connects two nodes. This edge connects Node.js and .NET. V8 and CLR/CoreCLR/Mono - in process. On Windows, MacOS, and Linux. 
 
