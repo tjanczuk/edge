@@ -1201,6 +1201,24 @@ set EDGE_NATIVE=C:\projects\edge\build\Debug\edge_nativeclr.node
 
 You can also set the `EDGE_DEBUG` environment variable to 1 to have the edge module generate debug traces to the console when it runs.
 
+#### Building on Windows with [Node.js (chakracore)](https://github.com/nodejs/node-chakracore)
+
+Note: **This feature is experimental.**
+
+Node.js (chakracore) only supports building with the installed version. When you run ```npm install edge```
+with Node.js (chakracore), the install scripts will try to build edge. Currently pre-compiled binaries are not
+shipped for Node.js (chakracore).
+
+To build edge manually with Node.js (chakracore):
+```
+cd tools
+build.bat release
+```
+
+Tip: After ```npm install edge``` or building manually on one machine, you will now have compiled binaries
+for Node.js (chakracore). You can put the whole edge folder on a share, then other machines with Node.js (chakracore)
+can run ```npm install \\server\share\edge``` to use the compiled binaries, no building toolset required.
+
 ### Running tests
 
 You must have mocha installed on the system. Then:
