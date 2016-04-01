@@ -36,7 +36,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="EdgeJs, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>packages\Edge.js.4.0.0\lib\EdgeJs.dll</HintPath>
+      <HintPath>packages\Edge.js.4.4.1\lib\EdgeJs.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
@@ -73,10 +73,10 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <None Include="edge\x64\edge.node">
+    <None Include="edge\x64\edge_nativeclr.node">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="edge\x86\edge.node">
+    <None Include="edge\x86\edge_nativeclr.node">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="packages.config" />

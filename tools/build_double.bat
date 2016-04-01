@@ -2,7 +2,7 @@
 set SELF=%~dp0
 if "%1" equ "" (
     echo Usage: build_double.bat {node_version}
-    echo e.g. build_double.bat 4.1.1
+    echo e.g. build_double.bat 4.4.1
     exit /b -1
 )
 
@@ -14,9 +14,9 @@ if not exist "%SELF%\build\download.exe" (
 	csc /out:"%SELF%\build\download.exe" "%SELF%\download.cs"
 )
 
-if not exist "%SELF%\build\unzip.exe" (
-	csc /out:"%SELF%\build\unzip.exe" /r:System.IO.Compression.FileSystem.dll "%SELF%\unzip.cs"
-)
+rem if not exist "%SELF%\build\unzip.exe" (
+rem 	csc /out:"%SELF%\build\unzip.exe" /r:System.IO.Compression.FileSystem.dll "%SELF%\unzip.cs"
+rem )
 
 if not exist "%SELF%\build\repl.exe" (
 	csc /out:"%SELF%\build\repl.exe" "%SELF%\repl.cs"
@@ -31,7 +31,10 @@ if not exist "%SELF%\build\%1.zip" (
 )
 
 if not exist "%SELF%\build\node-%1" (
-	"%SELF%\build\unzip.exe" "%SELF%\build\%1.zip" "%SELF%\build"
+	rem "%SELF%\build\unzip.exe" "%SELF%\build\%1.zip" "%SELF%\build"
+	pushd "%SELF%\build\"
+	cscript //B ..\unzip.vbs %1.zip
+	popd
 )
 
 call :build_node %1 x86
@@ -77,7 +80,7 @@ exit /b 0
 
 rem takes 2 parameters: 1 - node version, 2 - x86 or x64
 
-if exist "%SELF%\build\nuget\content\edge\%2\edge.node" exit /b 0
+if exist "%SELF%\build\nuget\content\edge\%2\edge_nativeclr.node" exit /b 0
 
 set NODEEXE=%SELF%\build\node-%1-%2\node.exe
 set GYP=%APPDATA%\npm\node_modules\node-gyp\bin\node-gyp.js
@@ -85,10 +88,10 @@ set GYP=%APPDATA%\npm\node_modules\node-gyp\bin\node-gyp.js
 pushd "%SELF%\.."
 
 "%NODEEXE%" "%GYP%" configure --msvs_version=2013
-"%SELF%\build\repl.exe" ./build/edge.vcxproj "%USERPROFILE%\.node-gyp\%1\$(Configuration)\node.lib" "%SELF%\build\node-%1-%2\node.lib"
+"%SELF%\build\repl.exe" ./build/edge_nativeclr.vcxproj "%USERPROFILE%\.node-gyp\%1\$(Configuration)\node.lib" "%SELF%\build\node-%1-%2\node.lib"
 "%NODEEXE%" "%GYP%" build
 mkdir "%SELF%\build\nuget\content\edge\%2" > nul 2>&1
-copy /y build\release\edge.node "%SELF%\build\nuget\content\edge\%2"
+copy /y build\release\edge_nativeclr.node "%SELF%\build\nuget\content\edge\%2"
 copy /y "%SELF%\build\node-%1-%2\node.dll" "%SELF%\build\nuget\content\edge\%2"
 
 popd
