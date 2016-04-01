@@ -48,7 +48,7 @@ namespace EdgeJs
         }
 
         // Find the entry point with `dumpbin /exports node.exe`, look for Start@node
-        [DllImport("node.dll", EntryPoint = "#929", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("node.dll", EntryPoint = "#925", CallingConvention = CallingConvention.Cdecl)]
         static extern int NodeStart(int argc, string[] argv);
 
         [DllImport("kernel32.dll", EntryPoint = "LoadLibrary")]

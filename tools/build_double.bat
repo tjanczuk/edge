@@ -2,7 +2,7 @@
 set SELF=%~dp0
 if "%1" equ "" (
     echo Usage: build_double.bat {node_version}
-    echo e.g. build_double.bat 4.4.1
+    echo e.g. build_double.bat 5.9.1
     exit /b -1
 )
 
