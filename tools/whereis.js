@@ -17,5 +17,7 @@ module.exports = function() {
 	    }
     }
 
-    return null;
+    // Return empty string '' when not found. This supports "if (whereis_result) {...}"
+    // test, and also GYP condition test <(!node -e `...console.log(whereis_result)`) != ''
+    return '';
 }
