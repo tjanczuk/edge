@@ -1522,8 +1522,9 @@ var createHttpServer = Edge.Func(@"
     };
 ");
 
-await createHttpServer(8080);
+var server = createHttpServer(8080);
 Console.WriteLine(await new WebClient().DownloadStringTaskAsync("http://localhost:8080"));
+await server;
 ```
 
 ### How to: use external Node.js modules
