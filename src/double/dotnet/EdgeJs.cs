@@ -8,7 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 [assembly: AssemblyCompany("Tomasz Janczuk")] 
-[assembly: AssemblyProduct("EdgeJS")] 
+[assembly: AssemblyProduct("Edge.js")] 
 [assembly: AssemblyCopyright("Copyright 2012 Tomasz Janczuk")] 
 [assembly: AssemblyTrademark("Copyright 2012 Tomasz Janczuk")] 
 
