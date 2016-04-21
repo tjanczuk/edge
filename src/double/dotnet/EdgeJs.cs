@@ -7,6 +7,11 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
+[assembly: AssemblyCompany("Tomasz Janczuk")] 
+[assembly: AssemblyProduct("EdgeJS")] 
+[assembly: AssemblyCopyright("Copyright 2012 Tomasz Janczuk")] 
+[assembly: AssemblyTrademark("Copyright 2012 Tomasz Janczuk")] 
+
 namespace EdgeJs
 {
     public class Edge

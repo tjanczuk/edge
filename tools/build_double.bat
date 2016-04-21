@@ -55,8 +55,18 @@ if %ERRORLEVEL% neq 0 exit /b -1
 call :build_edge %1 x64
 if %ERRORLEVEL% neq 0 exit /b -1
 
-csc /out:"%SELF%\build\nuget\lib\EdgeJs.dll" /target:library "%SELF%\..\src\double\dotnet\EdgeJs.cs"
+REM Generate version information before the build
+if exist "%SELF%\build\nuget\VersionInfo.cs" del /Q /F "%SELF%\build\nuget\VersionInfo.cs"
 if %ERRORLEVEL% neq 0 exit /b -1
+echo using System.Reflection; > "%SELF%\build\nuget\VersionInfo.cs"
+echo [assembly: AssemblyDescription("Scripting Node.js v%~1 from CLR")]  >> "%SELF%\build\nuget\VersionInfo.cs"
+echo [assembly: AssemblyVersion("%~1.0")] >> "%SELF%\build\nuget\VersionInfo.cs"
+echo [assembly: AssemblyFileVersion("%~1.0")] >> "%SELF%\build\nuget\VersionInfo.cs"
+
+csc /out:"%SELF%\build\nuget\lib\EdgeJs.dll" /target:library "%SELF%\..\src\double\dotnet\EdgeJs.cs" "%SELF%\build\nuget\VersionInfo.cs"
+if %ERRORLEVEL% neq 0 exit /b -1
+
+if exist "%SELF%\build\nuget\VersionInfo.cs" del /Q /F "%SELF%\build\nuget\VersionInfo.cs"
 
 copy /y "%SELF%\..\lib\edge.js" "%SELF%\build\nuget\content\edge"
 copy /y "%SELF%\..\lib\double_edge.js" "%SELF%\build\nuget\content\edge"
