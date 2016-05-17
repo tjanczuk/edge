@@ -12,10 +12,8 @@ using System.Threading.Tasks;
 using System.IO;
 using System.Diagnostics;
 using System.Runtime.Versioning;
-using Microsoft.Dnx.Compilation;
-using Microsoft.Dnx.Compilation.Caching;
-using Microsoft.Dnx.Runtime;
-using Microsoft.Dnx.Runtime.Loader;
+using Microsoft.DotNet.ProjectModel;
+using Microsoft.DotNet.ProjectModel.Resolution;
 using Microsoft.Extensions.PlatformAbstractions;
 
 [StructLayout(LayoutKind.Sequential)]
@@ -100,47 +98,7 @@ public class CoreCLREmbedding
         }
     }
 
-    private class EdgeServiceProviderLocator : IServiceProviderLocator
-    {
-        public IServiceProvider ServiceProvider
-        {
-            get;
-            set;
-        }
-    }
-
-    private class EdgeServiceProvider : IServiceProvider
-    {
-        private readonly Dictionary<Type, object> _entries = new Dictionary<Type, object>();
-
-        public EdgeServiceProvider()
-        {
-            Add(typeof(IServiceProvider), this);
-        }
-
-        public void Add(Type type, object instance)
-        {
-            _entries[type] = instance;
-        }
-
-        public bool TryAdd(Type type, object instance)
-        {
-            if (GetService(type) == null)
-            {
-                Add(type, instance);
-                return true;
-            }
-
-            return false;
-        }
-
-        public object GetService(Type serviceType)
-        {
-            return _entries[serviceType];
-        }
-    }
-
-    private class EdgeRuntimeEnvironment : IRuntimeEnvironment
+    private class EdgeRuntimeEnvironment
     {
         public EdgeRuntimeEnvironment(EdgeBootstrapperContext bootstrapperContext)
         {
@@ -162,8 +120,6 @@ public class CoreCLREmbedding
         {
             get;
         }
-
-        public string RuntimeType => "CoreCLR";
 
         public string RuntimeArchitecture
         {
@@ -191,53 +147,36 @@ public class CoreCLREmbedding
         }
     }
 
-    private class EdgeAssemblyLoadContextAccessor : IAssemblyLoadContextAccessor
-    {
-        private readonly Lazy<EdgeAssemblyLoadContext> _context;
-
-        public EdgeAssemblyLoadContextAccessor()
-        {
-            _context = new Lazy<EdgeAssemblyLoadContext>(() => new EdgeAssemblyLoadContext(this));
-        }
-
-        public IAssemblyLoadContext GetLoadContext(Assembly assembly)
-        {
-            return (IAssemblyLoadContext) AssemblyLoadContext.GetLoadContext(assembly);
-        }
-
-        public IAssemblyLoadContext Default => _context.Value;
-
-        public EdgeAssemblyLoadContext TypedDefault => _context.Value;
-    }
-
-    private class EdgeAssemblyLoadContext : AssemblyLoadContext, IAssemblyLoadContext
+    private class EdgeAssemblyLoadContext : AssemblyLoadContext
     {
         internal readonly Dictionary<string, string> CompileAssemblies = new Dictionary<string, string>();
-        private readonly List<IAssemblyLoader> _loaders = new List<IAssemblyLoader>();
         private readonly bool _noProjectJsonFile;
-        private readonly EdgeAssemblyLoadContextAccessor _loadContextAccessor;
         private readonly Dictionary<string, Assembly> _loadedAssemblies = new Dictionary<string, Assembly>();
+        private readonly IList<LibraryDescription> _libraries = null;
 
-        public EdgeAssemblyLoadContext(EdgeAssemblyLoadContextAccessor loadContextAccessor)
+        public EdgeAssemblyLoadContext()
         {
             DebugMessage("EdgeAssemblyLoadContext::ctor (CLR) - Starting");
             DebugMessage("EdgeAssemblyLoadContext::ctor (CLR) - Application root is {0}", RuntimeEnvironment.ApplicationDirectory);
 
-            _loadContextAccessor = loadContextAccessor;
-
             if (File.Exists(Path.Combine(RuntimeEnvironment.ApplicationDirectory, "project.lock.json")))
             {
-                IList<LibraryDescription> libraries = ApplicationHostContext.GetRuntimeLibraries(ApplicationHostContext);
-                Dictionary<string, ProjectDescription> projects = libraries.Where(p => p.Type == LibraryTypes.Project).ToDictionary(p => p.Identity.Name, p => (ProjectDescription)p);
-                Dictionary<AssemblyName, string> assemblies = PackageDependencyProvider.ResolvePackageAssemblyPaths(libraries);
-                
-                CompilationEngineContext compilationContext = new CompilationEngineContext(ApplicationEnvironment, RuntimeEnvironment, this, new CompilationCache());
-                CompilationEngine compilationEngine = new CompilationEngine(compilationContext);
+                DebugMessage("EdgeAssemblyLoadContext::ctor (CLR) - Loading project.json into a BuildWorkspace");
+                BuildWorkspace workspace = new BuildWorkspace(ProjectReaderSettings.ReadFromEnvironment());
 
-                AddCompileAssemblies(libraries);
+                DebugMessage("EdgeAssemblyLoadContext::ctor (CLR) - Checking project.json for a valid framework target");
+                ProjectContext targetFramework =
+                    workspace.GetProjectContextCollection(RuntimeEnvironment.ApplicationDirectory)
+                        .FrameworkOnlyContexts.FirstOrDefault(c => c.TargetFramework.Framework == ".NETCoreApp" || c.TargetFramework.Framework == ".NETStandard");
 
-                _loaders.Add(new ProjectAssemblyLoader(_loadContextAccessor, compilationEngine, projects.Values));
-                _loaders.Add(new PackageAssemblyLoader(_loadContextAccessor, assemblies, libraries));
+                if (targetFramework == null)
+                {
+                    DebugMessage("EdgeAssemblyLoadContext::ctor (CLR) - Unable to find a .NETCoreApp or .NETStandard framework target");
+                    throw new Exception("Unable to find a .NETCoreApp or .NETStandard framework target in the project.json");
+                }
+
+                _libraries = targetFramework.LibraryManager.GetLibraries();
+                AddCompileAssemblies(_libraries);
             }
 
             else
@@ -246,18 +185,15 @@ public class CoreCLREmbedding
 
                 if (File.Exists(Path.Combine(RuntimeEnvironment.EdgeNodePath, "project.lock.json")))
                 {
-                    ApplicationHostContext stockHostContext = new ApplicationHostContext
-                    {
-                        ProjectDirectory = RuntimeEnvironment.EdgeNodePath,
-                        TargetFramework = TargetFrameworkName
-                    };
+                    DebugMessage("EdgeAssemblyLoadContext::ctor (CLR) - Loading stock project.json from Edge.js distribution");
 
-                    IList<LibraryDescription> libraries = ApplicationHostContext.GetRuntimeLibraries(stockHostContext);
-                    Dictionary<AssemblyName, string> assemblies = PackageDependencyProvider.ResolvePackageAssemblyPaths(libraries);
+                    BuildWorkspace workspace = new BuildWorkspace(ProjectReaderSettings.ReadFromEnvironment());
+                    ProjectContext targetFramework =
+                        workspace.GetProjectContextCollection(RuntimeEnvironment.ApplicationDirectory)
+                            .FrameworkOnlyContexts.First(c => c.TargetFramework.Framework == ".NETCoreApp" || c.TargetFramework.Framework == ".NETStandard");
 
-                    AddCompileAssemblies(libraries);
-
-                    _loaders.Add(new PackageAssemblyLoader(_loadContextAccessor, assemblies, libraries));
+                    _libraries = targetFramework.LibraryManager.GetLibraries();
+                    AddCompileAssemblies(_libraries);
                 }
             }
 
@@ -266,7 +202,7 @@ public class CoreCLREmbedding
 
         protected void AddCompileAssemblies(IList<LibraryDescription> libraries)
         {
-            foreach (LibraryDescription libraryDescription in libraries.Where(l => l.Type == LibraryTypes.Package))
+            foreach (LibraryDescription libraryDescription in libraries)
             {
                 if (CompileAssemblies.ContainsKey(libraryDescription.Identity.Name))
                 {
@@ -275,14 +211,14 @@ public class CoreCLREmbedding
 
                 PackageDescription packageDescription = (PackageDescription)libraryDescription;
 
-                if (packageDescription.Target.CompileTimeAssemblies != null && packageDescription.Target.CompileTimeAssemblies.Count > 0)
+                if (packageDescription.CompileTimeAssemblies != null && packageDescription.CompileTimeAssemblies.Any())
                 {
-                    CompileAssemblies[libraryDescription.Identity.Name] = Path.Combine(packageDescription.Path, packageDescription.Target.CompileTimeAssemblies[0].Path);
+                    CompileAssemblies[libraryDescription.Identity.Name] = Path.Combine(packageDescription.Path, packageDescription.CompileTimeAssemblies.First().Path);
                 }
 
-                else if (packageDescription.Target.RuntimeAssemblies != null && packageDescription.Target.RuntimeAssemblies.Count > 0)
+                else if (packageDescription.RuntimeAssemblies != null && packageDescription.RuntimeAssemblies.Any())
                 {
-                    CompileAssemblies[libraryDescription.Identity.Name] = Path.Combine(packageDescription.Path, packageDescription.Target.RuntimeAssemblies[0].Path);
+                    CompileAssemblies[libraryDescription.Identity.Name] = Path.Combine(packageDescription.Path, packageDescription.RuntimeAssemblies.First().Path);
                 }
             }
         }
@@ -291,18 +227,21 @@ public class CoreCLREmbedding
         {
             DebugMessage("EdgeAssemblyLoadContext::AddCompiler (CLR) - Adding the compiler in {0}", compilerDirectory);
 
-            ApplicationHostContext compilerHostContext = new ApplicationHostContext
+            BuildWorkspace workspace = new BuildWorkspace(ProjectReaderSettings.ReadFromEnvironment());
+            ProjectContext targetFramework =
+                workspace.GetProjectContextCollection(RuntimeEnvironment.ApplicationDirectory)
+                    .FrameworkOnlyContexts.First(c => c.TargetFramework.Framework == ".NETCoreApp" || c.TargetFramework.Framework == ".NETStandard");
+
+            IList<LibraryDescription> compilerLibraries = targetFramework.LibraryManager.GetLibraries();
+            AddCompileAssemblies(compilerLibraries);
+
+            foreach (LibraryDescription compilerLibrary in compilerLibraries)
             {
-                ProjectDirectory = compilerDirectory,
-                TargetFramework = TargetFrameworkName
-            };
-
-            IList<LibraryDescription> libraries = ApplicationHostContext.GetRuntimeLibraries(compilerHostContext);
-            Dictionary<AssemblyName, string> assemblies = PackageDependencyProvider.ResolvePackageAssemblyPaths(libraries);
-
-            AddCompileAssemblies(libraries);
-
-            _loaders.Add(new PackageAssemblyLoader(_loadContextAccessor, assemblies, libraries));
+                if (!_libraries.Any(l => l.Identity.Name == compilerLibrary.Identity.Name))
+                {
+                    _libraries.Add(compilerLibrary);
+                }
+            }
 
             DebugMessage("EdgeAssemblyLoadContext::AddCompiler (CLR) - Finished");
         }
@@ -318,15 +257,17 @@ public class CoreCLREmbedding
                 return _loadedAssemblies[assemblyName.Name];
             }
 
-            foreach (IAssemblyLoader loader in _loaders)
+            LibraryDescription projectLibrary = _libraries.SingleOrDefault(l => l.Identity.Name == assemblyName.Name);
+
+            if (projectLibrary != null)
             {
                 try
                 {
-                    Assembly assembly = loader.Load(assemblyName);
+                    Assembly assembly = LoadFromFile(projectLibrary.Path);
 
                     if (assembly != null)
                     {
-                        DebugMessage("EdgeAssemblyLoadContext::Load (CLR) - Successfully resolved assembly with {0}", loader.GetType().Name);
+                        DebugMessage("EdgeAssemblyLoadContext::Load (CLR) - Successfully resolved assembly");
                         _loadedAssemblies[assemblyName.Name] = assembly;
 
                         return assembly;
@@ -335,12 +276,12 @@ public class CoreCLREmbedding
 
                 catch (Exception e)
                 {
-                    DebugMessage("EdgeAssemblyLoadContext::Load (CLR) - Error trying to load {0} with {1}: {2}{3}{4}", assemblyName.Name, loader.GetType().Name, e.Message, Environment.NewLine, e.StackTrace);
+                    DebugMessage("EdgeAssemblyLoadContext::Load (CLR) - Error trying to load {0}: {2}{3}{4}", assemblyName.Name, e.Message, Environment.NewLine, e.StackTrace);
                     throw;
                 }
             }
 
-            DebugMessage("EdgeAssemblyLoadContext::Load (CLR) - Unable to resolve assembly with any of the loaders");
+            DebugMessage("EdgeAssemblyLoadContext::Load (CLR) - Unable to resolve assembly from project.json");
 
             try
             {
@@ -353,7 +294,7 @@ public class CoreCLREmbedding
                 {
                     throw new Exception(
                         String.Format(
-                            "Could not load assembly '{0}'.  Please ensure that a project.json file specifying the dependencies for this application exists either in the current directory or in a .NET project directory specified using the EDGE_APP_ROOT environment variable and that the 'dnu restore' command has been run for this project.json file.",
+                            "Could not load assembly '{0}'.  Please ensure that a project.json file specifying the dependencies for this application exists either in the current directory or in a .NET project directory specified using the EDGE_APP_ROOT environment variable and that the 'dotnet restore' command has been run for this project.json file.",
                             assemblyName.Name), e);
                 }
 
@@ -361,7 +302,7 @@ public class CoreCLREmbedding
             }
         }
 
-        public Assembly LoadFile(string assemblyPath)
+        public Assembly LoadFromFile(string assemblyPath)
         {
             if (!Path.IsPathRooted(assemblyPath))
             {
@@ -375,41 +316,14 @@ public class CoreCLREmbedding
 
             return LoadFromAssemblyPath(assemblyPath);
         }
-
-        public Assembly LoadStream(Stream assemblyStream, Stream assemblySymbols)
-        {
-            return LoadFromStream(assemblyStream);
-        }
-
-        public IntPtr LoadUnmanagedLibrary(string name)
-        {
-            return LoadUnmanagedDll(name);
-        }
-
-        public IntPtr LoadUnmanagedLibraryFromPath(string path)
-        {
-            return LoadUnmanagedDllFromPath(path);
-        }
-
-        public void Dispose()
-        {
-        }
-
-        Assembly IAssemblyLoadContext.Load(AssemblyName assemblyName)
-        {
-            return Load(assemblyName);
-        }
     }
     
     // ReSharper disable InconsistentNaming
-    private static EdgeAssemblyLoadContextAccessor LoadContextAccessor;
-    private static ApplicationHostContext ApplicationHostContext;
-    private static ApplicationEnvironment ApplicationEnvironment;
     private static EdgeRuntimeEnvironment RuntimeEnvironment;
+    private static EdgeAssemblyLoadContext LoadContext;
     // ReSharper enable InconsistentNaming
 
     private static readonly bool DebugMode = Environment.GetEnvironmentVariable("EDGE_DEBUG") == "1";
-    private static readonly FrameworkName TargetFrameworkName = new FrameworkName("DNXCore,Version=v5.0");
     private static readonly long MinDateTimeTicks = 621355968000000000;
     private static readonly Dictionary<Type, List<Tuple<string, Func<object, object>>>> TypePropertyAccessors = new Dictionary<Type, List<Tuple<string, Func<object, object>>>>();
     private static readonly int PointerSize = Marshal.SizeOf<IntPtr>();
@@ -425,32 +339,9 @@ public class CoreCLREmbedding
             DebugMessage("CoreCLREmbedding::Initialize (CLR) - Starting");
 
             RuntimeEnvironment = new EdgeRuntimeEnvironment(Marshal.PtrToStructure<EdgeBootstrapperContext>(context));
+            LoadContext = new EdgeAssemblyLoadContext();
 
-            Project project;
-            Project.TryGetProject(RuntimeEnvironment.ApplicationDirectory, out project);
-
-            ApplicationHostContext = new ApplicationHostContext
-            {
-                ProjectDirectory = RuntimeEnvironment.ApplicationDirectory,
-                TargetFramework = TargetFrameworkName,
-                Project = project
-            };
-
-            ApplicationEnvironment = new ApplicationEnvironment(ApplicationHostContext.Project, TargetFrameworkName, "Release", null);
-            LoadContextAccessor = new EdgeAssemblyLoadContextAccessor();
-
-            EdgeServiceProvider serviceProvider = new EdgeServiceProvider();
-
-            serviceProvider.Add(typeof(IRuntimeEnvironment), RuntimeEnvironment);
-            serviceProvider.Add(typeof(IApplicationEnvironment), ApplicationEnvironment);
-            serviceProvider.Add(typeof(IAssemblyLoadContextAccessor), LoadContextAccessor);
-
-            CallContextServiceLocator.Locator = new EdgeServiceProviderLocator
-            {
-                ServiceProvider = serviceProvider
-            };
-
-            PlatformServices.SetDefault(PlatformServices.Create(null, ApplicationEnvironment, RuntimeEnvironment, null, LoadContextAccessor, null));
+            AssemblyLoadContext.InitializeDefaultContext(LoadContext);
 
             DebugMessage("CoreCLREmbedding::Initialize (CLR) - Complete");
         }
@@ -480,12 +371,12 @@ public class CoreCLREmbedding
                     assemblyFile = Path.Combine(Directory.GetCurrentDirectory(), assemblyFile);
                 }
 
-                assembly = LoadContextAccessor.Default.LoadFile(assemblyFile);
+                assembly = LoadContext.LoadFromFile(assemblyFile);
             }
 
             else
             {
-                assembly = LoadContextAccessor.Default.Load(new AssemblyName(assemblyFile));
+                assembly = LoadContext.LoadFromAssemblyName(new AssemblyName(assemblyFile));
             }
 
             DebugMessage("CoreCLREmbedding::GetFunc (CLR) - Assembly {0} loaded successfully", assemblyFile);
@@ -530,9 +421,9 @@ public class CoreCLREmbedding
 
             if (!Compilers.ContainsKey(compiler))
             {
-                LoadContextAccessor.TypedDefault.AddCompiler(Directory.GetParent(compiler).FullName);
+                LoadContext.AddCompiler(Directory.GetParent(compiler).FullName);
 
-                Assembly compilerAssembly = LoadContextAccessor.Default.LoadFile(compiler);
+                Assembly compilerAssembly = LoadContext.LoadFromFile(compiler);
                 DebugMessage("CoreCLREmbedding::CompileFunc (CLR) - Compiler assembly {0} loaded successfully", compiler);
 
                 compilerType = compilerAssembly.GetType("EdgeCompiler");
@@ -553,7 +444,7 @@ public class CoreCLREmbedding
 
                 setAssemblyLoader?.Invoke(null, new object[]
                 {
-                    new Func<Stream, Assembly>(assemblyStream => LoadContextAccessor.Default.LoadStream(assemblyStream, null))
+                    new Func<Stream, Assembly>(assemblyStream => LoadContext.LoadFromStream(assemblyStream, null))
                 });
 
                 Compilers[compiler] = new Tuple<Type, MethodInfo>(compilerType, compileMethod);
@@ -571,7 +462,7 @@ public class CoreCLREmbedding
             Func<object, Task<object>> compiledFunction = (Func<object, Task<object>>)compileMethod.Invoke(compilerInstance, new object[]
             {
                 options,
-                LoadContextAccessor.TypedDefault.CompileAssemblies
+                LoadContext.CompileAssemblies
             });
             DebugMessage("CoreCLREmbedding::CompileFunc (CLR) - Compilation complete");
 
