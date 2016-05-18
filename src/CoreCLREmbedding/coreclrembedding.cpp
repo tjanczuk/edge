@@ -239,6 +239,11 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
     pal::get_own_executable_path(&bootstrapper);
     trace::info(_X("CoreClrEmbedding::Initialize - Bootstrapper is %s"), bootstrapper.c_str());
 
+	pal::string_t edgeAppDir;
+	pal::getenv(_X("EDGE_APP_DIR"), &edgeAppDir);
+
+	edgeAppDir = edgeAppDir.length() > 0 ? edgeAppDir : currentDirectory;
+
     pal::string_t coreClrDirectory;
 	pal::string_t coreClrEnvironmentVariable;
 	
@@ -248,18 +253,64 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
     {
         trace::info(_X("CoreClrEmbedding::Initialize - Trying to load %s from the path specified in the CORECLR_DIR environment variable: %s"), LIBCORECLR_NAME, coreClrDirectory.c_str());
         LoadCoreClrAtPath(coreClrDirectory, &libCoreClr);
+
+		if (!libCoreClr)
+		{
+			std::vector<char> coreClrEnvironmentVariableCstr;
+			pal::pal_clrstring(coreClrEnvironmentVariable, &coreClrEnvironmentVariableCstr);
+
+			throwV8Exception("Unable to load the CLR from the directory (%s) specified in the CORECLR_DIR environment variable.", coreClrEnvironmentVariableCstr.data());
+			return E_FAIL;
+		}
     }
 
 	if (!libCoreClr)
 	{
-		pal::string_t edgeAppDir;
-		pal::getenv(_X("EDGE_APP_DIR"), &edgeAppDir);
-
-		LoadCoreClrAtPath(edgeAppDir.length() > 0 ? edgeAppDir : currentDirectory, &libCoreClr);
+		coreClrDirectory = edgeAppDir.length() > 0 ? edgeAppDir : currentDirectory;
+		LoadCoreClrAtPath(coreClrDirectory, &libCoreClr);
 	}
 
     if (!libCoreClr)
     {
+		//trace::info(_X("CoreClrEmbedding::Initialize - Getting the dependency manifest file for the Edge app directory: %s"), edgeAppDir.c_str());
+
+		//pal::string_t depsJsonFile;
+		//std::vector<pal::string_t> depsJsonFiles;
+
+		//pal::readdir(edgeAppDir, _X("*.deps.json"), &depsJsonFiles);
+
+		//if (depsJsonFiles.size() > 1)
+		//{
+		//	std::vector<char> edgeAppDirCstr;
+		//	pal::pal_clrstring(edgeAppDir, &edgeAppDirCstr);
+
+		//	throwV8Exception("Multiple dependency manifest (*.deps.json) files exist in the Edge.js application directory (%s).", edgeAppDirCstr.data());
+		//	return E_FAIL;
+		//}
+
+		//else if (depsJsonFiles.size() == 1)
+		//{
+		//	depsJsonFile = depsJsonFiles[0];
+		//	trace::info(_X("CoreClrEmbedding::Initialize - Exactly one (%s) dependency manifest file found in the Edge app directory, using it"), depsJsonFile.c_str());
+		//}
+
+		//else
+		//{
+		//	// TODO: no .deps.json file, use the stock one from the distribution
+		//}
+
+		//trace::info(_X("CoreClrEmbedding::Initialize - Opening a stream for the dependency manifest file"), depsJsonFile.c_str());
+		//pal::ifstream_t depsJsonStream(depsJsonFile);
+
+		//if (!depsJsonStream.good())
+		//{
+		//	std::vector<char> depsJsonFileCstr;
+		//	pal::pal_clrstring(depsJsonFile, &depsJsonFileCstr);
+
+		//	throwV8Exception("Unable to open the dependency manifest file at %s", depsJsonFileCstr.data());
+		//	return E_FAIL;
+		//}
+
 		pal::string_t pathEnvironmentVariable;
 		pal::getenv(_X("PATH"), &pathEnvironmentVariable);
 
@@ -292,6 +343,15 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 
 					append_path(&coreClrDirectory, coreClrVersion.c_str());
 					LoadCoreClrAtPath(coreClrDirectory, &libCoreClr);
+
+					if (!libCoreClr)
+					{
+						std::vector<char> coreClrVersionCstr;
+						pal::pal_clrstring(coreClrVersion, &coreClrVersionCstr);
+
+						throwV8Exception("The targeted CLR version (%s) specified in the CORECLR_VERSION environment variable was not found.", coreClrVersionCstr.data());
+						return E_FAIL;
+					}
 				}
 
 				else
