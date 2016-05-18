@@ -4,6 +4,7 @@
 #include <sys/stat.h>
 #include "pal/pal_utils.h"
 #include "pal/trace.h"
+#include "fxr/fx_ver.h"
 
 #ifndef EDGE_PLATFORM_WINDOWS
 #include <dlfcn.h>
@@ -57,14 +58,15 @@ InitializeFunction initialize;
 			"CoreCLREmbedding",\
 			functionName,\
 			(void**) functionPointer);\
+	pal::clr_palstring(functionName, &functionNameString);\
 	\
 	if (FAILED(result))\
 	{\
-		throwV8Exception("Call to coreclr_create_delegate() for %s failed with a return code of 0x%x.", functionName, result);\
+		throwV8Exception("Call to coreclr_create_delegate() for %s failed with a return code of 0x%x.", functionNameString.c_str(), result);\
 		return result;\
 	}\
 	\
-	trace::info(_X("CoreClrEmbedding::Initialize - CoreCLREmbedding.%s() loaded successfully"), functionName);\
+	trace::info(_X("CoreClrEmbedding::Initialize - CoreCLREmbedding.%s() loaded successfully"), functionNameString.c_str());\
 
 std::string GetOSName()
 {
@@ -197,6 +199,7 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 	trace::info(_X("CoreClrEmbedding::Initialize - Started"));
 
     HRESULT result = S_OK;
+	pal::string_t functionNameString;
 	pal::string_t currentDirectory;
 
     if (!pal::getcwd(&currentDirectory))
@@ -285,13 +288,44 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 
 				if (coreClrVersion.length() > 0)
 				{
+					trace::info(_X("CoreClrEmbedding::Initialize - CORECLR_VERSION environment variable provided (%s)"), coreClrVersion.c_str());
+
 					append_path(&coreClrDirectory, coreClrVersion.c_str());
 					LoadCoreClrAtPath(coreClrDirectory, &libCoreClr);
 				}
 
 				else
 				{
-					// TODO: iterate through the candidate runtimes
+					trace::info(_X("CoreClrEmbedding::Initialize - No CORECLR_VERSION environment variable provided, getting the max installed framework version"));
+
+					std::vector<pal::string_t> frameworkVersions;
+					pal::readdir(coreClrDirectory, &frameworkVersions);
+					fx_ver_t maxVersion(-1, -1, -1);
+					fx_ver_t currentVersion(-1, -1, -1);
+
+					for (u_int versionIndex = 0; versionIndex < frameworkVersions.size(); versionIndex++)
+					{
+						if (fx_ver_t::parse(frameworkVersions[versionIndex], &currentVersion))
+						{
+							if (currentVersion > maxVersion)
+							{
+								maxVersion = currentVersion;
+							}
+						}
+					}
+
+					if (maxVersion.get_major() > 0)
+					{
+						trace::info(_X("CoreClrEmbedding::Initialize - Max framework version was %s"), maxVersion.as_str().c_str());
+
+						append_path(&coreClrDirectory, maxVersion.as_str().c_str());
+						LoadCoreClrAtPath(coreClrDirectory, &libCoreClr);
+					}
+
+					else
+					{
+						trace::info(_X("CoreClrEmbedding::Initialize - None of the subdirectories of %s were valid framework versions"), coreClrDirectory.c_str());
+					}
 				}
 			}
 

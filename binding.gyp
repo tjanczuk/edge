@@ -49,7 +49,8 @@
                     'src/common/utils.cpp',
                     'src/CoreCLREmbedding/pal/pal.windows.cpp',
                     'src/CoreCLREmbedding/pal/pal_utils.cpp',
-                    'src/CoreCLREmbedding/pal/trace.cpp'
+                    'src/CoreCLREmbedding/pal/trace.cpp',
+                    'src/CoreCLREmbedding/fxr/fx_ver.cpp'
                   ]
                 },
                 {
@@ -74,7 +75,8 @@
                     'src/common/utils.cpp',
                     'src/CoreCLREmbedding/pal/pal.unix.cpp',
                     'src/CoreCLREmbedding/pal/pal_utils.cpp',
-                    'src/CoreCLREmbedding/pal/trace.cpp'
+                    'src/CoreCLREmbedding/pal/trace.cpp',
+                    'src/CoreCLREmbedding/fxr/fx_ver.cpp'
                   ]
                 },
                 {
