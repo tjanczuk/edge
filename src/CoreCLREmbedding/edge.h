@@ -8,6 +8,8 @@
 #include <string>
 #include <stdio.h>
 
+#include "pal/pal.h"
+
 #ifndef EDGE_PLATFORM_WINDOWS
 typedef int BOOL;
 
@@ -104,11 +106,9 @@ class CoreClrEmbedding
 {
     private:
 		CoreClrEmbedding();
-        static void FreeCoreClr(void** pLibCoreClr);
-        static bool LoadCoreClrAtPath(const char* loadPath, void** ppLibCoreClr);
-        static void GetPathToBootstrapper(char* bootstrapper, size_t bufferSize);
-        static void AddToTpaList(std::string directoryPath, std::string* tpaList);
-        static void* LoadSymbol(void* library, const char* symbolName);
+        static void FreeCoreClr(pal::dll_t pLibCoreClr);
+        static bool LoadCoreClrAtPath(pal::string_t loadPath, pal::dll_t* ppLibCoreClr);
+        static void AddToTpaList(pal::string_t directoryPath, pal::string_t* tpaList);
         static char* GetLoadError();
 
     public:

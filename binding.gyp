@@ -36,7 +36,7 @@
           {
             'conditions': [
               [
-                '"<!(node -e "var whereis = require(\'./tools/whereis\'); console.log(whereis(\'dnx.exe\'));")"!=""',
+                '"<!(node -e "var whereis = require(\'./tools/whereis\'); console.log(whereis(\'dotnet.exe\'));")"!=""',
                 {
                   'sources+': [
                     'src/common/v8synchronizationcontext.cpp',
@@ -46,7 +46,10 @@
                     'src/CoreCLREmbedding/coreclrnodejsfunc.cpp',
                     'src/CoreCLREmbedding/coreclrfuncinvokecontext.cpp',
                     'src/CoreCLREmbedding/coreclrnodejsfuncinvokecontext.cpp',
-                    'src/common/utils.cpp'
+                    'src/common/utils.cpp',
+                    'src/CoreCLREmbedding/pal/pal.windows.cpp',
+                    'src/CoreCLREmbedding/pal/pal_utils.cpp',
+                    'src/CoreCLREmbedding/pal/trace.cpp'
                   ]
                 },
                 {
@@ -58,7 +61,7 @@
           {
             'conditions': [
               [
-                '"<!(echo -n `which dnx`)"!=""',
+                '"<!(echo -n `which dotnet`)"!=""',
                 {
                   'sources+': [
                     'src/common/v8synchronizationcontext.cpp',
@@ -68,7 +71,10 @@
                     'src/CoreCLREmbedding/coreclrnodejsfunc.cpp',
                     'src/CoreCLREmbedding/coreclrfuncinvokecontext.cpp',
                     'src/CoreCLREmbedding/coreclrnodejsfuncinvokecontext.cpp',
-                    'src/common/utils.cpp'
+                    'src/common/utils.cpp',
+                    'src/CoreCLREmbedding/pal/pal.unix.cpp',
+                    'src/CoreCLREmbedding/pal/pal_utils.cpp',
+                    'src/CoreCLREmbedding/pal/trace.cpp'
                   ]
                 },
                 {
@@ -255,7 +261,7 @@
           {
             'conditions': [
               [
-                '"<!(node -e "var whereis = require(\'./tools/whereis\'); console.log(whereis(\'dnx.exe\'));")"!=""',
+                '"<!(node -e "var whereis = require(\'./tools/whereis\'); console.log(whereis(\'dotnet.exe\'));")"!=""',
                 {
                   'actions+': [
                     {
@@ -264,10 +270,10 @@
                         'src/CoreCLREmbedding/project.json'
                       ],
                       'outputs': [
-                        'src/CoreCLREmbedding/bin/$(BUILDTYPE)/dnxcore50/CoreCLREmbedding.dll'
+                        'src/CoreCLREmbedding/bin/$(BUILDTYPE)/netstandard1.5/CoreCLREmbedding.dll'
                       ],                        
                       'action': [
-                        'cd "<(module_root_dir)\\src\\CoreCLREmbedding" & dnu restore & cd "<(module_root_dir)\\src\\CoreCLREmbedding" & dnu build --configuration $(Configuration) & copy "<(module_root_dir)\\src\\CoreCLREmbedding\\bin\\$(Configuration)\\dnxcore50\\CoreCLREmbedding.dll" "<(module_root_dir)\\build\\$(Configuration)"'
+                        'cd "<(module_root_dir)\\src\\CoreCLREmbedding" & dotnet restore & cd "<(module_root_dir)\\src\\CoreCLREmbedding" & dotnet build --configuration $(Configuration) & copy "<(module_root_dir)\\src\\CoreCLREmbedding\\bin\\$(Configuration)\\netstandard1.5\\CoreCLREmbedding.dll" "<(module_root_dir)\\build\\$(Configuration)"'
                       ]
                     }
                   ],
@@ -275,7 +281,7 @@
                     {
                       'destination': '<(module_root_dir)\\build\\$(BUILDTYPE)',
                       'files': [
-                        '<(module_root_dir)\\src\\CoreCLREmbedding\\bin\\$(BUILDTYPE)\\dnxcore50\\CoreCLREmbedding.dll'
+                        '<(module_root_dir)\\src\\CoreCLREmbedding\\bin\\$(BUILDTYPE)\\netstandard1.5\\CoreCLREmbedding.dll'
                       ]
                     }
                   ]
@@ -310,7 +316,7 @@
                 }
               ],
               [
-                '"<!(echo -n `which dnx`)"!=""',
+                '"<!(echo -n `which dotnet`)"!=""',
                 {
                   'actions+': [
                     {
@@ -324,7 +330,7 @@
                       'action': [
                         'bash',
                         '-c',
-                        'cd src/CoreCLREmbedding && dnu restore'
+                        'cd src/CoreCLREmbedding && dotnet restore'
                       ]
                     },
                     {
@@ -334,12 +340,12 @@
                         'src/common/*.cs'
                       ],
                       'outputs': [
-                        'src/CoreCLREmbedding/bin/$(BUILDTYPE)/dnxcore50/CoreCLREmbedding.dll'
+                        'src/CoreCLREmbedding/bin/$(BUILDTYPE)/netstandard1.5/CoreCLREmbedding.dll'
                       ],                        
                       'action': [
                         'bash',
                         '-c',
-                        'cd src/CoreCLREmbedding && dnu build --configuration $(BUILDTYPE)'
+                        'cd src/CoreCLREmbedding && dotnet build --configuration $(BUILDTYPE)'
                       ]
                     }
                   ],
@@ -347,7 +353,7 @@
                     {
                       'destination': '<(module_root_dir)/build/$(BUILDTYPE)',
                       'files': [
-                        '<(module_root_dir)/src/CoreCLREmbedding/bin/$(BUILDTYPE)/dnxcore50/CoreCLREmbedding.dll',
+                        '<(module_root_dir)/src/CoreCLREmbedding/bin/$(BUILDTYPE)/netstandard1.5/CoreCLREmbedding.dll',
                         '<(module_root_dir)/src/CoreCLREmbedding/project.json',
                         '<(module_root_dir)/src/CoreCLREmbedding/project.lock.json'
                       ]

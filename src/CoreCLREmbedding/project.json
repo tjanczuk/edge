@@ -1,6 +1,9 @@
 {
   "frameworks": {
     "netstandard1.5": {
+      "bin": {
+        "assembly": "bin/{configuration}/netstandard1.5/CoreCLREmbedding.dll"
+      },
       "imports": [
         "portable-dnxcore50+net45+win8+wp8+wpa81"
       ],

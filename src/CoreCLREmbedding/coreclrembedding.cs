@@ -11,10 +11,7 @@ using System.Collections;
 using System.Threading.Tasks;
 using System.IO;
 using System.Diagnostics;
-using System.Runtime.Versioning;
 using Microsoft.DotNet.ProjectModel;
-using Microsoft.DotNet.ProjectModel.Resolution;
-using Microsoft.Extensions.PlatformAbstractions;
 
 [StructLayout(LayoutKind.Sequential)]
 // ReSharper disable once CheckNamespace
@@ -152,7 +149,7 @@ public class CoreCLREmbedding
         internal readonly Dictionary<string, string> CompileAssemblies = new Dictionary<string, string>();
         private readonly bool _noProjectJsonFile;
         private readonly Dictionary<string, Assembly> _loadedAssemblies = new Dictionary<string, Assembly>();
-        private readonly IList<LibraryDescription> _libraries = null;
+        private readonly IList<LibraryDescription> _libraries;
 
         public EdgeAssemblyLoadContext()
         {

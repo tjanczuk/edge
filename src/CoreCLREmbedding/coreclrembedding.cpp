@@ -2,6 +2,8 @@
 #include <limits.h>
 #include <set>
 #include <sys/stat.h>
+#include "pal/pal_utils.h"
+#include "pal/trace.h"
 
 #ifndef EDGE_PLATFORM_WINDOWS
 #include <dlfcn.h>
@@ -21,22 +23,14 @@
 #include <libproc.h>
 #endif
 
-#ifdef EDGE_PLATFORM_APPLE
-const char* LIBCORECLR_NAME = "libcoreclr.dylib";
-#elif defined(EDGE_PLATFORM_WINDOWS)
-const char* LIBCORECLR_NAME = "coreclr.dll";
-#else
-const char* LIBCORECLR_NAME = "libcoreclr.so";
-#endif
-
-typedef HRESULT (STDMETHODCALLTYPE *coreclr_create_delegateFunction)(
+typedef pal::hresult_t (STDMETHODCALLTYPE *coreclr_create_delegate)(
 		void* hostHandle,
 		unsigned int domainId,
 		const char* assemblyName,
 		const char* typeName,
 		const char* methodName,
 		void** delegate);
-typedef HRESULT (STDMETHODCALLTYPE *coreclr_initializeFunction)(
+typedef pal::hresult_t (STDMETHODCALLTYPE *coreclr_initialize)(
 		const char *exePath,
 		const char *appDomainFriendlyName,
 		int propertyCount,
@@ -70,7 +64,7 @@ InitializeFunction initialize;
 		return result;\
 	}\
 	\
-	DBG("CoreClrEmbedding::Initialize - CoreCLREmbedding.%s() loaded successfully", functionName);\
+	trace::info(_X("CoreClrEmbedding::Initialize - CoreCLREmbedding.%s() loaded successfully"), functionName);\
 
 std::string GetOSName()
 {
@@ -190,135 +184,144 @@ std::string GetOSVersion()
 
 HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 {
-    // Much of the CoreCLR bootstrapping process is cribbed from 
-    // https://github.com/aspnet/dnx/blob/dev/src/dnx.coreclr.unix/dnx.coreclr.cpp
+	trace::setup();
 
-	DBG("CoreClrEmbedding::Initialize - Started")
+	pal::string_t edgeDebug;
+	pal::getenv(_X("EDGE_DEBUG"), &edgeDebug);
+
+	if (edgeDebug.length() > 0)
+	{
+		trace::enable();
+	}
+
+	trace::info(_X("CoreClrEmbedding::Initialize - Started"));
 
     HRESULT result = S_OK;
-    char currentDirectory[PATH_MAX];
+	pal::string_t currentDirectory;
 
-#ifdef EDGE_PLATFORM_WINDOWS
-    if (!_getcwd(&currentDirectory[0], PATH_MAX))
-#else
-    if (!getcwd(&currentDirectory[0], PATH_MAX))
-#endif
+    if (!pal::getcwd(&currentDirectory))
     {
 		throwV8Exception("Unable to get the current directory.");
         return E_FAIL;
     }
 
-	char edgeNodePath[PATH_MAX];
+	// TODO: see if there is a way to get this via PAL
+	pal::string_t edgeNodePath;
+	std::vector<char> edgeNodePathCstr;
+
+	char tempEdgeNodePath[PATH_MAX];
 
 #ifdef EDGE_PLATFORM_WINDOWS
     HMODULE moduleHandle = NULL;
 
     GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCSTR) &CoreClrEmbedding::Initialize, &moduleHandle);
-    GetModuleFileName(moduleHandle, edgeNodePath, PATH_MAX);
-    PathRemoveFileSpec(edgeNodePath);
+    GetModuleFileName(moduleHandle, tempEdgeNodePath, PATH_MAX);
 #else
     Dl_info dlInfo;
 
 	dladdr((void*)&CoreClrEmbedding::Initialize, &dlInfo);
-	strcpy(edgeNodePath, dlInfo.dli_fname);
-	strcpy(edgeNodePath, dirname(edgeNodePath));
+	strcpy(tempEdgeNodePath, dlInfo.dli_fname);
 #endif
 
-    DBG("CoreClrEmbedding::Initialize - edge.node path is %s", edgeNodePath);
+	pal::clr_palstring(tempEdgeNodePath, &edgeNodePath);
+	edgeNodePath = get_directory(edgeNodePath);
 
-    void* libCoreClr = NULL;
-    char bootstrapper[PATH_MAX];
+	pal::pal_clrstring(edgeNodePath, &edgeNodePathCstr);
 
-    GetPathToBootstrapper(&bootstrapper[0], PATH_MAX);
-    DBG("CoreClrEmbedding::Initialize - Bootstrapper is %s", bootstrapper);
+    trace::info(_X("CoreClrEmbedding::Initialize - edge.node path is %s"), edgeNodePath.c_str());
 
-    char coreClrDirectory[PATH_MAX];
-    char* coreClrEnvironmentVariable = getenv("CORECLR_DIR");
+    pal::dll_t libCoreClr = NULL;
+    pal::string_t bootstrapper;
 
-    if (coreClrEnvironmentVariable)
+    pal::get_own_executable_path(&bootstrapper);
+    trace::info(_X("CoreClrEmbedding::Initialize - Bootstrapper is %s"), bootstrapper.c_str());
+
+    pal::string_t coreClrDirectory;
+	pal::string_t coreClrEnvironmentVariable;
+	
+	pal::getenv(_X("CORECLR_DIR"), &coreClrEnvironmentVariable);
+
+    if (coreClrEnvironmentVariable.length() > 0)
     {
-        if (coreClrEnvironmentVariable[0] == '"')
-        {
-            strncpy(&coreClrDirectory[0], &coreClrEnvironmentVariable[1], strlen(coreClrEnvironmentVariable) - 2);
-            coreClrDirectory[strlen(coreClrEnvironmentVariable) - 2] = '\0';
-        }
-
-        else
-        {
-            strncpy(&coreClrDirectory[0], coreClrEnvironmentVariable, strlen(coreClrEnvironmentVariable) + 1);
-        }
-
-    	DBG("CoreClrEmbedding::Initialize - Trying to load %s from the path specified in the CORECLR_DIR environment variable: %s", LIBCORECLR_NAME, coreClrDirectory);
-
+        trace::info(_X("CoreClrEmbedding::Initialize - Trying to load %s from the path specified in the CORECLR_DIR environment variable: %s"), LIBCORECLR_NAME, coreClrDirectory.c_str());
         LoadCoreClrAtPath(coreClrDirectory, &libCoreClr);
     }
 
-    if (!libCoreClr)
-    {
-    	strncpy(&coreClrDirectory[0], currentDirectory, strlen(currentDirectory) + 1);
-    	LoadCoreClrAtPath(coreClrDirectory, &libCoreClr);
-    }
+	if (!libCoreClr)
+	{
+		pal::string_t edgeAppDir;
+		pal::getenv(_X("EDGE_APP_DIR"), &edgeAppDir);
+
+		LoadCoreClrAtPath(edgeAppDir.length() > 0 ? edgeAppDir : currentDirectory, &libCoreClr);
+	}
 
     if (!libCoreClr)
     {
-        // Try to load CoreCLR from application path
-#ifdef EDGE_PLATFORM_WINDOWS
-        char* lastSlash = strrchr(&bootstrapper[0], '\\');
-#else
-        char* lastSlash = strrchr(&bootstrapper[0], '/');
-#endif
+		pal::string_t pathEnvironmentVariable;
+		pal::getenv(_X("PATH"), &pathEnvironmentVariable);
 
-        assert(lastSlash);
-        strncpy(&coreClrDirectory[0], &bootstrapper[0], lastSlash - &bootstrapper[0]);
-        coreClrDirectory[lastSlash - &bootstrapper[0]] = '\0';
-
-        LoadCoreClrAtPath(coreClrDirectory, &libCoreClr);
-    }
-
-    if (!libCoreClr)
-    {
-    	std::string pathEnvironmentVariable = getenv("PATH");
-#if EDGE_PLATFORM_WINDOWS
-    	char delimeter = ';';
-#else
-    	char delimeter = ':';
-#endif
+		pal::string_t dotnetExecutablePath;
 
     	size_t previousIndex = 0;
-    	size_t currentIndex = pathEnvironmentVariable.find(delimeter);
+    	size_t currentIndex = pathEnvironmentVariable.find(PATH_SEPARATOR);
 
     	while (!libCoreClr && currentIndex != std::string::npos)
     	{
-    		strncpy(&coreClrDirectory[0], pathEnvironmentVariable.substr(previousIndex, currentIndex - previousIndex).c_str(), currentIndex - previousIndex);
-    		coreClrDirectory[currentIndex - previousIndex] = '\0';
+			dotnetExecutablePath = pathEnvironmentVariable.substr(previousIndex, currentIndex - previousIndex);
 
-    		LoadCoreClrAtPath(coreClrDirectory, &libCoreClr);
+			append_path(&dotnetExecutablePath, _X("dotnet"));
+			dotnetExecutablePath.append(pal::exe_suffix());
+
+			if (pal::file_exists(dotnetExecutablePath))
+			{
+				coreClrDirectory = pathEnvironmentVariable.substr(previousIndex, currentIndex - previousIndex);
+				trace::info(_X("CoreClrEmbedding::Initialize - Found dotnet directory at %s"), coreClrDirectory.c_str());
+
+				append_path(&coreClrDirectory, _X("shared"));
+				append_path(&coreClrDirectory, _X("Microsoft.NETCore.App"));
+
+				pal::string_t coreClrVersion;
+				pal::getenv(_X("CORECLR_VERSION"), &coreClrVersion);
+
+				if (coreClrVersion.length() > 0)
+				{
+					append_path(&coreClrDirectory, coreClrVersion.c_str());
+					LoadCoreClrAtPath(coreClrDirectory, &libCoreClr);
+				}
+
+				else
+				{
+					// TODO: iterate through the candidate runtimes
+				}
+			}
 
     		if (!libCoreClr)
     		{
 				previousIndex = currentIndex + 1;
-				currentIndex = pathEnvironmentVariable.find(delimeter, previousIndex);
+				currentIndex = pathEnvironmentVariable.find(PATH_SEPARATOR, previousIndex);
     		}
     	}
     }
 
     if (!libCoreClr)
     {
-		throwV8Exception("Failed to find CoreCLR.  Make sure that you have either specified the CoreCLR directory in the CORECLR_DIR environment variable or it exists somewhere in your PATH environment variable, which you do via the \"dnvm install\" and \"dnvm use\" commands.");
+		throwV8Exception("Failed to find CoreCLR.  Make sure that you have either specified the CoreCLR directory in the CORECLR_DIR environment variable or the dotnet executable exists somewhere in your PATH environment variable and you have specified a CORECLR_VERSION environment variable.");
         return E_FAIL;
     }
 
-    DBG("CoreClrEmbedding::Initialize - %s loaded successfully from %s", LIBCORECLR_NAME, &coreClrDirectory[0]);
+    trace::info(_X("CoreClrEmbedding::Initialize - %s loaded successfully from %s"), LIBCORECLR_NAME, coreClrDirectory.c_str());
 
-    std::string assemblySearchDirectories;
+    pal::string_t assemblySearchDirectories;
 
-    assemblySearchDirectories.append(&currentDirectory[0]);
-    assemblySearchDirectories.append(":");
-    assemblySearchDirectories.append(&coreClrDirectory[0]);
+    assemblySearchDirectories.append(currentDirectory);
+    assemblySearchDirectories.append(_X(":"));
+    assemblySearchDirectories.append(coreClrDirectory);
+	assemblySearchDirectories.append(_X(":"));
+	assemblySearchDirectories.append(edgeNodePath);
 
-    DBG("CoreClrEmbedding::Initialize - Assembly search path is %s", assemblySearchDirectories.c_str());
+    trace::info(_X("CoreClrEmbedding::Initialize - Assembly search path is %s"), assemblySearchDirectories.c_str());
 
-    coreclr_initializeFunction initializeCoreCLR = (coreclr_initializeFunction) LoadSymbol(libCoreClr, "coreclr_initialize");
+    coreclr_initialize initializeCoreCLR = (coreclr_initialize) pal::get_symbol(libCoreClr, "coreclr_initialize");
 
     if (!initializeCoreCLR)
     {
@@ -326,8 +329,8 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
         return E_FAIL;
     }
 
-    DBG("CoreClrEmbedding::Initialize - coreclr_initialize loaded successfully");
-    coreclr_create_delegateFunction createDelegate = (coreclr_create_delegateFunction) LoadSymbol(libCoreClr, "coreclr_create_delegate");
+    trace::info(_X("CoreClrEmbedding::Initialize - coreclr_initialize loaded successfully"));
+    coreclr_create_delegate createDelegate = (coreclr_create_delegate) pal::get_symbol(libCoreClr, "coreclr_create_delegate");
 
     if (!createDelegate)
     {
@@ -335,40 +338,44 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
     	return E_FAIL;
     }
 
-    DBG("CoreClrEmbedding::Initialize - coreclr_create_delegate loaded successfully");
+    trace::info(_X("CoreClrEmbedding::Initialize - coreclr_create_delegate loaded successfully"));
 
     const char* propertyKeys[] = {
     	"TRUSTED_PLATFORM_ASSEMBLIES",
     	"APP_PATHS",
     	"APP_NI_PATHS",
     	"NATIVE_DLL_SEARCH_DIRECTORIES",
-    	"AppDomainCompatSwitch"
+    	"AppDomainCompatSwitch",
+		"APP_CONTEXT_BASE_DIRECTORY"
     };
 
-    std::string tpaList;
+    pal::string_t tpaList;
+
+	// TODO: may want to consider looking at .deps.json for TPA instead of loading everything in the runtime directory
     AddToTpaList(coreClrDirectory, &tpaList);
 
-    std::string appPaths(&currentDirectory[0]);
-#if EDGE_PLATFORM_WINDOWS
-    appPaths.append(";");
-#else
-    appPaths.append(":");
-#endif
-    appPaths.append(edgeNodePath);
+	pal::string_t appBase = edgeNodePath;
+    trace::info(_X("CoreClrEmbedding::Initialize - Using %s as the app path value"), appBase.c_str());
 
-    DBG("CoreClrEmbedding::Initialize - Using %s as the app path value", appPaths.c_str());
+	std::vector<char> tpaListCstr, appBaseCstr, assemblySearchDirectoriesCstr, bootstrapperCstr;
+	
+	pal::pal_clrstring(tpaList, &tpaListCstr);
+	pal::pal_clrstring(appBase, &appBaseCstr);
+	pal::pal_clrstring(assemblySearchDirectories, &assemblySearchDirectoriesCstr);
+	pal::pal_clrstring(bootstrapper, &bootstrapperCstr);
 
     const char* propertyValues[] = {
-    	tpaList.c_str(),
-        appPaths.c_str(),
-        appPaths.c_str(),
-        assemblySearchDirectories.c_str(),
-        "UseLatestBehaviorWhenTFMNotSpecified"
+    	tpaListCstr.data(),
+        appBaseCstr.data(),
+		appBaseCstr.data(),
+        assemblySearchDirectoriesCstr.data(),
+        "UseLatestBehaviorWhenTFMNotSpecified",
+		appBaseCstr.data()
     };
 
-    DBG("CoreClrEmbedding::Initialize - Calling coreclr_initialize()");
+    trace::info(_X("CoreClrEmbedding::Initialize - Calling coreclr_initialize()"));
 	result = initializeCoreCLR(
-			bootstrapper,
+			bootstrapperCstr.data(),
 			"Edge",
 			sizeof(propertyKeys) / sizeof(propertyKeys[0]),
 			&propertyKeys[0],
@@ -382,8 +389,8 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 		return result;
 	}
 
-	DBG("CoreClrEmbedding::Initialize - CoreCLR initialized successfully");
-    DBG("CoreClrEmbedding::Initialize - App domain created successfully (app domain ID: %d)", appDomainId);
+	trace::info(_X("CoreClrEmbedding::Initialize - CoreCLR initialized successfully"));
+    trace::info(_X("CoreClrEmbedding::Initialize - App domain created successfully (app domain ID: %d)"), appDomainId);
 
     SetCallV8FunctionDelegateFunction setCallV8Function;
 
@@ -396,18 +403,22 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
     CREATE_DELEGATE("CompileFunc", &compileFunc);
 	CREATE_DELEGATE("Initialize", &initialize);
 
-	DBG("CoreClrEmbedding::Initialize - Getting runtime info");
+	trace::info(_X("CoreClrEmbedding::Initialize - Getting runtime info"));
 
 	CoreClrGcHandle exception = NULL;
 	BootstrapperContext context;
 
-	context.runtimeDirectory = &coreClrDirectory[0];
+	std::vector<char> coreClrDirectoryCstr, currentDirectoryCstr;
+	pal::pal_clrstring(coreClrDirectory, &coreClrDirectoryCstr);
+	pal::pal_clrstring(currentDirectory, &currentDirectoryCstr);
+
+	context.runtimeDirectory = coreClrDirectoryCstr.data();
 	context.applicationDirectory = getenv("EDGE_APP_ROOT");
-	context.edgeNodePath = &edgeNodePath[0];
+	context.edgeNodePath = edgeNodePathCstr.data();
 
 	if (!context.applicationDirectory)
 	{
-		context.applicationDirectory = &currentDirectory[0];
+		context.applicationDirectory = currentDirectoryCstr.data();
 	}
 
 	std::string operatingSystem = GetOSName();
@@ -423,7 +434,7 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 	DBG("CoreClrEmbedding::Initialize - Runtime directory: %s", context.runtimeDirectory);
 	DBG("CoreClrEmbedding::Initialize - Application directory: %s", context.applicationDirectory);
 
-	DBG("CoreClrEmbedding::Initialize - Calling CLR Initialize() function");
+	trace::info(_X("CoreClrEmbedding::Initialize - Calling CLR Initialize() function"));
 
 	initialize(&context, &exception);
 
@@ -437,7 +448,7 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 
 	else
 	{
-		DBG("CoreClrEmbedding::Initialize - CLR Initialize() function called successfully")
+		trace::info(_X("CoreClrEmbedding::Initialize - CLR Initialize() function called successfully"));
 	}
 
 	exception = NULL;
@@ -453,17 +464,17 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 
 	else
 	{
-		DBG("CoreClrEmbedding::Initialize - CallV8Function delegate set successfully");
+		trace::info(_X("CoreClrEmbedding::Initialize - CallV8Function delegate set successfully"));
 	}
 
-	DBG("CoreClrEmbedding::Initialize - Completed");
+	trace::info(_X("CoreClrEmbedding::Initialize - Completed"));
 
     return S_OK;
 }
 
 CoreClrGcHandle CoreClrEmbedding::GetClrFuncReflectionWrapFunc(const char* assemblyFile, const char* typeName, const char* methodName, v8::Local<v8::Value>* v8Exception)
 {
-	DBG("CoreClrEmbedding::GetClrFuncReflectionWrapFunc - Starting");
+	trace::info(_X("CoreClrEmbedding::GetClrFuncReflectionWrapFunc - Starting"));
 
 	CoreClrGcHandle exception;
 	CoreClrGcHandle function = getFunc(assemblyFile, typeName, methodName, &exception);
@@ -478,246 +489,77 @@ CoreClrGcHandle CoreClrEmbedding::GetClrFuncReflectionWrapFunc(const char* assem
 
 	else
 	{
-		DBG("CoreClrEmbedding::GetClrFuncReflectionWrapFunc - Finished");
+		trace::info(_X("CoreClrEmbedding::GetClrFuncReflectionWrapFunc - Finished"));
 		return function;
 	}
 }
 
-#ifdef EDGE_PLATFORM_WINDOWS
-void CoreClrEmbedding::AddToTpaList(std::string directoryPath, std::string* tpaList)
+void CoreClrEmbedding::AddToTpaList(pal::string_t directoryPath, pal::string_t* tpaList)
 {
-    const char * const tpaExtensions[] = {
-        ".ni.dll",
-        ".dll",
-        ".ni.exe",
-        ".exe"
+	trace::info(_X("CoreClrEmbedding::AddToTpaList - Searching %s for assemblies to add to the TPA list"), directoryPath.c_str());
+
+    const pal::char_t * const tpaExtensions[] = {
+        _X("*.ni.dll"),
+        _X("*.dll"),
+        _X("*.ni.exe"),
+        _X("*.exe")
     };
 
-    std::string directoryPathWithFilter(directoryPath);
-    directoryPathWithFilter.append("\\*");
+	std::vector<pal::string_t> files;
+    std::set<pal::string_t> addedAssemblies;
+	pal::string_t dirSeparator(1, DIR_SEPARATOR);
+	pal::string_t pathSeparator(1, PATH_SEPARATOR);
 
-    WIN32_FIND_DATA directoryEntry;
-    HANDLE fileHandle = FindFirstFile(directoryPathWithFilter.c_str(), &directoryEntry);
-
-    if (fileHandle == INVALID_HANDLE_VALUE)
-    {
-        return;
-    }
-
-    DBG("CoreClrEmbedding::AddToTpaList - Searching %s for assemblies to add to the TPA list", directoryPath.c_str());
-
-    std::set<std::string> addedAssemblies;
-
-    // Walk the directory for each extension separately so that we first get files with .ni.dll extension,
-    // then files with .dll extension, etc.
+    // Walk the directory for each extension separately so that we first get files with .ni.dll extension, then files with .dll 
+	// extension, etc.
     for (int extensionIndex = 0; extensionIndex < sizeof(tpaExtensions) / sizeof(tpaExtensions[0]); extensionIndex++)
     {
-        const char* currentExtension = tpaExtensions[extensionIndex];
-        size_t currentExtensionLength = strlen(currentExtension);
+		pal::readdir(directoryPath, tpaExtensions[extensionIndex], &files);
 
-        // For all entries in the directory
-        do
-        {
-            if ((directoryEntry.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY)
-            {
-                continue;
-            }
+		for (u_int fileIndex = 0; fileIndex < files.size(); fileIndex++)
+		{
+			pal::string_t filename = get_filename(files[fileIndex]);
+			pal::string_t filenameWithoutExtension = get_filename_without_ext(files[fileIndex]);
 
-            std::string filename(directoryEntry.cFileName);
+			// Make sure if we have an assembly with multiple extensions present, we insert only one version of it.
+			if (addedAssemblies.find(filenameWithoutExtension) == addedAssemblies.end())
+			{
+				addedAssemblies.insert(filenameWithoutExtension);
 
-            // Check if the extension matches the one we are looking for
-            size_t extensionPosition = filename.length() - currentExtensionLength;
+				tpaList->append(directoryPath);
+				tpaList->append(dirSeparator);
+				tpaList->append(files[fileIndex]);
+				tpaList->append(pathSeparator);
 
-            if ((extensionPosition <= 0) || (filename.compare(extensionPosition, currentExtensionLength, currentExtension) != 0))
-            {
-                continue;
-            }
-
-            std::string filenameWithoutExtension(filename.substr(0, extensionPosition));
-
-            // Make sure if we have an assembly with multiple extensions present,
-            // we insert only one version of it.
-            if (addedAssemblies.find(filenameWithoutExtension) == addedAssemblies.end())
-            {
-                addedAssemblies.insert(filenameWithoutExtension);
-
-                tpaList->append(directoryPath);
-#ifdef EDGE_PLATFORM_WINDOWS
-                tpaList->append("\\");
-#else
-                tpaList->append("/");
-#endif
-                tpaList->append(filename);
-#ifdef EDGE_PLATFORM_WINDOWS
-                tpaList->append(";");
-#else
-                tpaList->append(":");
-#endif
-
-                DBG("CoreClrEmbedding::AddToTpaList - Added %s to the TPA list", filename.c_str());
-            }
-        }
-        while (FindNextFile(fileHandle, &directoryEntry));
-
-        FindClose(fileHandle);
-
-        // Rewind the directory stream to be able to iterate over it for the next extension
-        fileHandle = FindFirstFile(directoryPathWithFilter.c_str(), &directoryEntry);
+				trace::info(_X("CoreClrEmbedding::AddToTpaList - Added %s to the TPA list"), filename.c_str());
+			}
+		}
     }
-
-    FindClose(fileHandle);
 }
-#else
-void CoreClrEmbedding::AddToTpaList(std::string directoryPath, std::string* tpaList)
-{
-    const char * const tpaExtensions[] = {
-        ".ni.dll",
-        ".dll",
-        ".ni.exe",
-        ".exe"
-    };
-    DIR* directory = opendir(directoryPath.c_str());
-    struct dirent* directoryEntry;
-    std::set<std::string> addedAssemblies;
 
-    // Walk the directory for each extension separately so that we first get files with .ni.dll extension,
-    // then files with .dll extension, etc.
-    for (uint extensionIndex = 0; extensionIndex < sizeof(tpaExtensions) / sizeof(tpaExtensions[0]); extensionIndex++)
-    {
-        const char* currentExtension = tpaExtensions[extensionIndex];
-        int currentExtensionLength = strlen(currentExtension);
-
-        // For all entries in the directory
-        while ((directoryEntry = readdir(directory)) != NULL)
-        {
-            // We are interested in files only
-            switch (directoryEntry->d_type)
-            {
-                case DT_REG:
-                    break;
-
-                // Handle symlinks and file systems that do not support d_type
-                case DT_LNK:
-                case DT_UNKNOWN:
-                    {
-                        std::string fullFilename;
-
-                        fullFilename.append(directoryPath);
-#ifdef EDGE_PLATFORM_WINDOWS
-                        fullFilename.append("\\");
-#else
-                        fullFilename.append("/");
-#endif
-                        fullFilename.append(directoryEntry->d_name);
-
-                        struct stat fileInfo;
-
-                        if (stat(fullFilename.c_str(), &fileInfo) == -1)
-                        {
-                            continue;
-                        }
-
-                        if (!S_ISREG(fileInfo.st_mode))
-                        {
-                            continue;
-                        }
-                    }
-
-                    break;
-
-                default:
-                    continue;
-            }
-
-            std::string filename(directoryEntry->d_name);
-
-            // Check if the extension matches the one we are looking for
-            int extensionPosition = filename.length() - currentExtensionLength;
-
-            if ((extensionPosition <= 0) || (filename.compare(extensionPosition, currentExtensionLength, currentExtension) != 0))
-            {
-                continue;
-            }
-
-            std::string filenameWithoutExtension(filename.substr(0, extensionPosition));
-
-            // Make sure if we have an assembly with multiple extensions present,
-            // we insert only one version of it.
-            if (addedAssemblies.find(filenameWithoutExtension) == addedAssemblies.end())
-            {
-                addedAssemblies.insert(filenameWithoutExtension);
-
-                tpaList->append(directoryPath);
-#ifdef EDGE_PLATFORM_WINDOWS
-                tpaList->append("\\");
-#else
-                tpaList->append("/");
-#endif
-                tpaList->append(filename);
-                tpaList->append(":");
-            }
-        }
-
-        // Rewind the directory stream to be able to iterate over it for the next extension
-        rewinddir(directory);
-    }
-
-    closedir(directory);
-}
-#endif
-
-void CoreClrEmbedding::FreeCoreClr(void** libCoreClr)
+void CoreClrEmbedding::FreeCoreClr(pal::dll_t libCoreClr)
 {
     if (libCoreClr)
     {
-#ifdef EDGE_PLATFORM_WINDOWS
-        FreeLibrary((HMODULE) libCoreClr);
-#else
-        dlclose(libCoreClr);
-#endif
+		pal::unload_library(libCoreClr);
         libCoreClr = NULL;
     }
 }
 
-bool CoreClrEmbedding::LoadCoreClrAtPath(const char* loadPath, void** libCoreClrPointer)
+bool CoreClrEmbedding::LoadCoreClrAtPath(pal::string_t loadPath, pal::dll_t* libCoreClrPointer)
 {
-    std::string coreClrDllPath(loadPath);
+    trace::info(_X("CoreClrEmbedding::LoadCoreClrAtPath - Trying to load %s from %s"), LIBCORECLR_NAME, loadPath.c_str());
 
-    DBG("CoreClrEmbedding::LoadCoreClrAtPath - Trying to load %s from %s", LIBCORECLR_NAME, loadPath);
+	pal::string_t coreClrFilePath = pal::string_t(loadPath);
+	append_path(&coreClrFilePath, LIBCORECLR_NAME);
 
-#ifdef EDGE_PLATFORM_WINDOWS
-    coreClrDllPath.append("\\");
-#else
-    coreClrDllPath.append("/");
-#endif
-    coreClrDllPath.append(LIBCORECLR_NAME);
-
-#ifdef EDGE_PLATFORM_WINDOWS
-    *libCoreClrPointer = LoadLibrary(coreClrDllPath.c_str());
-#else
-    *libCoreClrPointer = dlopen(coreClrDllPath.c_str(), RTLD_NOW | RTLD_GLOBAL);
-#endif
-
-    if (*libCoreClrPointer == NULL )
-    {
-        DBG("CoreClrEmbedding::LoadCoreClrAtPath - Errors loading %s from %s: %s", LIBCORECLR_NAME, loadPath, GetLoadError());
+	if (coreclr_exists_in_dir(loadPath) && pal::load_library(coreClrFilePath.c_str(), libCoreClrPointer))
+	{
+    	trace::info(_X("CoreClrEmbedding::LoadCoreClrAtPath - Load of %s succeeded"), LIBCORECLR_NAME);
+		return true;
     }
 
-    else
-    {
-    	DBG("CoreClrEmbedding::LoadCoreClrAtPath - Load of %s succeeded", LIBCORECLR_NAME);
-    }
-
-    return *libCoreClrPointer != NULL;
-}
-
-void* CoreClrEmbedding::LoadSymbol(void* library, const char* symbolName)
-{
-#ifdef EDGE_PLATFORM_WINDOWS
-    return GetProcAddress((HMODULE) library, symbolName);
-#else
-    return dlsym(library, symbolName);
-#endif
+    return false;
 }
 
 char* CoreClrEmbedding::GetLoadError()
@@ -732,52 +574,33 @@ char* CoreClrEmbedding::GetLoadError()
 #endif
 }
 
-void CoreClrEmbedding::GetPathToBootstrapper(char* pathToBootstrapper, size_t bufferSize)
-{
-#ifdef EDGE_PLATFORM_APPLE
-    ssize_t pathLength = proc_pidpath(getpid(), pathToBootstrapper, bufferSize);
-#elif defined(EDGE_PLATFORM_WINDOWS)
-    DWORD dwBufferSize;
-    SIZETToDWord(bufferSize, &dwBufferSize);
-
-    size_t pathLength = GetModuleFileName(GetModuleHandle(NULL), pathToBootstrapper, dwBufferSize);
-#else
-    ssize_t pathLength = readlink("/proc/self/exe", pathToBootstrapper, bufferSize);
-#endif
-    assert(pathLength > 0);
-
-    // ensure pathToBootstrapper is null terminated, readlink for example
-    // will not null terminate it.
-    pathToBootstrapper[pathLength] = '\0';
-}
-
 void CoreClrEmbedding::CallClrFunc(CoreClrGcHandle functionHandle, void* payload, int payloadType, int* taskState, void** result, int* resultType)
 {
-	DBG("CoreClrEmbedding::CallClrFunc");
+	trace::info(_X("CoreClrEmbedding::CallClrFunc"));
 	callFunc(functionHandle, payload, payloadType, taskState, result, resultType);
 }
 
 void CoreClrEmbedding::ContinueTask(CoreClrGcHandle taskHandle, void* context, TaskCompleteFunction callback, void** exception)
 {
-	DBG("CoreClrEmbedding::ContinueTask");
+	trace::info(_X("CoreClrEmbedding::ContinueTask"));
 	continueTask(taskHandle, context, callback, exception);
 }
 
 void CoreClrEmbedding::FreeHandle(CoreClrGcHandle handle)
 {
-	DBG("CoreClrEmbedding::FreeHandle");
+	trace::info(_X("CoreClrEmbedding::FreeHandle"));
 	freeHandle(handle);
 }
 
 void CoreClrEmbedding::FreeMarshalData(void* marshalData, int marshalDataType)
 {
-	DBG("CoreClrEmbedding::FreeMarshalData");
+	trace::info(_X("CoreClrEmbedding::FreeMarshalData"));
 	freeMarshalData(marshalData, marshalDataType);
 }
 
 CoreClrGcHandle CoreClrEmbedding::CompileFunc(const void* options, const int payloadType, v8::Local<v8::Value>* v8Exception)
 {
-    DBG("CoreClrEmbedding::CompileFunc - Starting");
+    trace::info(_X("CoreClrEmbedding::CompileFunc - Starting"));
 
     CoreClrGcHandle exception;
     CoreClrGcHandle function = compileFunc(options, payloadType, &exception);
@@ -792,7 +615,7 @@ CoreClrGcHandle CoreClrEmbedding::CompileFunc(const void* options, const int pay
 
     else
     {
-        DBG("CoreClrEmbedding::CompileFunc - Finished");
+        trace::info(_X("CoreClrEmbedding::CompileFunc - Finished"));
         return function;
     }
 }
