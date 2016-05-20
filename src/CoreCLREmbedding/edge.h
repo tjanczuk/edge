@@ -35,6 +35,8 @@ typedef struct bootstrapperContext
 	const char* runtimeDirectory;
 	const char* applicationDirectory;
 	const char* edgeNodePath;
+	const char* bootstrapAssemblies;
+	const char* dependencyManifestFile;
 } BootstrapperContext;
 
 typedef void (STDMETHODCALLTYPE *CallFuncFunction)(

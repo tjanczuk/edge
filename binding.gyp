@@ -23,11 +23,11 @@
         "<!(node -e \"require('nan')\")"
       ],
       'cflags+': [
-        '-DHAVE_CORECLR -std=c++11'
+        '-DHAVE_CORECLR -D_NO_ASYNCRTIMP -std=c++11'
       ],
       'xcode_settings': {
         'OTHER_CFLAGS': [
-          '-DHAVE_CORECLR'
+          '-DHAVE_CORECLR -D_NO_ASYNCRTIMP'
         ]
       },
       'conditions': [
@@ -50,7 +50,14 @@
                     'src/CoreCLREmbedding/pal/pal.windows.cpp',
                     'src/CoreCLREmbedding/pal/pal_utils.cpp',
                     'src/CoreCLREmbedding/pal/trace.cpp',
-                    'src/CoreCLREmbedding/fxr/fx_ver.cpp'
+                    'src/CoreCLREmbedding/fxr/fx_ver.cpp',
+                    'src/CoreCLREmbedding/json/casablanca/src/json/json.cpp',
+                    'src/CoreCLREmbedding/json/casablanca/src/json/json_parsing.cpp',
+                    'src/CoreCLREmbedding/json/casablanca/src/json/json_serialization.cpp',
+                    'src/CoreCLREmbedding/json/casablanca/src/utilities/asyncrt_utils.cpp'
+                  ],
+                  'include_dirs+': [
+                    'src/CoreCLREmbedding/json/casablanca/include'
                   ]
                 },
                 {
@@ -76,7 +83,14 @@
                     'src/CoreCLREmbedding/pal/pal.unix.cpp',
                     'src/CoreCLREmbedding/pal/pal_utils.cpp',
                     'src/CoreCLREmbedding/pal/trace.cpp',
-                    'src/CoreCLREmbedding/fxr/fx_ver.cpp'
+                    'src/CoreCLREmbedding/fxr/fx_ver.cpp',
+                    'src/CoreCLREmbedding/json/casablanca/src/json/json.cpp',
+                    'src/CoreCLREmbedding/json/casablanca/src/json/json_parsing.cpp',
+                    'src/CoreCLREmbedding/json/casablanca/src/json/json_serialization.cpp',
+                    'src/CoreCLREmbedding/json/casablanca/src/utilities/asyncrt_utils.cpp'
+                  ],
+                  'include_dirs+': [
+                    'src/CoreCLREmbedding/json/casablanca/include'
                   ]
                 },
                 {
@@ -100,7 +114,8 @@
               'AdditionalOptions': [
                 '/wd4506',
                 '/DHAVE_CORECLR',
-                '/EHsc'
+                '/EHsc',
+                '/D_NO_ASYNCRTIMP'
               ]
             },
             'VCLinkerTool': {
@@ -123,6 +138,7 @@
               'AdditionalOptions': [
                 '/wd4506',
                 '/DHAVE_CORECLR',
+                '/D_NO_ASYNCRTIMP',
                 '/EHsc'
               ]
             },
@@ -272,7 +288,7 @@
                         'src/CoreCLREmbedding/project.json'
                       ],
                       'outputs': [
-                        'src/CoreCLREmbedding/bin/$(BUILDTYPE)/netstandard1.5/CoreCLREmbedding.dll'
+                        'src/CoreCLREmbedding/bin/$(Configuration)/netstandard1.5/CoreCLREmbedding.dll'
                       ],                        
                       'action': [
                         'cd "<(module_root_dir)\\src\\CoreCLREmbedding" & dotnet restore & cd "<(module_root_dir)\\src\\CoreCLREmbedding" & dotnet build --configuration $(Configuration) & copy "<(module_root_dir)\\src\\CoreCLREmbedding\\bin\\$(Configuration)\\netstandard1.5\\CoreCLREmbedding.dll" "<(module_root_dir)\\build\\$(Configuration)"'
@@ -281,9 +297,9 @@
                   ],
                   'copies+': [
                     {
-                      'destination': '<(module_root_dir)\\build\\$(BUILDTYPE)',
+                      'destination': '<(module_root_dir)\\build\\$(Configuration)',
                       'files': [
-                        '<(module_root_dir)\\src\\CoreCLREmbedding\\bin\\$(BUILDTYPE)\\netstandard1.5\\CoreCLREmbedding.dll'
+                        '<(module_root_dir)\\src\\CoreCLREmbedding\\bin\\$(Configuration)\\netstandard1.5\\CoreCLREmbedding.dll'
                       ]
                     }
                   ]

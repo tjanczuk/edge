@@ -5,6 +5,7 @@
 #include "pal/pal_utils.h"
 #include "pal/trace.h"
 #include "fxr/fx_ver.h"
+#include "cpprest/json.h"
 
 #ifndef EDGE_PLATFORM_WINDOWS
 #include <dlfcn.h>
@@ -240,12 +241,35 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
     trace::info(_X("CoreClrEmbedding::Initialize - Bootstrapper is %s"), bootstrapper.c_str());
 
 	pal::string_t edgeAppDir;
-	pal::getenv(_X("EDGE_APP_DIR"), &edgeAppDir);
+	pal::getenv(_X("EDGE_APP_ROOT"), &edgeAppDir);
 
 	edgeAppDir = edgeAppDir.length() > 0 ? edgeAppDir : currentDirectory;
 
     pal::string_t coreClrDirectory;
 	pal::string_t coreClrEnvironmentVariable;
+	pal::string_t dependencyManifestFile;
+
+	trace::info(_X("CoreClrEmbedding::Initialize - Getting the dependency manifest file for the Edge app directory: %s"), edgeAppDir.c_str());
+
+	std::vector<pal::string_t> depsJsonFiles;
+	pal::readdir(edgeAppDir, _X("*.deps.json"), &depsJsonFiles);
+
+	if (depsJsonFiles.size() > 1)
+	{
+		std::vector<char> edgeAppDirCstr;
+		pal::pal_clrstring(edgeAppDir, &edgeAppDirCstr);
+
+		throwV8Exception("Multiple dependency manifest (*.deps.json) files exist in the Edge.js application directory (%s).", edgeAppDirCstr.data());
+		return E_FAIL;
+	}
+
+	else if (depsJsonFiles.size() == 1)
+	{
+		dependencyManifestFile = pal::string_t(edgeAppDir);
+		append_path(&dependencyManifestFile, depsJsonFiles[0].c_str());
+
+		trace::info(_X("CoreClrEmbedding::Initialize - Exactly one (%s) dependency manifest file found in the Edge app directory, using it"), dependencyManifestFile.c_str());
+	}
 	
 	pal::getenv(_X("CORECLR_DIR"), &coreClrEnvironmentVariable);
 
@@ -272,45 +296,6 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 
     if (!libCoreClr)
     {
-		//trace::info(_X("CoreClrEmbedding::Initialize - Getting the dependency manifest file for the Edge app directory: %s"), edgeAppDir.c_str());
-
-		//pal::string_t depsJsonFile;
-		//std::vector<pal::string_t> depsJsonFiles;
-
-		//pal::readdir(edgeAppDir, _X("*.deps.json"), &depsJsonFiles);
-
-		//if (depsJsonFiles.size() > 1)
-		//{
-		//	std::vector<char> edgeAppDirCstr;
-		//	pal::pal_clrstring(edgeAppDir, &edgeAppDirCstr);
-
-		//	throwV8Exception("Multiple dependency manifest (*.deps.json) files exist in the Edge.js application directory (%s).", edgeAppDirCstr.data());
-		//	return E_FAIL;
-		//}
-
-		//else if (depsJsonFiles.size() == 1)
-		//{
-		//	depsJsonFile = depsJsonFiles[0];
-		//	trace::info(_X("CoreClrEmbedding::Initialize - Exactly one (%s) dependency manifest file found in the Edge app directory, using it"), depsJsonFile.c_str());
-		//}
-
-		//else
-		//{
-		//	// TODO: no .deps.json file, use the stock one from the distribution
-		//}
-
-		//trace::info(_X("CoreClrEmbedding::Initialize - Opening a stream for the dependency manifest file"), depsJsonFile.c_str());
-		//pal::ifstream_t depsJsonStream(depsJsonFile);
-
-		//if (!depsJsonStream.good())
-		//{
-		//	std::vector<char> depsJsonFileCstr;
-		//	pal::pal_clrstring(depsJsonFile, &depsJsonFileCstr);
-
-		//	throwV8Exception("Unable to open the dependency manifest file at %s", depsJsonFileCstr.data());
-		//	return E_FAIL;
-		//}
-
 		pal::string_t pathEnvironmentVariable;
 		pal::getenv(_X("PATH"), &pathEnvironmentVariable);
 
@@ -353,6 +338,8 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 						return E_FAIL;
 					}
 				}
+
+				// TODO: look at deps.json for the framework version
 
 				else
 				{
@@ -502,13 +489,15 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 	CoreClrGcHandle exception = NULL;
 	BootstrapperContext context;
 
-	std::vector<char> coreClrDirectoryCstr, currentDirectoryCstr;
+	std::vector<char> coreClrDirectoryCstr, currentDirectoryCstr, dependencyManifestFileCstr;
 	pal::pal_clrstring(coreClrDirectory, &coreClrDirectoryCstr);
 	pal::pal_clrstring(currentDirectory, &currentDirectoryCstr);
+	pal::pal_clrstring(dependencyManifestFile, &dependencyManifestFileCstr);
 
 	context.runtimeDirectory = coreClrDirectoryCstr.data();
 	context.applicationDirectory = getenv("EDGE_APP_ROOT");
 	context.edgeNodePath = edgeNodePathCstr.data();
+	context.dependencyManifestFile = dependencyManifestFileCstr.data();
 
 	if (!context.applicationDirectory)
 	{
@@ -528,8 +517,64 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 	DBG("CoreClrEmbedding::Initialize - Runtime directory: %s", context.runtimeDirectory);
 	DBG("CoreClrEmbedding::Initialize - Application directory: %s", context.applicationDirectory);
 
-	trace::info(_X("CoreClrEmbedding::Initialize - Calling CLR Initialize() function"));
+	// TODO: merge in .deps.json dependencies from the application, if applicable
+	trace::info(_X("CoreClrEmbedding::Initialize - Getting bootstrap assemblies list"));
+	
+	pal::string_t edgeJsProjectJsonFile(edgeNodePath);
+	append_path(&edgeJsProjectJsonFile, _X("project.lock.json"));
 
+	if (!pal::file_exists(edgeJsProjectJsonFile))
+	{
+		throwV8Exception("Unable to locate the project.lock.json file for Edge.js under %s.", edgeNodePathCstr);
+		return E_FAIL;
+	}
+
+	trace::info(_X("CoreClrEmbedding::Initialize - Opening a stream for Edge.js package dependencies file at %s"), edgeJsProjectJsonFile.c_str());
+	pal::ifstream_t edgeJsProjectJsonStream(edgeJsProjectJsonFile);
+
+	if (!edgeJsProjectJsonStream.good())
+	{
+		std::vector<char> edgeJsProjectJsonFileCstr;
+		pal::pal_clrstring(edgeJsProjectJsonFile, &edgeJsProjectJsonFileCstr);
+
+		throwV8Exception("Unable to open the project.lock.json file for Edge.js at %s", edgeJsProjectJsonFileCstr.data());
+		return E_FAIL;
+	}
+
+	const web::json::value root = web::json::value::parse(edgeJsProjectJsonStream);
+	const web::json::object& json = root.as_object();
+	const web::json::object& dependencies = json.at(_X("targets")).as_object().at(_X(".NETStandard,Version=v1.5")).as_object();
+
+	pal::string_t bootstrapAssemblies;
+
+	for (const auto& dependency : dependencies)
+	{
+		if (dependency.second.has_field(_X("runtime")))
+		{
+			pal::string_t runtimeAssembly = dependency.second.at(_X("runtime")).as_object().begin()->first;
+
+			if (!ends_with(runtimeAssembly, _X("/_._"), false))
+			{
+				trace::info(_X("CoreClrEmbedding::Initialize - Found runtime dependency assembly for %s at %s"), dependency.first.c_str(), runtimeAssembly.c_str());
+
+				if (bootstrapAssemblies.length() > 0)
+				{
+					bootstrapAssemblies.append(_X(";"));
+				}
+
+				bootstrapAssemblies.append(dependency.first);
+				bootstrapAssemblies.append(_X(":"));
+				bootstrapAssemblies.append(runtimeAssembly);
+			}
+		}
+	}
+
+	std::vector<char> bootstrapAssembliesCstr;
+	pal::pal_clrstring(bootstrapAssemblies, &bootstrapAssembliesCstr);
+
+	context.bootstrapAssemblies = bootstrapAssembliesCstr.data();
+
+	trace::info(_X("CoreClrEmbedding::Initialize - Calling CLR Initialize() function"));
 	initialize(&context, &exception);
 
 	if (exception)
