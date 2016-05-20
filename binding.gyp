@@ -54,7 +54,9 @@
                     'src/CoreCLREmbedding/json/casablanca/src/json/json.cpp',
                     'src/CoreCLREmbedding/json/casablanca/src/json/json_parsing.cpp',
                     'src/CoreCLREmbedding/json/casablanca/src/json/json_serialization.cpp',
-                    'src/CoreCLREmbedding/json/casablanca/src/utilities/asyncrt_utils.cpp'
+                    'src/CoreCLREmbedding/json/casablanca/src/utilities/asyncrt_utils.cpp',
+                    'src/CoreCLREmbedding/deps/deps_format.cpp',
+                    'src/CoreCLREmbedding/deps/deps_entry.cpp'
                   ],
                   'include_dirs+': [
                     'src/CoreCLREmbedding/json/casablanca/include'
@@ -87,7 +89,9 @@
                     'src/CoreCLREmbedding/json/casablanca/src/json/json.cpp',
                     'src/CoreCLREmbedding/json/casablanca/src/json/json_parsing.cpp',
                     'src/CoreCLREmbedding/json/casablanca/src/json/json_serialization.cpp',
-                    'src/CoreCLREmbedding/json/casablanca/src/utilities/asyncrt_utils.cpp'
+                    'src/CoreCLREmbedding/json/casablanca/src/utilities/asyncrt_utils.cpp',
+                    'src/CoreCLREmbedding/deps/deps_format.cpp',
+                    'src/CoreCLREmbedding/deps/deps_entry.cpp'
                   ],
                   'include_dirs+': [
                     'src/CoreCLREmbedding/json/casablanca/include'
@@ -115,7 +119,8 @@
                 '/wd4506',
                 '/DHAVE_CORECLR',
                 '/EHsc',
-                '/D_NO_ASYNCRTIMP'
+                '/D_NO_ASYNCRTIMP',
+                '/DTARGET_RUNTIME_ID="win7-x64"'
               ]
             },
             'VCLinkerTool': {
@@ -139,7 +144,8 @@
                 '/wd4506',
                 '/DHAVE_CORECLR',
                 '/D_NO_ASYNCRTIMP',
-                '/EHsc'
+                '/EHsc',
+                '/DTARGET_RUNTIME_ID=\\"win7-x64\\"'
               ]
             },
             'VCLinkerTool': {

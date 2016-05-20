@@ -6,6 +6,8 @@
 #include "pal/trace.h"
 #include "fxr/fx_ver.h"
 #include "cpprest/json.h"
+#include "deps/deps_format.h"
+#include "deps/deps_entry.h"
 
 #ifndef EDGE_PLATFORM_WINDOWS
 #include <dlfcn.h>
@@ -517,7 +519,6 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 	DBG("CoreClrEmbedding::Initialize - Runtime directory: %s", context.runtimeDirectory);
 	DBG("CoreClrEmbedding::Initialize - Application directory: %s", context.applicationDirectory);
 
-	// TODO: merge in .deps.json dependencies from the application, if applicable
 	trace::info(_X("CoreClrEmbedding::Initialize - Getting bootstrap assemblies list"));
 	
 	pal::string_t edgeJsProjectJsonFile(edgeNodePath);
@@ -568,6 +569,11 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 			}
 		}
 	}
+
+	// TODO: use versions from the .deps.json if they exist
+	// TODO: update deps_format.cpp to get TARGET_RUNTIME_ID from coreclr.dll somehow
+	//deps_json_t dependencyManifest(true, dependencyManifestFile);
+	//dependencyManifest.get_entries(deps_entry_t::asset_types::runtime);
 
 	std::vector<char> bootstrapAssembliesCstr;
 	pal::pal_clrstring(bootstrapAssemblies, &bootstrapAssembliesCstr);

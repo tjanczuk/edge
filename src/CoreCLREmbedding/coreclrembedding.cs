@@ -168,6 +168,7 @@ public class CoreCLREmbedding
         private readonly Dictionary<string, Assembly> _loadedAssemblies = new Dictionary<string, Assembly>();
         private readonly Dictionary<string, Tuple<SemVersion, string>> _libraries = new Dictionary<string, Tuple<SemVersion, string>>();
         private readonly string _packagesPath;
+        private static NuGetFramework _targetFramework = new NuGetFramework(".NETStandard,Version=v1.5");
 
         public EdgeAssemblyLoadContext(string bootstrapAssemblies)
         {
@@ -212,12 +213,11 @@ public class CoreCLREmbedding
         public void LoadDependencyManifest(string dependencyManifestFile)
         {
             DebugMessage("EdgeAssemblyLoadContext::LoadDependencyManifest (CLR) - Loading dependency manifest from {0}", dependencyManifestFile);
-
-            NuGetFramework targetFramework = new NuGetFramework(".NETStandard,Version=v1.5");
+            
             LockFile edgeJsProjectJsonLockFile = LockFileReader.Read(Path.Combine(RuntimeEnvironment.EdgeNodePath, "project.lock.json"), false);
-            ProjectContext edgeJsProjectContext = new ProjectContextBuilder().WithLockFile(edgeJsProjectJsonLockFile).WithTargetFramework(targetFramework).Build();
+            ProjectContext edgeJsProjectContext = new ProjectContextBuilder().WithLockFile(edgeJsProjectJsonLockFile).WithTargetFramework(_targetFramework).Build();
             LibraryExporter edgeJsProjectExporter = edgeJsProjectContext.CreateExporter("Release");
-            DependencyContext edgeJsDependencyContext = new DependencyContextBuilder().Build(null, null, edgeJsProjectExporter.GetAllExports(), true, targetFramework,
+            DependencyContext edgeJsDependencyContext = new DependencyContextBuilder().Build(null, null, edgeJsProjectExporter.GetAllExports(), true, _targetFramework,
                 String.Empty);
 
             DependencyContextJsonReader dependencyContextReader = new DependencyContextJsonReader();
@@ -230,24 +230,7 @@ public class CoreCLREmbedding
                 DebugMessage("EdgeAssemblyLoadContext::LoadDependencyManifest (CLR) - Resetting assemblies list");
                 _libraries.Clear();
 
-                DebugMessage("EdgeAssemblyLoadContext::LoadDependencyManifest (CLR) - Adding runtime assemblies for {0}", dependencyContext.Target.Framework);
-
-                foreach (RuntimeLibrary runtimeLibrary in dependencyContext.RuntimeLibraries)
-                {
-                    DebugMessage("EdgeAssemblyLoadContext::LoadDependencyManifest (CLR) - Processing {1} {0}", runtimeLibrary.Name, runtimeLibrary.Type);
-
-                    if (runtimeLibrary.RuntimeAssemblyGroups != null && runtimeLibrary.RuntimeAssemblyGroups.Any() && runtimeLibrary.RuntimeAssemblyGroups[0].AssetPaths.Any())
-                    {
-                        string assetPath = runtimeLibrary.RuntimeAssemblyGroups[0].AssetPaths[0];
-                        string assemblyPath = runtimeLibrary.Type == "project"
-                            ? Path.Combine(RuntimeEnvironment.ApplicationDirectory, assetPath)
-                            : Path.Combine(_packagesPath, runtimeLibrary.Name, runtimeLibrary.Version, assetPath.Replace('/', Path.DirectorySeparatorChar));
-
-                        _libraries[runtimeLibrary.Name] = new Tuple<SemVersion, string>(SemVersion.Parse(runtimeLibrary.Version), assemblyPath);
-
-                        DebugMessage("EdgeAssemblyLoadContext::LoadDependencyManifest (CLR) - Added runtime assembly {0}", assemblyPath);
-                    }
-                }
+                AddDependencies(dependencyContext);
 
                 // TODO: add compile assemblies
             }
@@ -255,6 +238,37 @@ public class CoreCLREmbedding
             _noDependencyManifestFile = false;
 
             DebugMessage("EdgeAssemblyLoadContext::LoadDependencyManifest (CLR) - Finished");
+        }
+
+        private void AddDependencies(DependencyContext dependencyContext)
+        {
+            DebugMessage("EdgeAssemblyLoadContext::AddDependencies (CLR) - Adding runtime assemblies for {0}", dependencyContext.Target.Framework);
+
+            foreach (RuntimeLibrary runtimeLibrary in dependencyContext.RuntimeLibraries)
+            {
+                DebugMessage("EdgeAssemblyLoadContext::AddDependencies (CLR) - Processing {1} {0}", runtimeLibrary.Name, runtimeLibrary.Type);
+
+                if (runtimeLibrary.RuntimeAssemblyGroups != null && runtimeLibrary.RuntimeAssemblyGroups.Any() && runtimeLibrary.RuntimeAssemblyGroups[0].AssetPaths.Any())
+                {
+                    string assetPath = runtimeLibrary.RuntimeAssemblyGroups[0].AssetPaths[0];
+                    string assemblyPath = runtimeLibrary.Type == "project"
+                        ? Path.Combine(RuntimeEnvironment.ApplicationDirectory, assetPath)
+                        : Path.Combine(_packagesPath, runtimeLibrary.Name, runtimeLibrary.Version, assetPath.Replace('/', Path.DirectorySeparatorChar));
+
+                    if (!_libraries.ContainsKey(runtimeLibrary.Name))
+                    {
+                        _libraries[runtimeLibrary.Name] = new Tuple<SemVersion, string>(SemVersion.Parse(runtimeLibrary.Version), assemblyPath);
+                        DebugMessage("EdgeAssemblyLoadContext::AddDependencies (CLR) - Added runtime assembly {0}", assemblyPath);
+                    }
+
+                    else
+                    {
+                        DebugMessage("EdgeAssemblyLoadContext::AddDependencies (CLR) - Already present in the runtime assemblies list, skipping");
+                    }
+                }
+
+                // TODO: add native assets
+            }
         }
 
         protected void AddCompileAssemblies(IList<LibraryDescription> libraries)
@@ -284,42 +298,16 @@ public class CoreCLREmbedding
         {
             DebugMessage("EdgeAssemblyLoadContext::AddCompiler (CLR) - Adding the compiler in {0}", compilerDirectory);
 
-            // TODO: do this through DependencyContext
-            BuildWorkspace workspace = new BuildWorkspace(ProjectReaderSettings.ReadFromEnvironment());
-            ProjectContext targetFramework =
-                workspace.GetProjectContextCollection(RuntimeEnvironment.ApplicationDirectory)
-                    .FrameworkOnlyContexts.First(c => c.TargetFramework.Framework == ".NETStandard");
+            LockFile compilerProjectJsonLockFile = LockFileReader.Read(Path.Combine(compilerDirectory, "project.lock.json"), false);
+            ProjectContext compilerProjectContext = new ProjectContextBuilder().WithLockFile(compilerProjectJsonLockFile).WithTargetFramework(_targetFramework).Build();
+            LibraryExporter compilerProjectExporter = compilerProjectContext.CreateExporter("Release");
+            DependencyContext compilerDependencyContext = new DependencyContextBuilder().Build(null, null, compilerProjectExporter.GetAllExports(), true, _targetFramework,
+                String.Empty);
 
-            IList<LibraryDescription> compilerLibraries = targetFramework.LibraryManager.GetLibraries();
-            AddCompileAssemblies(compilerLibraries);
+            DebugMessage("EdgeAssemblyLoadContext::AddCompiler (CLR) - Adding dependencies for the compiler");
+            AddDependencies(compilerDependencyContext);
 
-            foreach (LibraryDescription compilerLibrary in compilerLibraries)
-            {
-                PackageDescription packageDescription = (PackageDescription)compilerLibrary;
-
-                if (packageDescription.RuntimeAssemblies == null || !packageDescription.RuntimeAssemblies.Any())
-                {
-                    continue;
-                }
-
-                string assemblyPath = packageDescription.RuntimeAssemblies.First().Path;
-                SemVersion semver = SemVersion.Parse(compilerLibrary.Identity.Version.ToString());
-
-                if (!_libraries.ContainsKey(compilerLibrary.Identity.Name))
-                {
-                    _libraries[compilerLibrary.Identity.Name] = new Tuple<SemVersion, string>(semver, assemblyPath);
-                    DebugMessage("EdgeAssemblyLoadContext::AddCompiler (CLR) - Added runtime library {0} for the compiler", assemblyPath);
-                }
-
-                else
-                {
-                    if (semver > _libraries[compilerLibrary.Identity.Name].Item1 && !_loadedAssemblies.ContainsKey(compilerLibrary.Identity.Name))
-                    {
-                        _libraries[compilerLibrary.Identity.Name] = new Tuple<SemVersion, string>(semver, assemblyPath);
-                        DebugMessage("EdgeAssemblyLoadContext::AddCompiler (CLR) - Added runtime library {0} for the compiler", assemblyPath);
-                    }
-                }
-            }
+            // TODO: add compile assemblies
 
             DebugMessage("EdgeAssemblyLoadContext::AddCompiler (CLR) - Finished");
         }
@@ -390,6 +378,12 @@ public class CoreCLREmbedding
 
             return LoadFromAssemblyPath(assemblyPath);
         }
+
+        //protected override IntPtr LoadUnmanagedDll(string unmanagedDllName)
+        //{
+        //    // TODO: implement
+        //    throw new NotImplementedException();
+        //}
     }
     
     // ReSharper disable InconsistentNaming
