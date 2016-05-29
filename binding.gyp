@@ -120,7 +120,7 @@
                 '/DHAVE_CORECLR',
                 '/EHsc',
                 '/D_NO_ASYNCRTIMP',
-                '/DTARGET_RUNTIME_ID="win7-x64"'
+                '/DTARGET_RUNTIME_ID=\\"win7-x64\\"'
               ]
             },
             'VCLinkerTool': {
