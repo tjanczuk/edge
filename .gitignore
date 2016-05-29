@@ -37,5 +37,3 @@ Sample105.*
 .settings/
 
 adhoc/
-
-lib/native/win32/**/project.json
