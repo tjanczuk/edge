@@ -1,6 +1,8 @@
 @echo off
 
 set SELF=%~dp0
+set run32=N
+set run64=N
 
 if "%1"=="" set run32=Y
 if "%1"=="ia32" set run32=Y

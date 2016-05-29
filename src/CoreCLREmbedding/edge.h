@@ -7,6 +7,8 @@
 #include <assert.h>
 #include <string>
 #include <stdio.h>
+#include <utility>
+#include <map>
 
 #include "pal/pal.h"
 

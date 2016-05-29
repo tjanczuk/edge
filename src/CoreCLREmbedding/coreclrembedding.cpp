@@ -211,7 +211,6 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
         return E_FAIL;
     }
 
-	// TODO: see if there is a way to get this via PAL
 	pal::string_t edgeNodePath;
 	std::vector<char> edgeNodePathCstr;
 
@@ -423,6 +422,7 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 
     trace::info(_X("CoreClrEmbedding::Initialize - coreclr_create_delegate loaded successfully"));
 
+	// TODO: provide the dependency manifest file
     const char* propertyKeys[] = {
     	"TRUSTED_PLATFORM_ASSEMBLIES",
     	"APP_PATHS",
@@ -546,6 +546,7 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 	const web::json::object& json = root.as_object();
 	const web::json::object& dependencies = json.at(_X("targets")).as_object().at(_X(".NETStandard,Version=v1.5")).as_object();
 
+	std::map<pal::string_t, std::pair<pal::string_t, pal::string_t>> bootstrapAssembliesMap;
 	pal::string_t bootstrapAssemblies;
 
 	for (const auto& dependency : dependencies)
@@ -556,24 +557,73 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 
 			if (!ends_with(runtimeAssembly, _X("/_._"), false))
 			{
-				trace::info(_X("CoreClrEmbedding::Initialize - Found runtime dependency assembly for %s at %s"), dependency.first.c_str(), runtimeAssembly.c_str());
+				pal::stringstream_t packageNameVersionStream(dependency.first);
+				pal::string_t packageName;
+				pal::string_t packageVersion;
 
-				if (bootstrapAssemblies.length() > 0)
-				{
-					bootstrapAssemblies.append(_X(";"));
-				}
+				std::getline(packageNameVersionStream, packageName, _X('/'));
+				std::getline(packageNameVersionStream, packageVersion, _X('/'));
 
-				bootstrapAssemblies.append(dependency.first);
-				bootstrapAssemblies.append(_X(":"));
-				bootstrapAssemblies.append(runtimeAssembly);
+				trace::info(_X("CoreClrEmbedding::Initialize - Found runtime dependency assembly for %s (%s) at %s"), packageName.c_str(), packageVersion.c_str(), runtimeAssembly.c_str());
+				bootstrapAssembliesMap[packageName] = std::pair<pal::string_t, pal::string_t>(packageVersion, runtimeAssembly);
 			}
 		}
 	}
 
-	// TODO: use versions from the .deps.json if they exist
 	// TODO: update deps_format.cpp to get TARGET_RUNTIME_ID from coreclr.dll somehow
-	//deps_json_t dependencyManifest(true, dependencyManifestFile);
-	//dependencyManifest.get_entries(deps_entry_t::asset_types::runtime);
+	if (dependencyManifestFile.length() > 0)
+	{
+		trace::info(_X("CoreClrEmbedding::Initialize - Checking application dependency manifest file for overrides to the bootstrap packages"));
+
+		deps_json_t dependencyManifest(true, dependencyManifestFile);
+		std::vector<deps_entry_t> applicationDependencies = dependencyManifest.get_entries(deps_entry_t::asset_types::runtime);
+
+		for (const deps_entry_t& applicationDependency : applicationDependencies)
+		{
+			trace::info(_X("CoreClrEmbedding::Initialize - Checking %s"), applicationDependency.library_name.c_str());
+
+			if (bootstrapAssembliesMap.find(applicationDependency.library_name) != bootstrapAssembliesMap.end())
+			{
+				fx_ver_t applicationDependencyVersion(-1, -1, -1);
+				fx_ver_t bootstrapVersion(-1, -1, -1);
+				fx_ver_t::parse(applicationDependency.library_version, &applicationDependencyVersion);
+				fx_ver_t::parse(bootstrapAssembliesMap[applicationDependency.library_name].first, &bootstrapVersion);
+
+				if (applicationDependencyVersion > bootstrapVersion)
+				{
+					trace::info(_X("CoreClrEmbedding::Initialize - Application dependency manifest version (%s) is greater than the Edge.js dependency manifest version (%s), new path for the dependency is %s"), applicationDependency.library_version.c_str(), bootstrapAssembliesMap[applicationDependency.library_name].first.c_str(), applicationDependency.relative_path.c_str());
+					bootstrapAssembliesMap[applicationDependency.library_name] = std::pair<pal::string_t, pal::string_t>(applicationDependency.library_version, applicationDependency.relative_path);
+				}
+
+				else
+				{
+					trace::info(_X("CoreClrEmbedding::Initialize - Application dependency manifest version (%s) is less than or equal to the Edge.js dependency manifest version (%s), skipping"), applicationDependency.library_version.c_str(), bootstrapAssembliesMap[applicationDependency.library_name].first.c_str());
+				}
+			}
+
+			else
+			{
+				trace::info(_X("CoreClrEmbedding::Initialize - Not present in the bootstrap assemblies list, skipping"));
+			}
+		}
+	}
+
+	for (std::map<pal::string_t, std::pair<pal::string_t, pal::string_t>>::iterator iter = bootstrapAssembliesMap.begin(); iter != bootstrapAssembliesMap.end(); ++iter)
+	{
+		pal::string_t currentPackageName = iter->first;
+		std::pair<pal::string_t, pal::string_t> versionAssemblyPair = iter->second;
+
+		if (bootstrapAssemblies.length() > 0)
+		{
+			bootstrapAssemblies.append(_X(";"));
+		}
+
+		bootstrapAssemblies.append(currentPackageName);
+		bootstrapAssemblies.append(_X("/"));
+		bootstrapAssemblies.append(versionAssemblyPair.first);
+		bootstrapAssemblies.append(_X(":"));
+		bootstrapAssemblies.append(versionAssemblyPair.second);
+	}
 
 	std::vector<char> bootstrapAssembliesCstr;
 	pal::pal_clrstring(bootstrapAssemblies, &bootstrapAssembliesCstr);

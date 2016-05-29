@@ -213,4 +213,18 @@ describe('call patterns', function () {
 
     });
 
+    if (process.env.EDGE_USE_CORECLR) {
+        it('project can override version of bootstrap assembly', function (done) {
+            var func = edge.func({
+                assemblyFile: edgeTestDll,
+                typeName: 'Edge.Tests.Startup',
+                methodName: 'CorrectVersionOfNewtonsoftJsonUsed'
+            });
+
+            func(null, function (error, result) {
+                assert.equal(result, "8.0.0.0");
+                done();
+            });
+        });
+    }
 });

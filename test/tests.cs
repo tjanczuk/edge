@@ -19,6 +19,10 @@ using System.Collections.Generic;
 using System.Dynamic;
 using System.Text;
 using System.Threading.Tasks;
+#if NETSTANDARD1_5
+using Newtonsoft.Json;
+using System.Reflection;
+#endif
 
 #pragma warning disable 1998
 
@@ -373,6 +377,13 @@ namespace Edge.Tests
         {
             return new BadPerson();
         }
+
+#if NETSTANDARD1_5
+        public async Task<object> CorrectVersionOfNewtonsoftJsonUsed(object input)
+        {
+            return typeof(JsonConvert).GetTypeInfo().Assembly.GetName().Version.ToString();
+        }
+#endif
 
         public class BadPerson 
         {
