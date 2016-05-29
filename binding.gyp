@@ -120,6 +120,7 @@
                 '/DHAVE_CORECLR',
                 '/EHsc',
                 '/D_NO_ASYNCRTIMP',
+                '/D_HAS_EXCEPTIONS',
                 '/DTARGET_RUNTIME_ID=\\"win7-x64\\"'
               ]
             },
@@ -144,6 +145,7 @@
                 '/wd4506',
                 '/DHAVE_CORECLR',
                 '/D_NO_ASYNCRTIMP',
+                '/D_HAS_EXCEPTIONS'
                 '/EHsc',
                 '/DTARGET_RUNTIME_ID=\\"win7-x64\\"'
               ]

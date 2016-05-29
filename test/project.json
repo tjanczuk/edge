@@ -16,6 +16,7 @@
   },
 
   "buildOptions": {
+    "preserveCompilationContext": true,
     "compile": {
       "exclude": ["double/**/*.cs", "hello_class.cs"]
     }

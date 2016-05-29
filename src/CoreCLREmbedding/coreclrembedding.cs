@@ -232,8 +232,6 @@ public class CoreCLREmbedding
                 _libraries.Clear();
 
                 AddDependencies(dependencyContext);
-
-                // TODO: add compile assemblies
             }
 
             _noDependencyManifestFile = false;
@@ -374,7 +372,7 @@ public class CoreCLREmbedding
             {
                 throw new Exception(
                     String.Format(
-                        "Could not load assembly '{0}'.  You will need to create a project.json file that includes this dependency, run 'dotnet build' to generate a .deps.json file, and then specify the output directory from the build process using the EDGE_APP_ROOT environment variable.",
+                        "Could not load file or assembly '{0}'.  You will need to create a project.json file that includes this dependency, run 'dotnet build' to generate a .deps.json file, and then specify the output directory from the build process using the EDGE_APP_ROOT environment variable.",
                         assemblyName.Name));
             }
 
@@ -382,7 +380,7 @@ public class CoreCLREmbedding
             {
                 throw new Exception(
                     String.Format(
-                        "Could not load assembly '{0}'.  You will need to add a reference to this package to your project.json.",
+                        "Could not load file or assembly '{0}'.  You will need to add a reference to this package to your project.json.",
                         assemblyName.Name));
             }
         }
