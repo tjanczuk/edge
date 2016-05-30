@@ -271,7 +271,7 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 
 		trace::info(_X("CoreClrEmbedding::Initialize - Exactly one (%s) dependency manifest file found in the Edge app directory, using it"), dependencyManifestFile.c_str());
 	}
-	
+
 	pal::getenv(_X("CORECLR_DIR"), &coreClrEnvironmentVariable);
 
     if (coreClrEnvironmentVariable.length() > 0)
@@ -340,11 +340,55 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 					}
 				}
 
-				// TODO: look at deps.json for the framework version
-
-				else
+				else if (dependencyManifestFile.length() > 0)
 				{
-					trace::info(_X("CoreClrEmbedding::Initialize - No CORECLR_VERSION environment variable provided, getting the max installed framework version"));
+					trace::info(_X("CoreClrEmbedding::Initialize - Checking for a framework version in the application dependency manifest"));
+
+					pal::ifstream_t dependencyManifestStream(dependencyManifestFile);
+
+					if (!dependencyManifestStream.good())
+					{
+						std::vector<char> manifestFileCstr;
+						pal::pal_clrstring(dependencyManifestFile, &manifestFileCstr);
+
+						throwV8Exception("Unable to open the application dependency manifest file at %s", manifestFileCstr.data());
+						return E_FAIL;
+					}
+
+					const web::json::value manifestRoot = web::json::value::parse(dependencyManifestStream);
+					const web::json::object& rootJson = manifestRoot.as_object();
+					const web::json::object& libraries = rootJson.at(_X("libraries")).as_object();
+
+					for (const auto& library : libraries)
+					{
+						size_t pos = library.first.find(_X("/"));
+						pal::string_t libraryName = library.first.substr(0, pos);
+						pal::string_t libraryVersion = library.first.substr(pos + 1);
+
+						if (libraryName == _X("Microsoft.NETCore.App"))
+						{
+							trace::info(_X("CoreClrEmbedding::Initialize - Found a framework version (%s) in the application dependency manifest, trying to load it"), libraryVersion.c_str());
+
+							append_path(&coreClrDirectory, libraryVersion.c_str());
+							LoadCoreClrAtPath(coreClrDirectory, &libCoreClr);
+
+							if (!libCoreClr)
+							{
+								std::vector<char> coreClrVersionCstr;
+								pal::pal_clrstring(libraryVersion, &coreClrVersionCstr);
+
+								throwV8Exception("The targeted CLR version (%s) specified in application dependency manifest was not found.", coreClrVersionCstr.data());
+								return E_FAIL;
+							}
+
+							break;
+						}
+					}
+				}
+
+				if (!libCoreClr)
+				{
+					trace::info(_X("CoreClrEmbedding::Initialize - No CORECLR_VERSION environment variable provided and no framework version provided in the application dependency manifest, getting the max installed framework version"));
 
 					std::vector<pal::string_t> frameworkVersions;
 					pal::readdir(coreClrDirectory, &frameworkVersions);
