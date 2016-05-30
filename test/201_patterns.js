@@ -226,5 +226,18 @@ describe('call patterns', function () {
                 done();
             });
         });
+
+        it('can use DependencyContext.Default', function (done) {
+            var func = edge.func({
+                assemblyFile: edgeTestDll,
+                typeName: 'Edge.Tests.Startup',
+                methodName: 'CanUseDefaultDependencyContext'
+            });
+
+            func(null, function (error, result) {
+                assert.equal(result, "8.0.3");
+                done();
+            });
+        });
     }
 });

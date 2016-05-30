@@ -236,6 +236,18 @@ public class CoreCLREmbedding
 
             _noDependencyManifestFile = false;
 
+            string entryAssemblyPath = dependencyManifestFile.Replace(".deps.json", ".dll");
+
+            if (File.Exists(entryAssemblyPath))
+            {
+                Assembly entryAssembly = Load(new AssemblyName(Path.GetFileNameWithoutExtension(entryAssemblyPath)));
+                Lazy<DependencyContext> defaultDependencyContext = new Lazy<DependencyContext>(() => DependencyContext.Load(entryAssembly));
+
+                // I really don't like doing it this way, but it's the easiest way to give the running code access to the default 
+                // dependency context data
+                typeof(DependencyContext).GetField("_defaultContext", BindingFlags.Static | BindingFlags.NonPublic).SetValue(null, defaultDependencyContext);
+            }
+
             DebugMessage("EdgeAssemblyLoadContext::LoadDependencyManifest (CLR) - Finished");
         }
 

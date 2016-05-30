@@ -249,6 +249,7 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
     pal::string_t coreClrDirectory;
 	pal::string_t coreClrEnvironmentVariable;
 	pal::string_t dependencyManifestFile;
+	pal::string_t frameworkDependencyManifestFile;
 
 	trace::info(_X("CoreClrEmbedding::Initialize - Getting the dependency manifest file for the Edge app directory: %s"), edgeAppDir.c_str());
 
@@ -419,6 +420,17 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 						trace::info(_X("CoreClrEmbedding::Initialize - None of the subdirectories of %s were valid framework versions"), coreClrDirectory.c_str());
 					}
 				}
+
+				if (libCoreClr)
+				{
+					frameworkDependencyManifestFile = pal::string_t(coreClrDirectory);
+					append_path(&frameworkDependencyManifestFile, _X("Microsoft.NETCore.App.deps.json"));
+
+					if (!pal::file_exists(frameworkDependencyManifestFile))
+					{
+						frameworkDependencyManifestFile = dependencyManifestFile.length() > 0 ? pal::string_t(dependencyManifestFile) : _X("");
+					}
+				}
 			}
 
     		if (!libCoreClr)
@@ -466,14 +478,15 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 
     trace::info(_X("CoreClrEmbedding::Initialize - coreclr_create_delegate loaded successfully"));
 
-	// TODO: provide the dependency manifest file
     const char* propertyKeys[] = {
     	"TRUSTED_PLATFORM_ASSEMBLIES",
     	"APP_PATHS",
     	"APP_NI_PATHS",
     	"NATIVE_DLL_SEARCH_DIRECTORIES",
     	"AppDomainCompatSwitch",
-		"APP_CONTEXT_BASE_DIRECTORY"
+		"APP_CONTEXT_BASE_DIRECTORY",
+		"APP_CONTEXT_DEPS_FILES",
+		"FX_DEPS_FILE"
     };
 
     pal::string_t tpaList;
@@ -484,12 +497,22 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 	pal::string_t appBase = edgeNodePath;
     trace::info(_X("CoreClrEmbedding::Initialize - Using %s as the app path value"), appBase.c_str());
 
-	std::vector<char> tpaListCstr, appBaseCstr, assemblySearchDirectoriesCstr, bootstrapperCstr;
+	pal::string_t appContextDepsFiles(dependencyManifestFile);
+
+	if (dependencyManifestFile != frameworkDependencyManifestFile)
+	{
+		appContextDepsFiles += _X(";") + frameworkDependencyManifestFile;
+	}
+
+	std::vector<char> tpaListCstr, appBaseCstr, assemblySearchDirectoriesCstr, bootstrapperCstr, dependencyManifestFileCstr, frameworkDependencyManifestFileCstr, appContextDepsFilesCstr;
 	
 	pal::pal_clrstring(tpaList, &tpaListCstr);
 	pal::pal_clrstring(appBase, &appBaseCstr);
 	pal::pal_clrstring(assemblySearchDirectories, &assemblySearchDirectoriesCstr);
 	pal::pal_clrstring(bootstrapper, &bootstrapperCstr);
+	pal::pal_clrstring(dependencyManifestFile, &dependencyManifestFileCstr);
+	pal::pal_clrstring(frameworkDependencyManifestFile, &frameworkDependencyManifestFileCstr);
+	pal::pal_clrstring(appContextDepsFiles, &appContextDepsFilesCstr);
 
     const char* propertyValues[] = {
     	tpaListCstr.data(),
@@ -497,7 +520,9 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 		appBaseCstr.data(),
         assemblySearchDirectoriesCstr.data(),
         "UseLatestBehaviorWhenTFMNotSpecified",
-		appBaseCstr.data()
+		appBaseCstr.data(),
+		appContextDepsFilesCstr.data(),
+		frameworkDependencyManifestFileCstr.data()
     };
 
     trace::info(_X("CoreClrEmbedding::Initialize - Calling coreclr_initialize()"));
@@ -535,10 +560,9 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 	CoreClrGcHandle exception = NULL;
 	BootstrapperContext context;
 
-	std::vector<char> coreClrDirectoryCstr, currentDirectoryCstr, dependencyManifestFileCstr;
+	std::vector<char> coreClrDirectoryCstr, currentDirectoryCstr;
 	pal::pal_clrstring(coreClrDirectory, &coreClrDirectoryCstr);
 	pal::pal_clrstring(currentDirectory, &currentDirectoryCstr);
-	pal::pal_clrstring(dependencyManifestFile, &dependencyManifestFileCstr);
 
 	context.runtimeDirectory = coreClrDirectoryCstr.data();
 	context.applicationDirectory = getenv("EDGE_APP_ROOT");

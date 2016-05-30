@@ -22,6 +22,8 @@ using System.Threading.Tasks;
 #if NETSTANDARD1_5
 using Newtonsoft.Json;
 using System.Reflection;
+using Microsoft.Extensions.DependencyModel;
+using System.Linq;
 #endif
 
 #pragma warning disable 1998
@@ -382,6 +384,11 @@ namespace Edge.Tests
         public async Task<object> CorrectVersionOfNewtonsoftJsonUsed(object input)
         {
             return typeof(JsonConvert).GetTypeInfo().Assembly.GetName().Version.ToString();
+        }
+
+        public async Task<object> CanUseDefaultDependencyContext(object input)
+        {
+            return DependencyContext.Default.RuntimeLibraries.Single(l => l.Name == "Newtonsoft.Json").Version.ToString();
         }
 #endif
 
