@@ -51,7 +51,7 @@ void deps_json_t::reconcile_libraries_with_targets(
         const pal::string_t& hash = properties.at(_X("sha512")).as_string();
         bool serviceable = properties.at(_X("serviceable")).as_bool();
 
-        for (int i = 0; i < deps_entry_t::s_known_asset_types.size(); ++i)
+        for (size_t i = 0; i < deps_entry_t::s_known_asset_types.size(); ++i)
         {
             bool rid_specific = false;
             for (const auto& rel_path : get_rel_paths_by_asset_type_fn(library.first, i, &rid_specific))
@@ -127,11 +127,7 @@ const pal::string_t deps_json_t::get_own_rid()
 		return m_rid;
 	}
 
-#if defined(TARGET_RUNTIME_ID)
-    return _STRINGIFY(TARGET_RUNTIME_ID);
-#else
-#error "Cannot build the host without knowing host's root RID"
-#endif
+	return _X("");
 }
 
 bool deps_json_t::perform_rid_fallback(rid_specific_assets_t* portable_assets, const rid_fallback_graph_t& rid_fallback_graph)
@@ -197,7 +193,7 @@ bool deps_json_t::process_runtime_targets(const json_value& json, const pal::str
         for (const auto& file : files)
         {
             const auto& type = file.second.at(_X("assetType")).as_string();
-            for (int i = 0; i < deps_entry_t::s_known_asset_types.size(); ++i)
+            for (size_t i = 0; i < deps_entry_t::s_known_asset_types.size(); ++i)
             {
                 if (pal::strcasecmp(type.c_str(), deps_entry_t::s_known_asset_types[i]) == 0)
                 {
@@ -223,7 +219,7 @@ bool deps_json_t::process_targets(const json_value& json, const pal::string_t& t
     {
         // if (package.second.at(_X("type")).as_string() != _X("package")) continue;
         const auto& asset_types = package.second.as_object();
-        for (int i = 0; i < deps_entry_t::s_known_asset_types.size(); ++i)
+        for (size_t i = 0; i < deps_entry_t::s_known_asset_types.size(); ++i)
         {
             auto iter = asset_types.find(deps_entry_t::s_known_asset_types[i]);
             if (iter != asset_types.end())
