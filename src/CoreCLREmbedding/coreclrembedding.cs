@@ -192,7 +192,7 @@ public class CoreCLREmbedding
             
             DependencyContextJsonReader dependencyContextReader = new DependencyContextJsonReader();
 
-            using (FileStream dependencyManifestStream = new FileStream(dependencyManifestFile, FileMode.Open))
+            using (FileStream dependencyManifestStream = new FileStream(dependencyManifestFile, FileMode.Open, FileAccess.Read))
             {
                 DebugMessage("EdgeAssemblyLoadContext::LoadDependencyManifest (CLR) - Reading dependency manifest file and merging in dependencies from Edge.js and the shared runtime");
                 DependencyContext dependencyContext = dependencyContextReader.Read(dependencyManifestStream).Merge(edgeJsDependencyContext);
@@ -203,7 +203,7 @@ public class CoreCLREmbedding
                 {
                     DebugMessage("EdgeAssemblyLoadContext::LoadDependencyManifest (CLR) - Merging in the dependency manifest from the shared runtime at {0}", runtimeDependencyManifestFile);
 
-                    using (FileStream runtimeDependencyManifestStream = new FileStream(runtimeDependencyManifestFile, FileMode.Open))
+                    using (FileStream runtimeDependencyManifestStream = new FileStream(runtimeDependencyManifestFile, FileMode.Open, FileAccess.Read))
                     {
                         dependencyContext = dependencyContext.Merge(dependencyContextReader.Read(runtimeDependencyManifestStream));
                     }
