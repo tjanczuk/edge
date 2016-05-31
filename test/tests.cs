@@ -153,12 +153,10 @@ namespace Edge.Tests
 
         public Task<object> NetExceptionCLRThread(dynamic input)
         {
-            Task<object> task = new Task<object>(() =>
+            Task<object> task = Task.Delay(200).ContinueWith(new Func<Task, object>((antecedant) =>
             {
                 throw new Exception("Test .NET exception");
-            });
-
-            task.Start();
+            }));
 
             return task;            
         }                   
