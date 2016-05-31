@@ -141,7 +141,7 @@ pal::string_t get_directory(const pal::string_t& path)
 
 void replace_char(pal::string_t* path, pal::char_t match, pal::char_t repl)
 {
-    int pos = 0;
+    size_t pos = 0;
     while ((pos = path->find(match, pos)) != pal::string_t::npos)
     {
         (*path)[pos] = repl;

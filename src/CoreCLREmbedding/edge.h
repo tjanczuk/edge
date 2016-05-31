@@ -15,16 +15,10 @@
 #ifndef EDGE_PLATFORM_WINDOWS
 typedef int BOOL;
 
-#define SUCCEEDED(status) ((HRESULT)(status) >= 0)
 #define FAILED(status) ((HRESULT)(status) < 0)
 #define HRESULT_CODE(status) ((status) & 0xFFFF)
 
 typedef int32_t HRESULT;
-
-const HRESULT S_OK = 0;
-const HRESULT E_FAIL = -1;
-
-#define STDMETHODCALLTYPE 
 #endif
 
 typedef void* CoreClrGcHandle;

@@ -117,9 +117,9 @@ private:
 
 	std::unordered_map<pal::string_t, int> m_ni_entries;
     rid_fallback_graph_t m_rid_fallback_graph;
+	bool m_valid;
     int m_coreclr_index;
     int m_hostpolicy_index;
-    bool m_valid;
 	pal::string_t m_rid;
 };
 

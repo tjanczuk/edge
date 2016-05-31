@@ -82,7 +82,7 @@ pal::string_t GetOSName()
 
 	if (uname(&unameData) == 0)
 	{
-		return pal::string_t(unameData.sysname.c_str());
+		return pal::string_t(unameData.sysname);
 	}
 
 	// uname() failed, falling back to defaults
@@ -241,7 +241,10 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
     pal::string_t bootstrapper;
 
     pal::get_own_executable_path(&bootstrapper);
-    trace::info(_X("CoreClrEmbedding::Initialize - Bootstrapper is %s"), bootstrapper.c_str());
+	trace::info(_X("CoreClrEmbedding::Initialize - Bootstrapper is %s"), bootstrapper.c_str());
+
+	pal::realpath(&bootstrapper);
+    trace::info(_X("CoreClrEmbedding::Initialize - Resolved bootstrapper is %s"), bootstrapper.c_str());
 
 	pal::string_t edgeAppDir;
 	pal::getenv(_X("EDGE_APP_ROOT"), &edgeAppDir);
@@ -588,7 +591,7 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 
 	if (!pal::file_exists(edgeJsProjectJsonFile))
 	{
-		throwV8Exception("Unable to locate the project.lock.json file for Edge.js under %s.", edgeNodePathCstr);
+		throwV8Exception("Unable to locate the project.lock.json file for Edge.js under %s.", edgeNodePathCstr.data());
 		return E_FAIL;
 	}
 
@@ -768,7 +771,7 @@ void CoreClrEmbedding::AddToTpaList(pal::string_t directoryPath, pal::string_t* 
 
     // Walk the directory for each extension separately so that we first get files with .ni.dll extension, then files with .dll 
 	// extension, etc.
-    for (int extensionIndex = 0; extensionIndex < sizeof(tpaExtensions) / sizeof(tpaExtensions[0]); extensionIndex++)
+    for (u_int extensionIndex = 0; extensionIndex < sizeof(tpaExtensions) / sizeof(tpaExtensions[0]); extensionIndex++)
     {
 		pal::readdir(directoryPath, tpaExtensions[extensionIndex], &files);
 

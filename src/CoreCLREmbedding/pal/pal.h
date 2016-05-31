@@ -4,6 +4,19 @@
 #ifndef PAL_H
 #define PAL_H
 
+#ifndef __LINUX__
+#if __linux
+// linux
+#define __LINUX__ 1
+#elif __unix // all unices not caught above
+// Unix
+#define __LINUX__ 1
+#elif __posix
+// POSIX
+#define __LINUX__ 1
+#endif
+#endif
+
 #include <string>
 #include <vector>
 #include <fstream>

@@ -23,12 +23,19 @@
         "<!(node -e \"require('nan')\")"
       ],
       'cflags+': [
-        '-DHAVE_CORECLR -D_NO_ASYNCRTIMP -std=c++11 -DTARGET_RUNTIME_ID=\\"doesntmatter\\"'
+        '-DHAVE_CORECLR -D_NO_ASYNCRTIMP -std=c++11'
+      ],
+      'cflags!': [
+        '-fno-exceptions'
+      ],
+      'cflags_cc!': [
+        '-fno-exceptions'
       ],
       'xcode_settings': {
         'OTHER_CFLAGS': [
-          '-DHAVE_CORECLR -D_NO_ASYNCRTIMP -DTARGET_RUNTIME_ID=\\"doesntmatter\\"'
-        ]
+          '-DHAVE_CORECLR -D_NO_ASYNCRTIMP'
+        ],
+        'GCC_ENABLE_CPP_EXCEPTIONS': 'YES'
       },
       'conditions': [
         [
@@ -120,8 +127,7 @@
                 '/DHAVE_CORECLR',
                 '/EHsc',
                 '/D_NO_ASYNCRTIMP',
-                '/D_HAS_EXCEPTIONS',
-                '/DTARGET_RUNTIME_ID=\\"doesntmatter\\"'
+                '/D_HAS_EXCEPTIONS'
               ]
             },
             'VCLinkerTool': {
@@ -146,8 +152,7 @@
                 '/DHAVE_CORECLR',
                 '/D_NO_ASYNCRTIMP',
                 '/D_HAS_EXCEPTIONS'
-                '/EHsc',
-                '/DTARGET_RUNTIME_ID=\\"doesntmatter\\"'
+                '/EHsc'
               ]
             },
             'VCLinkerTool': {

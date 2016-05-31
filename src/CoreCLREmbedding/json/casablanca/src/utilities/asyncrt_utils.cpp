@@ -490,7 +490,4 @@ std::string __cdecl conversions::to_utf8string(const utf16string &value) { retur
 utf16string __cdecl conversions::to_utf16string(const std::string &value) { return utf8_to_utf16(value); }
 
 utf16string __cdecl conversions::to_utf16string(utf16string value) { return std::move(value); }
-
-static bool is_digit(utility::char_t c) { return c >= _XPLATSTR('0') && c <= _XPLATSTR('9'); }
-
 }
