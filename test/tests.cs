@@ -24,6 +24,8 @@ using Newtonsoft.Json;
 using System.Reflection;
 using Microsoft.Extensions.DependencyModel;
 using System.Linq;
+using System.Net;
+using Microsoft.AspNetCore.Server.Kestrel.Networking;
 #endif
 
 #pragma warning disable 1998
@@ -389,6 +391,12 @@ namespace Edge.Tests
         public async Task<object> CanUseDefaultDependencyContext(object input)
         {
             return DependencyContext.Default.RuntimeLibraries.Single(l => l.Name == "Newtonsoft.Json").Version.ToString();
+        }
+
+        public async Task<object> CanUseNativeLibraries(object input)
+        {
+            Libuv libuv = new Libuv();
+            return libuv.loop_size();
         }
 #endif
 

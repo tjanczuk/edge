@@ -31,9 +31,6 @@ typedef void* CoreClrGcHandle;
 
 typedef struct bootstrapperContext
 {
-	const char* operatingSystem;
-	const char* operatingSystemVersion;
-	const char* architecture;
 	const char* runtimeDirectory;
 	const char* applicationDirectory;
 	const char* edgeNodePath;

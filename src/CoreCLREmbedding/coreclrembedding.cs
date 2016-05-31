@@ -16,6 +16,7 @@ using Microsoft.DotNet.ProjectModel.Compilation;
 using Microsoft.DotNet.ProjectModel.Graph;
 using Microsoft.Extensions.DependencyModel;
 using NuGet.Frameworks;
+using DotNetRuntimeEnvironment = Microsoft.DotNet.InternalAbstractions.RuntimeEnvironment;
 using Semver;
 
 [StructLayout(LayoutKind.Sequential)]
@@ -64,15 +65,6 @@ public enum V8Type
 public struct EdgeBootstrapperContext
 {
     [MarshalAs(UnmanagedType.LPStr)]
-    public string OperatingSystem;
-
-    [MarshalAs(UnmanagedType.LPStr)]
-    public string OperatingSystemVersion;
-
-    [MarshalAs(UnmanagedType.LPStr)]
-    public string Architecture;
-
-    [MarshalAs(UnmanagedType.LPStr)]
     public string RuntimeDirectory;
 
     [MarshalAs(UnmanagedType.LPStr)]
@@ -110,34 +102,10 @@ public class CoreCLREmbedding
     {
         public EdgeRuntimeEnvironment(EdgeBootstrapperContext bootstrapperContext)
         {
-            OperatingSystem = bootstrapperContext.OperatingSystem;
-            OperatingSystemVersion = bootstrapperContext.OperatingSystemVersion;
-            RuntimeArchitecture = bootstrapperContext.Architecture;
             ApplicationDirectory = bootstrapperContext.ApplicationDirectory;
-            RuntimeVersion = typeof(object).GetTypeInfo().Assembly.GetName().Version.ToString();
             RuntimePath = bootstrapperContext.RuntimeDirectory;
             EdgeNodePath = bootstrapperContext.EdgeNodePath;
             DependencyManifestFile = bootstrapperContext.DependencyManifestFile;
-        }
-
-        public string OperatingSystem
-        {
-            get;
-        }
-
-        public string OperatingSystemVersion
-        {
-            get;
-        }
-
-        public string RuntimeArchitecture
-        {
-            get;
-        }
-
-        public string RuntimeVersion
-        {
-            get;
         }
 
         public string RuntimePath
@@ -167,6 +135,7 @@ public class CoreCLREmbedding
         private bool _noDependencyManifestFile = true;
         private readonly Dictionary<string, Assembly> _loadedAssemblies = new Dictionary<string, Assembly>();
         private readonly Dictionary<string, string> _libraries = new Dictionary<string, string>();
+        private readonly Dictionary<string, string> _nativeLibraries = new Dictionary<string, string>();
         private readonly string _packagesPath;
         private static string _targetFrameworkString = ".NETStandard,Version=v1.5";
         private static NuGetFramework _targetFramework = new NuGetFramework(".NETStandard,Version=v1.5");
@@ -325,7 +294,21 @@ public class CoreCLREmbedding
                     }
                 }
 
-                // TODO: add native assets
+                List<string> nativeAssemblies = runtimeLibrary.GetRuntimeNativeAssets(dependencyContext, DotNetRuntimeEnvironment.GetRuntimeIdentifier()).ToList();
+
+                if (nativeAssemblies.Any())
+                {
+                    DebugMessage("EdgeAssemblyLoadContext::AddDependencies (CLR) - Adding native dependencies for {0}", DotNetRuntimeEnvironment.GetRuntimeIdentifier());
+
+                    foreach (string nativeAssembly in nativeAssemblies)
+                    {
+                        string nativeAssemblyPath = Path.Combine(_packagesPath, runtimeLibrary.Name, runtimeLibrary.Version, nativeAssembly.Replace('/', Path.DirectorySeparatorChar));
+
+                        DebugMessage("EdgeAssemblyLoadContext::AddDependencies (CLR) - Adding native assembly {0} at {1}",
+                            Path.GetFileNameWithoutExtension(nativeAssembly), nativeAssemblyPath);
+                        _nativeLibraries[Path.GetFileNameWithoutExtension(nativeAssembly)] = nativeAssemblyPath;
+                    }
+                }
             }
         }
 
@@ -412,11 +395,22 @@ public class CoreCLREmbedding
             return LoadFromAssemblyPath(assemblyPath);
         }
 
-        //protected override IntPtr LoadUnmanagedDll(string unmanagedDllName)
-        //{
-        //    // TODO: implement
-        //    throw new NotImplementedException();
-        //}
+        protected override IntPtr LoadUnmanagedDll(string unmanagedDllName)
+        {
+            DebugMessage("EdgeAssemblyLoadContext::LoadUnmanagedDll (CLR) - Trying to resolve {0}", unmanagedDllName);
+
+            if (_nativeLibraries.ContainsKey(unmanagedDllName))
+            {
+                DebugMessage("EdgeAssemblyLoadContext::LoadUnmanagedDll (CLR) - Successfully resolved to {0}", _nativeLibraries[unmanagedDllName]);
+                return LoadUnmanagedDllFromPath(_nativeLibraries[unmanagedDllName]);
+            }
+
+            else
+            {
+                DebugMessage("EdgeAssemblyLoadContext::LoadUnmanagedDll (CLR) - Unable to resolve to any native library from the dependency manifest");
+                return base.LoadUnmanagedDll(unmanagedDllName);
+            }
+        }
     }
     
     // ReSharper disable InconsistentNaming
