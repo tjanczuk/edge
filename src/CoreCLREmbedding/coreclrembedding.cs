@@ -194,8 +194,20 @@ public class CoreCLREmbedding
 
             using (FileStream dependencyManifestStream = new FileStream(dependencyManifestFile, FileMode.Open))
             {
-                DebugMessage("EdgeAssemblyLoadContext::LoadDependencyManifest (CLR) - Reading dependency manifest file and merging in dependencies from Edge.js");
+                DebugMessage("EdgeAssemblyLoadContext::LoadDependencyManifest (CLR) - Reading dependency manifest file and merging in dependencies from Edge.js and the shared runtime");
                 DependencyContext dependencyContext = dependencyContextReader.Read(dependencyManifestStream).Merge(edgeJsDependencyContext);
+
+                string runtimeDependencyManifestFile = (string) AppContext.GetData("FX_DEPS_FILE");
+
+                if (!String.IsNullOrEmpty(runtimeDependencyManifestFile) && runtimeDependencyManifestFile != dependencyManifestFile)
+                {
+                    DebugMessage("EdgeAssemblyLoadContext::LoadDependencyManifest (CLR) - Merging in the dependency manifest from the shared runtime at {0}", runtimeDependencyManifestFile);
+
+                    using (FileStream runtimeDependencyManifestStream = new FileStream(runtimeDependencyManifestFile, FileMode.Open))
+                    {
+                        dependencyContext = dependencyContext.Merge(dependencyContextReader.Read(runtimeDependencyManifestStream));
+                    }
+                }
 
                 DebugMessage("EdgeAssemblyLoadContext::LoadDependencyManifest (CLR) - Resetting assemblies list");
                 _libraries.Clear();
