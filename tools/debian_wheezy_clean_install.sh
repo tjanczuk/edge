@@ -4,7 +4,7 @@ THE_USER=${SUDO_USER:-${USERNAME:-guest}}
 
 set -e
 
-# install prerequisities and Mono x64
+# install prerequisities, Mono x64, and .NET Core x64
 if [ ! -e /etc/apt/sources.list.d/mono-xamarin.list ]
 then
     apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
@@ -12,26 +12,31 @@ then
     apt-get update
 fi
 
-apt-get -y install curl g++ pkg-config libgdiplus libunwind8 libssl-dev unzip make mono-complete git gettext libssl-dev libcurl4-openssl-dev zlib1g libicu-dev uuid-dev
+if [ ! -e /etc/apt/sources.list.d/dotnetdev.list ]
+then
+    echo "deb [arch=amd64] https://apt-mo.trafficmanager.net/repos/dotnet/ trusty main" > /etc/apt/sources.list.d/dotnetdev.list
+    apt-key adv --keyserver apt-mo.trafficmanager.net --recv-keys 417A0893
+    apt-get update
+fi
+
+apt-get -y install curl g++ pkg-config libgdiplus libunwind8 libssl-dev unzip make mono-complete git gettext libssl-dev libcurl4-openssl-dev zlib1g libicu-dev uuid-dev dotnet-dev-1.0.0-preview1-002702
 
 # download and build Node.js
-
-sudo -u ${THE_USER} curl https://codeload.github.com/joyent/node/tar.gz/v4.1.1 > node.v4.1.1.tar.gz
-sudo -u ${THE_USER} tar -xvf node.v4.1.1.tar.gz
-cd node-4.1.1/
-sudo -u ${THE_USER} bash -c './configure'
-sudo -u ${THE_USER} make
-make install
-cd ..
+if [ ! command -v node >/dev/null 2>&1 ]
+then
+    sudo -u ${THE_USER} curl https://codeload.github.com/nodejs/node/tar.gz/v4.1.1 > node.v4.1.1.tar.gz
+    sudo -u ${THE_USER} tar -xvf node.v4.1.1.tar.gz
+    cd node-4.1.1/
+    sudo -u ${THE_USER} bash -c './configure'
+    sudo -u ${THE_USER} make
+    make install
+    cd ..
+fi
 
 # install node-gyp and mocha
 
 npm install node-gyp -g
 npm install mocha -g
-
-curl -sSL https://raw.githubusercontent.com/aspnet/Home/dev/dnvminstall.sh | DNX_BRANCH=dev sudo -u ${THE_USER} sh
-
-su ${THE_USER} -l -s /bin/bash -c "source .dnx/dnvm/dnvm.sh && dnvm install latest -r coreclr -alias edge-coreclr"
 
 # download and build Edge.js
 
@@ -41,6 +46,6 @@ cd edge-master/
 EDGE_DIRECTORY=$(pwd)
 chown -R ${THE_USER} ~/.npm
 
-su ${THE_USER} -l -s /bin/bash -c "source ~/.dnx/dnvm/dnvm.sh && dnvm use edge-coreclr && cd $EDGE_DIRECTORY && npm install"
-su ${THE_USER} -l -s /bin/bash -c "source ~/.dnx/dnvm/dnvm.sh && dnvm use edge-coreclr && cd $EDGE_DIRECTORY && npm test"
-su ${THE_USER} -l -s /bin/bash -c "source ~/.dnx/dnvm/dnvm.sh && dnvm use edge-coreclr && cd $EDGE_DIRECTORY && EDGE_USE_CORECLR=1 npm test"
+su ${THE_USER} -l -s /bin/bash -c "cd $EDGE_DIRECTORY && npm install"
+su ${THE_USER} -l -s /bin/bash -c "cd $EDGE_DIRECTORY && npm test"
+su ${THE_USER} -l -s /bin/bash -c "cd $EDGE_DIRECTORY && EDGE_USE_CORECLR=1 npm test"
