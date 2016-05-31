@@ -71,42 +71,40 @@ InitializeFunction initialize;
 	\
 	trace::info(_X("CoreClrEmbedding::Initialize - CoreCLREmbedding.%s() loaded successfully"), functionNameString.c_str());\
 
-std::string GetOSName()
+pal::string_t GetOSName()
 {
 #if EDGE_PLATFORM_WINDOWS
-	return "Windows";
+	return _X("win");
+#elif EDGE_PLATFORM_APPLE
+	return _X("osx");
 #else
 	utsname unameData;
 
 	if (uname(&unameData) == 0)
 	{
-		return unameData.sysname;
+		return pal::string_t(unameData.sysname.c_str());
 	}
 
 	// uname() failed, falling back to defaults
 	else
 	{
-#if EDGE_PLATFORM_NIX
-		return "Linux";
-#elif EDGE_PLATFORM_APPLE
-		return "Darwin";
-#endif
+		return _X("unix");
 	}
 #endif
 }
 
-const char* GetOSArchitecture()
+pal::string_t GetOSArchitecture()
 {
 #if defined __X86__ || defined __i386__ || defined i386 || defined _M_IX86 || defined __386__
-	return "x86";
+	return _X("x86");
 #elif defined __ia64 || defined _M_IA64 || defined __ia64__ || defined __x86_64__ || defined _M_X64
-	return "x64";
+	return _X("x64");
 #elif defined ARM || defined __arm__ || defined _ARM
-	return "arm";
+	return _X("arm");
 #endif
 }
 
-std::string GetOSVersion()
+pal::string_t GetOSVersion()
 {
 #if EDGE_PLATFORM_WINDOWS
 	OSVERSIONINFO version_info;
@@ -116,73 +114,77 @@ std::string GetOSVersion()
 #pragma warning(disable:4996)
 	GetVersionEx(&version_info);
 #pragma warning(default:4996)
-	return std::to_string(version_info.dwMajorVersion).append(".").append(std::to_string(version_info.dwMinorVersion));
-#elif EDGE_PLATFORM_NIX
-	std::vector<std::string> qualifiers{ "ID=", "VERSION_ID=" };
 
-	std::ifstream lsbRelease;
+	if (version_info.dwMajorVersion == 6)
+	{
+		if (version_info.dwMinorVersion == 1)
+		{
+			return _X("7");
+		}
+
+		else if (version_info.dwMinorVersion == 2)
+		{
+			return _X("8");
+		}
+
+		else if (version_info.dwMinorVersion == 3)
+		{
+			return _X("81");
+		}
+	}
+
+	else if (version_info.dwMajorVersion == 10 && version_info.dwMinorVersion == 0)
+	{
+		return _X("10");
+	}
+
+	return _X("");
+#elif EDGE_PLATFORM_NIX
+	utility::ifstream_t lsbRelease;
 	lsbRelease.open("/etc/os-release", std::ifstream::in);
 
 	if (lsbRelease.is_open())
 	{
-		std::string osVersion;
-
-		for (std::string line; std::getline(lsbRelease, line); )
+		for (utility::string_t line; std::getline(lsbRelease, line); )
 		{
-			for (auto& qualifier : qualifiers)
+			if (line.substr(0, 11) == _X("VERSION_ID="))
 			{
-				if (line.compare(0, qualifier.length(), qualifier) == 0)
+				utility::string_t osVersion = line.substr(3);
+
+				if ((osVersion[0] == '"' && osVersion[osVersion.length() - 1] == '"') || ((osVersion[0] == '\'' && osVersion[osVersion.length() - 1] == '\'')))
 				{
-					auto value = line.substr(qualifier.length());
-
-					if (value.length() >= 2 && ((value[0] == '"'  && value[value.length() - 1] == '"') || (value[0] == '\'' && value[value.length() - 1] == '\'')))
-					{
-						value = value.substr(1, value.length() - 2);
-					}
-
-					if (value.length() == 0)
-					{
-						continue;
-					}
-
-					if (osVersion.length() > 0)
-					{
-						osVersion += " ";
-					}
-
-					osVersion += value;
+					osVersion = osVersion.substr(1, osVersion.length() - 2);
 				}
+
+				return _X(".") + osVersion;
 			}
 		}
-
-		return osVersion;
 	}
 
-	return "";
+	return _X("");
 #elif EDGE_PLATFORM_APPLE
 	utsname unameData;
 
 	if (uname(&unameData) == 0)
 	{
 		std::string release = unameData.release;
-
 		auto dot_position = release.find(".");
 
 		if (dot_position == std::string::npos)
 		{
-			return "10.1";
+			return _X("10.0");
 		}
 
 		auto version = atoi(release.substr(0, dot_position).c_str());
-        std::stringstream versionStringStream;
+        pal::stringstream_t versionStringStream;
         versionStringStream << (version - 4);
 
-		return std::string("10.").append(versionStringStream.str());
+		return pal::string("10.").append(versionStringStream.str());
 	}
 
 	else
 	{
-		return "10.1";
+		return "10.0";
 	}
 #endif
 }
@@ -628,12 +630,11 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 		}
 	}
 
-	// TODO: update deps_format.cpp to get TARGET_RUNTIME_ID from coreclr.dll somehow
 	if (dependencyManifestFile.length() > 0)
 	{
 		trace::info(_X("CoreClrEmbedding::Initialize - Checking application dependency manifest file for overrides to the bootstrap packages"));
 
-		deps_json_t dependencyManifest(true, dependencyManifestFile);
+		deps_json_t dependencyManifest(true, dependencyManifestFile, GetOSName() + GetOSVersion() + _X("-") + GetOSArchitecture());
 		std::vector<deps_entry_t> applicationDependencies = dependencyManifest.get_entries(deps_entry_t::asset_types::runtime);
 
 		for (const deps_entry_t& applicationDependency : applicationDependencies)

@@ -115,8 +115,18 @@ void deps_json_t::reconcile_libraries_with_targets(
     }
 }
 
-pal::string_t get_own_rid()
+void deps_json_t::set_own_rid(const pal::string_t rid)
 {
+	m_rid = rid;
+}
+
+const pal::string_t deps_json_t::get_own_rid()
+{
+	if (m_rid.length() > 0)
+	{
+		return m_rid;
+	}
+
 #if defined(TARGET_RUNTIME_ID)
     return _STRINGIFY(TARGET_RUNTIME_ID);
 #else

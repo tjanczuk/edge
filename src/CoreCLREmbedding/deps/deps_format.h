@@ -33,14 +33,20 @@ public:
     {
     }
 
+	deps_json_t(bool portable, const pal::string_t& deps_path, const pal::string_t& rid)
+		: deps_json_t(portable, deps_path, m_rid_fallback_graph /* dummy */, rid)
+	{
+	}
+
     deps_json_t(bool portable, const pal::string_t& deps_path)
-        : deps_json_t(portable, deps_path, m_rid_fallback_graph /* dummy */)
+        : deps_json_t(portable, deps_path, m_rid_fallback_graph /* dummy */, _X(""))
     {
     }
 
-    deps_json_t(bool portable, const pal::string_t& deps_path, const rid_fallback_graph_t& graph)
+    deps_json_t(bool portable, const pal::string_t& deps_path, const rid_fallback_graph_t& graph, const pal::string_t& rid)
         : deps_json_t()
     {
+		m_rid = rid;
         m_valid = load(portable, deps_path, graph);
     }
 
@@ -86,6 +92,10 @@ public:
 
 	const deps_entry_t& try_ni(const deps_entry_t& entry) const;
 
+	void set_own_rid(const pal::string_t rid);
+
+	const pal::string_t get_own_rid();
+
 private:
     bool load_standalone(const json_value& json, const pal::string_t& target_name);
     bool load_portable(const json_value& json, const pal::string_t& target_name, const rid_fallback_graph_t& rid_fallback_graph);
@@ -110,6 +120,7 @@ private:
     int m_coreclr_index;
     int m_hostpolicy_index;
     bool m_valid;
+	pal::string_t m_rid;
 };
 
 #endif // __DEPS_FORMAT_H_
