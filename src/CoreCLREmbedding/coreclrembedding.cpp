@@ -317,7 +317,9 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 
 			if (pal::file_exists(dotnetExecutablePath))
 			{
-				coreClrDirectory = pathEnvironmentVariable.substr(previousIndex, currentIndex - previousIndex);
+				pal::realpath(&dotnetExecutablePath);
+
+				coreClrDirectory = get_directory(dotnetExecutablePath);
 				trace::info(_X("CoreClrEmbedding::Initialize - Found dotnet directory at %s"), coreClrDirectory.c_str());
 
 				append_path(&coreClrDirectory, _X("shared"));
