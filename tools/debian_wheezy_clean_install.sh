@@ -22,7 +22,9 @@ fi
 apt-get -y install curl g++ pkg-config libgdiplus libunwind8 libssl-dev unzip make mono-complete git gettext libssl-dev libcurl4-openssl-dev zlib1g libicu-dev uuid-dev dotnet-dev-1.0.0-preview1-002702
 
 # download and build Node.js
-if [ ! command -v node >/dev/null 2>&1 ]
+command -v node || result=$?
+
+if [ $result ]
 then
     sudo -u ${THE_USER} curl https://codeload.github.com/nodejs/node/tar.gz/v4.1.1 > node.v4.1.1.tar.gz
     sudo -u ${THE_USER} tar -xvf node.v4.1.1.tar.gz
