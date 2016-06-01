@@ -1,10 +1,10 @@
 #!/bin/bash
 
-if [ -n "$(which dnx 2>/dev/null)" ]
+if [ -n "$(which dotnet 2>/dev/null)" ]
 then
-	dnu restore
-	dnu build
-	cp bin/Debug/dnxcore50/test.dll Edge.Tests.CoreClr.dll
+	dotnet restore
+	dotnet build
+	cp bin/Debug/netstandard1.5/test.dll Edge.Tests.CoreClr.dll
 fi
 
 if [ -n "$(which mono 2>/dev/null)" ]

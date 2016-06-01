@@ -23,12 +23,19 @@
         "<!(node -e \"require('nan')\")"
       ],
       'cflags+': [
-        '-DHAVE_CORECLR'
+        '-DHAVE_CORECLR -D_NO_ASYNCRTIMP -std=c++11'
+      ],
+      'cflags!': [
+        '-fno-exceptions'
+      ],
+      'cflags_cc!': [
+        '-fno-exceptions'
       ],
       'xcode_settings': {
         'OTHER_CFLAGS': [
-          '-DHAVE_CORECLR'
-        ]
+          '-DHAVE_CORECLR -D_NO_ASYNCRTIMP'
+        ],
+        'GCC_ENABLE_CPP_EXCEPTIONS': 'YES'
       },
       'conditions': [
         [
@@ -36,7 +43,7 @@
           {
             'conditions': [
               [
-                '"<!(node -e "var whereis = require(\'./tools/whereis\'); console.log(whereis(\'dnx.exe\'));")"!=""',
+                '"<!(node -e "var whereis = require(\'./tools/whereis\'); console.log(whereis(\'dotnet.exe\'));")"!=""',
                 {
                   'sources+': [
                     'src/common/v8synchronizationcontext.cpp',
@@ -46,8 +53,24 @@
                     'src/CoreCLREmbedding/coreclrnodejsfunc.cpp',
                     'src/CoreCLREmbedding/coreclrfuncinvokecontext.cpp',
                     'src/CoreCLREmbedding/coreclrnodejsfuncinvokecontext.cpp',
-                    'src/common/utils.cpp'
+                    'src/common/utils.cpp',
+                    'src/CoreCLREmbedding/pal/pal.windows.cpp',
+                    'src/CoreCLREmbedding/pal/pal_utils.cpp',
+                    'src/CoreCLREmbedding/pal/trace.cpp',
+                    'src/CoreCLREmbedding/fxr/fx_ver.cpp',
+                    'src/CoreCLREmbedding/json/casablanca/src/json/json.cpp',
+                    'src/CoreCLREmbedding/json/casablanca/src/json/json_parsing.cpp',
+                    'src/CoreCLREmbedding/json/casablanca/src/json/json_serialization.cpp',
+                    'src/CoreCLREmbedding/json/casablanca/src/utilities/asyncrt_utils.cpp',
+                    'src/CoreCLREmbedding/deps/deps_format.cpp',
+                    'src/CoreCLREmbedding/deps/deps_entry.cpp'
+                  ],
+                  'include_dirs+': [
+                    'src/CoreCLREmbedding/json/casablanca/include'
                   ]
+                },
+                {
+                  'type': 'none'
                 }
               ]
             ]
@@ -55,7 +78,7 @@
           {
             'conditions': [
               [
-                '"<!(echo -n `which dnx`)"!=""',
+                '"<!(echo -n `which dotnet`)"!=""',
                 {
                   'sources+': [
                     'src/common/v8synchronizationcontext.cpp',
@@ -65,8 +88,24 @@
                     'src/CoreCLREmbedding/coreclrnodejsfunc.cpp',
                     'src/CoreCLREmbedding/coreclrfuncinvokecontext.cpp',
                     'src/CoreCLREmbedding/coreclrnodejsfuncinvokecontext.cpp',
-                    'src/common/utils.cpp'
+                    'src/common/utils.cpp',
+                    'src/CoreCLREmbedding/pal/pal.unix.cpp',
+                    'src/CoreCLREmbedding/pal/pal_utils.cpp',
+                    'src/CoreCLREmbedding/pal/trace.cpp',
+                    'src/CoreCLREmbedding/fxr/fx_ver.cpp',
+                    'src/CoreCLREmbedding/json/casablanca/src/json/json.cpp',
+                    'src/CoreCLREmbedding/json/casablanca/src/json/json_parsing.cpp',
+                    'src/CoreCLREmbedding/json/casablanca/src/json/json_serialization.cpp',
+                    'src/CoreCLREmbedding/json/casablanca/src/utilities/asyncrt_utils.cpp',
+                    'src/CoreCLREmbedding/deps/deps_format.cpp',
+                    'src/CoreCLREmbedding/deps/deps_entry.cpp'
+                  ],
+                  'include_dirs+': [
+                    'src/CoreCLREmbedding/json/casablanca/include'
                   ]
+                },
+                {
+                  'type': 'none'
                 }
               ]
             ]
@@ -86,7 +125,9 @@
               'AdditionalOptions': [
                 '/wd4506',
                 '/DHAVE_CORECLR',
-                '/EHsc'
+                '/EHsc',
+                '/D_NO_ASYNCRTIMP',
+                '/D_HAS_EXCEPTIONS'
               ]
             },
             'VCLinkerTool': {
@@ -109,6 +150,8 @@
               'AdditionalOptions': [
                 '/wd4506',
                 '/DHAVE_CORECLR',
+                '/D_NO_ASYNCRTIMP',
+                '/D_HAS_EXCEPTIONS'
                 '/EHsc'
               ]
             },
@@ -129,7 +172,7 @@
         "<!(node -e \"require('nan')\")"
       ],
       'cflags+': [
-        '-DHAVE_NATIVECLR'
+        '-DHAVE_NATIVECLR -std=c++11'
       ],
       'xcode_settings': {
         'OTHER_CFLAGS': [
@@ -180,6 +223,9 @@
                       '<!@(pkg-config mono-2 --libs)'
                     ],
                   }
+                },
+                {
+                  'type': 'none'
                 }
               ]
             ]
@@ -246,7 +292,7 @@
           {
             'conditions': [
               [
-                '"<!(node -e "var whereis = require(\'./tools/whereis\'); console.log(whereis(\'dnx.exe\'));")"!=""',
+                '"<!(node -e "var whereis = require(\'./tools/whereis\'); console.log(whereis(\'dotnet.exe\'));")"!=""',
                 {
                   'actions+': [
                     {
@@ -255,18 +301,18 @@
                         'src/CoreCLREmbedding/project.json'
                       ],
                       'outputs': [
-                        'src/CoreCLREmbedding/bin/$(BUILDTYPE)/dnxcore50/CoreCLREmbedding.dll'
+                        'src/CoreCLREmbedding/bin/$(Configuration)/netstandard1.5/CoreCLREmbedding.dll'
                       ],                        
                       'action': [
-                        'cd "<(module_root_dir)\\src\\CoreCLREmbedding" & dnu restore & cd "<(module_root_dir)\\src\\CoreCLREmbedding" & dnu build --configuration $(Configuration) & copy "<(module_root_dir)\\src\\CoreCLREmbedding\\bin\\$(Configuration)\\dnxcore50\\CoreCLREmbedding.dll" "<(module_root_dir)\\build\\$(Configuration)"'
+                        'cd "<(module_root_dir)\\src\\CoreCLREmbedding" & dotnet restore & cd "<(module_root_dir)\\src\\CoreCLREmbedding" & dotnet build --configuration $(Configuration) & copy "<(module_root_dir)\\src\\CoreCLREmbedding\\bin\\$(Configuration)\\netstandard1.5\\CoreCLREmbedding.dll" "<(module_root_dir)\\build\\$(Configuration)"'
                       ]
                     }
                   ],
                   'copies+': [
                     {
-                      'destination': '<(module_root_dir)\\build\\$(BUILDTYPE)',
+                      'destination': '<(module_root_dir)\\build\\$(Configuration)',
                       'files': [
-                        '<(module_root_dir)\\src\\CoreCLREmbedding\\bin\\$(BUILDTYPE)\\dnxcore50\\CoreCLREmbedding.dll'
+                        '<(module_root_dir)\\src\\CoreCLREmbedding\\bin\\$(Configuration)\\netstandard1.5\\CoreCLREmbedding.dll'
                       ]
                     }
                   ]
@@ -301,7 +347,7 @@
                 }
               ],
               [
-                '"<!(echo -n `which dnx`)"!=""',
+                '"<!(echo -n `which dotnet`)"!=""',
                 {
                   'actions+': [
                     {
@@ -315,7 +361,7 @@
                       'action': [
                         'bash',
                         '-c',
-                        'cd src/CoreCLREmbedding && dnu restore'
+                        'cd src/CoreCLREmbedding && dotnet restore'
                       ]
                     },
                     {
@@ -325,12 +371,12 @@
                         'src/common/*.cs'
                       ],
                       'outputs': [
-                        'src/CoreCLREmbedding/bin/$(BUILDTYPE)/dnxcore50/CoreCLREmbedding.dll'
+                        'src/CoreCLREmbedding/bin/$(BUILDTYPE)/netstandard1.5/CoreCLREmbedding.dll'
                       ],                        
                       'action': [
                         'bash',
                         '-c',
-                        'cd src/CoreCLREmbedding && dnu build --configuration $(BUILDTYPE)'
+                        'cd src/CoreCLREmbedding && dotnet build --configuration $(BUILDTYPE)'
                       ]
                     }
                   ],
@@ -338,7 +384,7 @@
                     {
                       'destination': '<(module_root_dir)/build/$(BUILDTYPE)',
                       'files': [
-                        '<(module_root_dir)/src/CoreCLREmbedding/bin/$(BUILDTYPE)/dnxcore50/CoreCLREmbedding.dll',
+                        '<(module_root_dir)/src/CoreCLREmbedding/bin/$(BUILDTYPE)/netstandard1.5/CoreCLREmbedding.dll',
                         '<(module_root_dir)/src/CoreCLREmbedding/project.json',
                         '<(module_root_dir)/src/CoreCLREmbedding/project.lock.json'
                       ]

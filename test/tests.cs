@@ -19,6 +19,14 @@ using System.Collections.Generic;
 using System.Dynamic;
 using System.Text;
 using System.Threading.Tasks;
+#if NETSTANDARD1_5
+using Newtonsoft.Json;
+using System.Reflection;
+using Microsoft.Extensions.DependencyModel;
+using System.Linq;
+using System.Net;
+using Microsoft.AspNetCore.Server.Kestrel.Networking;
+#endif
 
 #pragma warning disable 1998
 
@@ -145,12 +153,10 @@ namespace Edge.Tests
 
         public Task<object> NetExceptionCLRThread(dynamic input)
         {
-            Task<object> task = new Task<object>(() =>
+            Task<object> task = Task.Delay(200).ContinueWith(new Func<Task, object>((antecedant) =>
             {
                 throw new Exception("Test .NET exception");
-            });
-
-            task.Start();
+            }));
 
             return task;            
         }                   
@@ -373,6 +379,24 @@ namespace Edge.Tests
         {
             return new BadPerson();
         }
+
+#if NETSTANDARD1_5
+        public async Task<object> CorrectVersionOfNewtonsoftJsonUsed(object input)
+        {
+            return typeof(JsonConvert).GetTypeInfo().Assembly.GetName().Version.ToString();
+        }
+
+        public async Task<object> CanUseDefaultDependencyContext(object input)
+        {
+            return DependencyContext.Default.RuntimeLibraries.Single(l => l.Name == "Newtonsoft.Json").Version.ToString();
+        }
+
+        public async Task<object> CanUseNativeLibraries(object input)
+        {
+            Libuv libuv = new Libuv();
+            return libuv.loop_size();
+        }
+#endif
 
         public class BadPerson 
         {
