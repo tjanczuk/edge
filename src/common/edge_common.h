@@ -32,7 +32,7 @@ using namespace v8;
 #define EDGE_PLATFORM_NIX 1
 #endif
 
-#ifdef EDGE_PLATFORM_NIX
+#ifndef EDGE_PLATFORM_WINDOWS
 #include <stdlib.h>
 #include <string.h>
 #define __cdecl

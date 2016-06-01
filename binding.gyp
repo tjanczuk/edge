@@ -35,7 +35,11 @@
         'OTHER_CFLAGS': [
           '-DHAVE_CORECLR -D_NO_ASYNCRTIMP'
         ],
-        'GCC_ENABLE_CPP_EXCEPTIONS': 'YES'
+        'GCC_ENABLE_CPP_EXCEPTIONS': 'YES',
+        'GCC_ENABLE_CPP_RTTI': 'YES',
+        'CLANG_CXX_LANGUAGE_STANDARD': 'c++11',
+        'CLANG_CXX_LIBRARY': 'libc++',
+        'MACOSX_DEPLOYMENT_TARGET': '10.7'
       },
       'conditions': [
         [

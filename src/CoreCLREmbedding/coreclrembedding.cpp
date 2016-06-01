@@ -179,12 +179,12 @@ pal::string_t GetOSVersion()
         pal::stringstream_t versionStringStream;
         versionStringStream << (version - 4);
 
-		return pal::string("10.").append(versionStringStream.str());
+		return pal::string_t("10.").append(versionStringStream.str());
 	}
 
 	else
 	{
-		return "10.0";
+		return _X("10.0");
 	}
 #endif
 }
@@ -306,17 +306,29 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 		pal::string_t pathEnvironmentVariable;
 		pal::getenv(_X("PATH"), &pathEnvironmentVariable);
 
+        trace::info(_X("CoreClrEmbedding::Initialize - Path is %s"), pathEnvironmentVariable.c_str());
+
 		pal::string_t dotnetExecutablePath;
 
     	size_t previousIndex = 0;
     	size_t currentIndex = pathEnvironmentVariable.find(PATH_SEPARATOR);
 
-    	while (!libCoreClr && currentIndex != std::string::npos)
+    	while (!libCoreClr && previousIndex != std::string::npos)
     	{
-			dotnetExecutablePath = pathEnvironmentVariable.substr(previousIndex, currentIndex - previousIndex);
+    		if (currentIndex != std::string::npos)
+    		{
+				dotnetExecutablePath = pathEnvironmentVariable.substr(previousIndex, currentIndex - previousIndex);
+			}
+
+			else
+			{
+				dotnetExecutablePath = pathEnvironmentVariable.substr(previousIndex);
+			}
 
 			append_path(&dotnetExecutablePath, _X("dotnet"));
 			dotnetExecutablePath.append(pal::exe_suffix());
+
+			trace::info(_X("CoreClrEmbedding::Initialize - Checking for dotnet at %s"), dotnetExecutablePath.c_str());
 
 			if (pal::file_exists(dotnetExecutablePath))
 			{
@@ -442,8 +454,12 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 
     		if (!libCoreClr)
     		{
-				previousIndex = currentIndex + 1;
-				currentIndex = pathEnvironmentVariable.find(PATH_SEPARATOR, previousIndex);
+				previousIndex = currentIndex == std::string::npos ? currentIndex : currentIndex + 1;
+
+				if (previousIndex != std::string::npos)
+				{
+					currentIndex = pathEnvironmentVariable.find(PATH_SEPARATOR, previousIndex);
+				}
     		}
     	}
     }
