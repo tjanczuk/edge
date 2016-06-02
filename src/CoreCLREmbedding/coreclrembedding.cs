@@ -220,7 +220,7 @@ public class CoreCLREmbedding
                 DebugMessage("EdgeAssemblyLoadContext::LoadDependencyManifest (CLR) - Resetting assemblies list");
                 _libraries.Clear();
 
-                AddDependencies(dependencyContext);
+                AddDependencies(dependencyContext, RuntimeEnvironment.StandaloneApplication);
             }
 
             _noDependencyManifestFile = false;
@@ -240,7 +240,7 @@ public class CoreCLREmbedding
             DebugMessage("EdgeAssemblyLoadContext::LoadDependencyManifest (CLR) - Finished");
         }
 
-        private void AddDependencies(DependencyContext dependencyContext)
+        private void AddDependencies(DependencyContext dependencyContext, bool standalone)
         {
             DebugMessage("EdgeAssemblyLoadContext::AddDependencies (CLR) - Adding dependencies for {0}", dependencyContext.Target.Framework);
 
@@ -253,7 +253,7 @@ public class CoreCLREmbedding
 
                 DebugMessage("EdgeAssemblyLoadContext::AddDependencies (CLR) - Processing compile dependency {0}", compileLibrary.Name);
 
-                string assemblyPath = RuntimeEnvironment.StandaloneApplication && File.Exists(Path.Combine(RuntimeEnvironment.ApplicationDirectory, "refs", Path.GetFileName(compileLibrary.Assemblies[0].Replace('/', Path.DirectorySeparatorChar))))
+                string assemblyPath = standalone && File.Exists(Path.Combine(RuntimeEnvironment.ApplicationDirectory, "refs", Path.GetFileName(compileLibrary.Assemblies[0].Replace('/', Path.DirectorySeparatorChar))))
                     ? Path.Combine(RuntimeEnvironment.ApplicationDirectory, "refs", Path.GetFileName(compileLibrary.Assemblies[0].Replace('/', Path.DirectorySeparatorChar)))
                     : Path.Combine(_packagesPath, compileLibrary.Name, compileLibrary.Version, compileLibrary.Assemblies[0].Replace('/', Path.DirectorySeparatorChar));
 
@@ -281,7 +281,7 @@ public class CoreCLREmbedding
                     string assetPath = runtimeLibrary.RuntimeAssemblyGroups[0].AssetPaths[0];
                     string assemblyPath = runtimeLibrary.Type == "project"
                         ? Path.Combine(RuntimeEnvironment.ApplicationDirectory, assetPath)
-                        : RuntimeEnvironment.StandaloneApplication
+                        : standalone
                             ? Path.Combine(RuntimeEnvironment.ApplicationDirectory, Path.GetFileName(assetPath))
                             : Path.Combine(_packagesPath, runtimeLibrary.Name, runtimeLibrary.Version, assetPath.Replace('/', Path.DirectorySeparatorChar));
                     string libraryNameFromPath = Path.GetFileNameWithoutExtension(assemblyPath);
@@ -350,7 +350,7 @@ public class CoreCLREmbedding
                 String.Empty);
 
             DebugMessage("EdgeAssemblyLoadContext::AddCompiler (CLR) - Adding dependencies for the compiler");
-            AddDependencies(compilerDependencyContext);
+            AddDependencies(compilerDependencyContext, false);
 
             DebugMessage("EdgeAssemblyLoadContext::AddCompiler (CLR) - Finished");
         }
