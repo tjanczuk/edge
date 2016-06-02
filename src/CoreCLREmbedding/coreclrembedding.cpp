@@ -251,7 +251,7 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 
 	edgeAppDir = edgeAppDir.length() > 0 ? edgeAppDir : currentDirectory;
 
-    pal::string_t coreClrDirectory;
+	pal::string_t coreClrDirectory;
 	pal::string_t coreClrEnvironmentVariable;
 	pal::string_t dependencyManifestFile;
 	pal::string_t frameworkDependencyManifestFile;
@@ -472,12 +472,15 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 
     trace::info(_X("CoreClrEmbedding::Initialize - %s loaded successfully from %s"), LIBCORECLR_NAME, coreClrDirectory.c_str());
 
+    bool standalone = edgeAppDir == coreClrDirectory;
+
     pal::string_t assemblySearchDirectories;
+    pal::string_t pathSeparator(1, PATH_SEPARATOR);
 
     assemblySearchDirectories.append(currentDirectory);
-    assemblySearchDirectories.append(_X(":"));
+    assemblySearchDirectories.append(pathSeparator);
     assemblySearchDirectories.append(coreClrDirectory);
-	assemblySearchDirectories.append(_X(":"));
+	assemblySearchDirectories.append(pathSeparator);
 	assemblySearchDirectories.append(edgeNodePath);
 
     trace::info(_X("CoreClrEmbedding::Initialize - Assembly search path is %s"), assemblySearchDirectories.c_str());
@@ -513,9 +516,7 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
     };
 
     pal::string_t tpaList;
-
-	// TODO: may want to consider looking at .deps.json for TPA instead of loading everything in the runtime directory
-    AddToTpaList(coreClrDirectory, &tpaList);
+    AddToTpaList(frameworkDependencyManifestFile.length() > 0 ? frameworkDependencyManifestFile : dependencyManifestFile, coreClrDirectory, &tpaList);
 
 	pal::string_t appBase = edgeNodePath;
     trace::info(_X("CoreClrEmbedding::Initialize - Using %s as the app path value"), appBase.c_str());
@@ -719,6 +720,7 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 		FreeMarshalData(exception, V8TypeException);
 
 		throwV8Exception(v8Exception);
+		return E_FAIL;
 	}
 
 	else
@@ -735,6 +737,7 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 		FreeMarshalData(exception, V8TypeException);
 
 		throwV8Exception(v8Exception);
+		return E_FAIL;
 	}
 
 	else
@@ -769,47 +772,37 @@ CoreClrGcHandle CoreClrEmbedding::GetClrFuncReflectionWrapFunc(const char* assem
 	}
 }
 
-void CoreClrEmbedding::AddToTpaList(pal::string_t directoryPath, pal::string_t* tpaList)
+void CoreClrEmbedding::AddToTpaList(pal::string_t dependencyManifestFile, pal::string_t frameworkDirectory, pal::string_t* tpaList)
 {
-	trace::info(_X("CoreClrEmbedding::AddToTpaList - Searching %s for assemblies to add to the TPA list"), directoryPath.c_str());
+	trace::info(_X("CoreClrEmbedding::AddToTpaList - Searching %s for serviceable assemblies to add to the TPA list"), dependencyManifestFile.c_str());
 
-    const pal::char_t * const tpaExtensions[] = {
-        _X("*.ni.dll"),
-        _X("*.dll"),
-        _X("*.ni.exe"),
-        _X("*.exe")
-    };
-
-	std::vector<pal::string_t> files;
+    std::vector<pal::string_t> files;
     std::set<pal::string_t> addedAssemblies;
 	pal::string_t dirSeparator(1, DIR_SEPARATOR);
 	pal::string_t pathSeparator(1, PATH_SEPARATOR);
 
-    // Walk the directory for each extension separately so that we first get files with .ni.dll extension, then files with .dll 
-	// extension, etc.
-    for (u_int extensionIndex = 0; extensionIndex < sizeof(tpaExtensions) / sizeof(tpaExtensions[0]); extensionIndex++)
-    {
-		pal::readdir(directoryPath, tpaExtensions[extensionIndex], &files);
+	deps_json_t dependencyManifest(false, dependencyManifestFile);
+	std::vector<deps_entry_t> dependencies = dependencyManifest.get_entries(deps_entry_t::asset_types::runtime);
 
-		for (u_int fileIndex = 0; fileIndex < files.size(); fileIndex++)
+	for (const deps_entry_t& dependency : dependencies)
+	{
+		if (!dependency.is_serviceable)
 		{
-			pal::string_t filename = get_filename(files[fileIndex]);
-			pal::string_t filenameWithoutExtension = get_filename_without_ext(files[fileIndex]);
-
-			// Make sure if we have an assembly with multiple extensions present, we insert only one version of it.
-			if (addedAssemblies.find(filenameWithoutExtension) == addedAssemblies.end())
-			{
-				addedAssemblies.insert(filenameWithoutExtension);
-
-				tpaList->append(directoryPath);
-				tpaList->append(dirSeparator);
-				tpaList->append(files[fileIndex]);
-				tpaList->append(pathSeparator);
-
-				trace::info(_X("CoreClrEmbedding::AddToTpaList - Added %s to the TPA list"), filename.c_str());
-			}
+			continue;
 		}
-    }
+
+		pal::string_t filename = pal::string_t(dependency.relative_path);
+		
+		replace_char(&filename, _X('/'), DIR_SEPARATOR);
+		filename = get_filename(filename);
+
+		tpaList->append(frameworkDirectory);
+		tpaList->append(dirSeparator);
+		tpaList->append(filename);
+		tpaList->append(pathSeparator);
+
+		trace::info(_X("CoreClrEmbedding::AddToTpaList - Added %s%s%s to the TPA list"), frameworkDirectory.c_str(), dirSeparator.c_str(), filename.c_str());
+	}
 }
 
 void CoreClrEmbedding::FreeCoreClr(pal::dll_t libCoreClr)

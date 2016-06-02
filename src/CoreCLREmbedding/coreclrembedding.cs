@@ -127,6 +127,14 @@ public class CoreCLREmbedding
         {
             get;
         }
+
+        public bool StandaloneApplication
+        {
+            get
+            {
+                return ApplicationDirectory == RuntimePath;
+            }
+        }
     }
 
     private class EdgeAssemblyLoadContext : AssemblyLoadContext
@@ -238,19 +246,24 @@ public class CoreCLREmbedding
 
             foreach (CompilationLibrary compileLibrary in dependencyContext.CompileLibraries)
             {
-                DebugMessage("EdgeAssemblyLoadContext::AddDependencies (CLR) - Processing compile dependency {0}", compileLibrary.Name);
-
                 if (compileLibrary.Assemblies == null || compileLibrary.Assemblies.Count == 0)
                 {
                     continue;
                 }
 
-                string assemblyPath = Path.Combine(_packagesPath, compileLibrary.Name, compileLibrary.Version, compileLibrary.Assemblies[0].Replace('/', Path.DirectorySeparatorChar));
+                DebugMessage("EdgeAssemblyLoadContext::AddDependencies (CLR) - Processing compile dependency {0}", compileLibrary.Name);
+
+                string assemblyPath = RuntimeEnvironment.StandaloneApplication && File.Exists(Path.Combine(RuntimeEnvironment.ApplicationDirectory, "refs", Path.GetFileName(compileLibrary.Assemblies[0].Replace('/', Path.DirectorySeparatorChar))))
+                    ? Path.Combine(RuntimeEnvironment.ApplicationDirectory, "refs", Path.GetFileName(compileLibrary.Assemblies[0].Replace('/', Path.DirectorySeparatorChar)))
+                    : Path.Combine(_packagesPath, compileLibrary.Name, compileLibrary.Version, compileLibrary.Assemblies[0].Replace('/', Path.DirectorySeparatorChar));
 
                 if (!CompileAssemblies.ContainsKey(compileLibrary.Name))
                 {
-                    CompileAssemblies[compileLibrary.Name] = assemblyPath;
-                    DebugMessage("EdgeAssemblyLoadContext::AddDependencies (CLR) - Added compile assembly {0}", assemblyPath);
+                    if (File.Exists(assemblyPath))
+                    {
+                        CompileAssemblies[compileLibrary.Name] = assemblyPath;
+                        DebugMessage("EdgeAssemblyLoadContext::AddDependencies (CLR) - Added compile assembly {0}", assemblyPath);
+                    }
                 }
 
                 else
@@ -268,7 +281,9 @@ public class CoreCLREmbedding
                     string assetPath = runtimeLibrary.RuntimeAssemblyGroups[0].AssetPaths[0];
                     string assemblyPath = runtimeLibrary.Type == "project"
                         ? Path.Combine(RuntimeEnvironment.ApplicationDirectory, assetPath)
-                        : Path.Combine(_packagesPath, runtimeLibrary.Name, runtimeLibrary.Version, assetPath.Replace('/', Path.DirectorySeparatorChar));
+                        : RuntimeEnvironment.StandaloneApplication
+                            ? Path.Combine(RuntimeEnvironment.ApplicationDirectory, Path.GetFileName(assetPath))
+                            : Path.Combine(_packagesPath, runtimeLibrary.Name, runtimeLibrary.Version, assetPath.Replace('/', Path.DirectorySeparatorChar));
                     string libraryNameFromPath = Path.GetFileNameWithoutExtension(assemblyPath);
 
                     if (!_libraries.ContainsKey(runtimeLibrary.Name))
@@ -355,6 +370,7 @@ public class CoreCLREmbedding
             {
                 try
                 {
+                    DebugMessage("EdgeAssemblyLoadContext::Load (CLR) - Trying to load from {0}", _libraries[assemblyName.Name]);
                     Assembly assembly = LoadFromFile(_libraries[assemblyName.Name]);
 
                     if (assembly != null)
@@ -368,7 +384,13 @@ public class CoreCLREmbedding
 
                 catch (Exception e)
                 {
-                    DebugMessage("EdgeAssemblyLoadContext::Load (CLR) - Error trying to load {0}: {2}{3}{4}", assemblyName.Name, e.Message, Environment.NewLine, e.StackTrace);
+                    DebugMessage("EdgeAssemblyLoadContext::Load (CLR) - Error trying to load {0}: {1}{2}{3}", assemblyName.Name, e.Message, Environment.NewLine, e.StackTrace);
+
+                    if (e.InnerException != null)
+                    {
+                        DebugMessage("EdgeAssemblyLoadContext::Load (CLR) - Inner exception: {0}{1}{2}", e.InnerException.Message, Environment.NewLine, e.InnerException.StackTrace);
+                    }
+
                     throw;
                 }
             }
@@ -462,7 +484,7 @@ public class CoreCLREmbedding
 
         catch (Exception e)
         {
-            DebugMessage("CoreCLREmbedding::Initialize (CLR) - Exception was thrown: {0}", e.Message);
+            DebugMessage("CoreCLREmbedding::Initialize (CLR) - Exception was thrown: {0}{1}{2}", e.Message, Environment.NewLine, e.StackTrace);
 
             V8Type v8Type;
             Marshal.WriteIntPtr(exception, MarshalCLRToV8(e, out v8Type));
@@ -471,6 +493,7 @@ public class CoreCLREmbedding
 
     private static Assembly Assembly_Resolving(AssemblyLoadContext arg1, AssemblyName arg2)
     {
+        DebugMessage("CoreCLREmbedding::Initialize (CLR) - Starting resolve process");
         return LoadContext.LoadFromAssemblyName(arg2);
     }
 
@@ -495,7 +518,7 @@ public class CoreCLREmbedding
 
             else
             {
-                assembly = LoadContext.LoadFromAssemblyName(new AssemblyName(assemblyFile));
+                assembly = AssemblyLoadContext.Default.LoadFromAssemblyName(new AssemblyName(assemblyFile));
             }
 
             DebugMessage("CoreCLREmbedding::GetFunc (CLR) - Assembly {0} loaded successfully", assemblyFile);
@@ -511,7 +534,7 @@ public class CoreCLREmbedding
 
         catch (Exception e)
         {
-            DebugMessage("CoreCLREmbedding::GetFunc (CLR) - Exception was thrown: {0}", e.Message);
+            DebugMessage("CoreCLREmbedding::GetFunc (CLR) - Exception was thrown: {0}{1}{2}", e.Message, Environment.NewLine, e.StackTrace);
 
             V8Type v8Type;
             Marshal.WriteIntPtr(exception, MarshalCLRToV8(e, out v8Type));
@@ -602,7 +625,7 @@ public class CoreCLREmbedding
 
         catch (Exception e)
         {
-            DebugMessage("CoreCLREmbedding::CompileFunc (CLR) - Exception was thrown: {0}\n{1}", e.Message, e.StackTrace);
+            DebugMessage("CoreCLREmbedding::CompileFunc (CLR) - Exception was thrown: {0}{1}{2}", e.Message, Environment.NewLine, e.StackTrace);
 
             V8Type v8Type;
             Marshal.WriteIntPtr(exception, MarshalCLRToV8(e, out v8Type));
@@ -672,7 +695,7 @@ public class CoreCLREmbedding
 
         catch (Exception e)
         {
-            DebugMessage("CoreCLREmbedding::CallFunc (CLR) - Exception was thrown: {0}", e.Message);
+            DebugMessage("CoreCLREmbedding::CallFunc (CLR) - Exception was thrown: {0}{1}{2}", e.Message, Environment.NewLine, e.StackTrace);
 
             V8Type v8Type;
 
@@ -750,7 +773,7 @@ public class CoreCLREmbedding
 
         catch (Exception e)
         {
-            DebugMessage("CoreCLREmbedding::ContinueTask (CLR) - Exception was thrown: {0}", e.Message);
+            DebugMessage("CoreCLREmbedding::ContinueTask (CLR) - Exception was thrown: {0}{1}{2}", e.Message, Environment.NewLine, e.StackTrace);
 
             V8Type v8Type;
             Marshal.WriteIntPtr(exception, MarshalCLRToV8(e, out v8Type));
@@ -768,7 +791,7 @@ public class CoreCLREmbedding
 
         catch (Exception e)
         {
-            DebugMessage("CoreCLREmbedding::SetCallV8FunctionDelegate (CLR) - Exception was thrown: {0}", e.Message);
+            DebugMessage("CoreCLREmbedding::SetCallV8FunctionDelegate (CLR) - Exception was thrown: {0}{1}{2}", e.Message, Environment.NewLine, e.StackTrace);
 
             V8Type v8Type;
             Marshal.WriteIntPtr(exception, MarshalCLRToV8(e, out v8Type));
