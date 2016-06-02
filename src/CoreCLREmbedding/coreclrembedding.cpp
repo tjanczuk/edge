@@ -472,8 +472,6 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 
     trace::info(_X("CoreClrEmbedding::Initialize - %s loaded successfully from %s"), LIBCORECLR_NAME, coreClrDirectory.c_str());
 
-    bool standalone = edgeAppDir == coreClrDirectory;
-
     pal::string_t assemblySearchDirectories;
     pal::string_t pathSeparator(1, PATH_SEPARATOR);
 
@@ -791,10 +789,13 @@ void CoreClrEmbedding::AddToTpaList(pal::string_t dependencyManifestFile, pal::s
 			continue;
 		}
 
-		pal::string_t filename = pal::string_t(dependency.relative_path);
-		
-		replace_char(&filename, _X('/'), DIR_SEPARATOR);
-		filename = get_filename(filename);
+		pal::string_t filename = pal::string_t(dependency.relative_path);		
+		size_t separatorPosition = filename.find_last_of(_X("/\\"));
+
+		if (separatorPosition != pal::string_t::npos)
+		{
+			filename = filename.substr(separatorPosition + 1);
+		}
 
 		tpaList->append(frameworkDirectory);
 		tpaList->append(dirSeparator);
