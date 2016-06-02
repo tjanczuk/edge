@@ -82,7 +82,7 @@
           {
             'conditions': [
               [
-                '"<!(echo -n `which dotnet`)"!=""',
+                '"<!((which dotnet) || echo not_found)"!="not_found"',
                 {
                   'sources+': [
                     'src/common/v8synchronizationcontext.cpp',
@@ -203,7 +203,7 @@
           {
             'conditions': [
               [
-                '"<!(echo -n `which mono`)"!=""',
+                '"<!((which mono) || echo not_found)"!="not_found"',
                 {
                   'sources+': [
                     'src/mono/clractioncontext.cpp',
@@ -327,7 +327,7 @@
           {
             'conditions': [
               [
-                '"<!(echo -n `which mono`)"!=""',
+                '"<!((which mono) || echo not_found)"!="not_found"',
                 {
                   'actions+': [
                     {
@@ -351,7 +351,7 @@
                 }
               ],
               [
-                '"<!(echo -n `which dotnet`)"!=""',
+                '"<!((which dotnet) || echo not_found)"!="not_found"',
                 {
                   'actions+': [
                     {
