@@ -192,18 +192,12 @@ public class CoreCLREmbedding
         {
             DebugMessage("EdgeAssemblyLoadContext::LoadDependencyManifest (CLR) - Loading dependency manifest from {0}", dependencyManifestFile);
             
-            LockFile edgeJsProjectJsonLockFile = LockFileReader.Read(Path.Combine(RuntimeEnvironment.EdgeNodePath, "project.lock.json"), false);
-            ProjectContext edgeJsProjectContext = new ProjectContextBuilder().WithLockFile(edgeJsProjectJsonLockFile).WithTargetFramework(_targetFrameworkString).Build();
-            LibraryExporter edgeJsProjectExporter = edgeJsProjectContext.CreateExporter("Release");
-            DependencyContext edgeJsDependencyContext = new DependencyContextBuilder().Build(null, null, edgeJsProjectExporter.GetAllExports(), true, _targetFramework,
-                String.Empty);
-            
             DependencyContextJsonReader dependencyContextReader = new DependencyContextJsonReader();
 
             using (FileStream dependencyManifestStream = new FileStream(dependencyManifestFile, FileMode.Open, FileAccess.Read))
             {
-                DebugMessage("EdgeAssemblyLoadContext::LoadDependencyManifest (CLR) - Reading dependency manifest file and merging in dependencies from Edge.js and the shared runtime");
-                DependencyContext dependencyContext = dependencyContextReader.Read(dependencyManifestStream).Merge(edgeJsDependencyContext);
+                DebugMessage("EdgeAssemblyLoadContext::LoadDependencyManifest (CLR) - Reading dependency manifest file and merging in dependencies from the shared runtime");
+                DependencyContext dependencyContext = dependencyContextReader.Read(dependencyManifestStream);
 
                 string runtimeDependencyManifestFile = (string) AppContext.GetData("FX_DEPS_FILE");
 
@@ -216,9 +210,6 @@ public class CoreCLREmbedding
                         dependencyContext = dependencyContext.Merge(dependencyContextReader.Read(runtimeDependencyManifestStream));
                     }
                 }
-
-                DebugMessage("EdgeAssemblyLoadContext::LoadDependencyManifest (CLR) - Resetting assemblies list");
-                _libraries.Clear();
 
                 AddDependencies(dependencyContext, RuntimeEnvironment.StandaloneApplication);
             }
@@ -1316,8 +1307,7 @@ public class CoreCLREmbedding
 
         return expando;
     }
-
-    [Conditional("DEBUG")]
+    
     internal static void DebugMessage(string message, params object[] parameters)
     {
         if (DebugMode)

@@ -54,8 +54,6 @@ if not exist "%GYP%" (
     exit /b -1
 )
 
-if exist ".\src\CoreCLREmbedding\bin" rmdir /s /q ".\src\CoreCLREmbedding\bin"
-
 "%NODEEXE%" "%GYP%" configure build --msvs_version=2013 -%FLAVOR%
 if %ERRORLEVEL% neq 0 (
     echo Error building edge.node %FLAVOR% for node.js %2 v%3
@@ -67,14 +65,6 @@ copy /y .\build\%FLAVOR%\edge_*.node "%DESTDIR%"
 if %ERRORLEVEL% neq 0 (
     echo Error copying edge.node %FLAVOR% for node.js %2 v%3
     exit /b -1
-)
-
-if exist ".\build\%FLAVOR%\CoreCLREmbedding.dll" (
-    copy /y .\build\%FLAVOR%\CoreCLREmbedding.dll "%DESTDIR%"
-    if %ERRORLEVEL% neq 0 (
-        echo Error copying CoreCLREmbedding.dll %FLAVOR% for node.js %2 v%3
-        exit /b -1
-    )
 )
 
 copy /y "%DESTDIR%\..\msvcr120.dll" "%DESTDIR%"

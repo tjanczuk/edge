@@ -36,4 +36,4 @@ public class NodejsFunc
 
         return invokeContext.TaskCompletionSource.Task;
     }  
-};
+}

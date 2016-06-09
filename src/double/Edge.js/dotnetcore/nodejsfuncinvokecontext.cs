@@ -81,4 +81,4 @@ public class NodejsFuncInvokeContext
 
         CoreCLREmbedding.DebugMessage("NodejsFuncInvokeContext::NodejsFuncComplete (CLR) - Finished");
     }
-};
+}

@@ -2,7 +2,7 @@ set SELF=%~dp0
 ver > nul
 
 IF "%EDGE_USE_CORECLR%"=="1" (
-	cmd /c "cd ""%SELF%"" && dotnet restore && dotnet build"
+	cmd /c "cd ""%SELF%"" && dotnet restore -f ..\tools\build\nuget && dotnet build"
 	
 	IF %ERRORLEVEL% NEQ 0 (
 		ECHO Test restore failed

@@ -1,0 +1,84 @@
+{
+  "version": "5.9.1-rc2",
+  "description": "With Edge.js you can script Node.js in a .NET application. Edge.js allows you to run Node.js and .NET code in one process. You can call Node.js functions from .NET and .NET functions from Node.js. Edge.js takes care of marshalling data between CLR and V8. Edge.js also reconciles threading models of single threaded V8 and multi-threaded CLR. Edge.js ensures correct lifetime of objects on V8 and CLR heaps. Edge.js NuGet package v5.9.1 supports scripting Node.js v5.9.1 with Edge.js v5.0.2.",
+  "copyright": "Copyright 2015 Tomasz Janczuk",
+
+  "frameworks": {
+    "net40": {
+      "bin": {
+        "assembly": "bin/{configuration}/net40/EdgeJs.dll"
+      }
+    },
+
+    "netstandard1.5": {
+      "imports": [
+        "portable-dnxcore50+net45+win8+wp8+wpa81"
+      ],
+
+      "dependencies": {
+        "NETStandard.Library": "1.5.0-rc2-24027",
+        "System.Console": "4.0.0-rc2-24027",
+        "System.Runtime": "4.1.0-rc2-24027",
+        "System.Runtime.InteropServices": "4.1.0-rc2-24027",
+        "System.Dynamic.Runtime": "4.0.11-rc2-24027",
+        "System.Linq": "4.1.0-rc2-24027",
+        "System.Linq.Expressions": "4.0.11-rc2-24027",
+        "System.IO.FileSystem": "4.0.1-rc2-24027",
+        "System.Runtime.Loader": "4.0.0-rc2-24027",
+        "Microsoft.CSharp": "4.0.1-rc2-24027",
+        "System.Reflection": "4.1.0-rc2-24027",
+        "System.Xml.XPath.XmlDocument": "4.0.1-rc2-24027",
+        "System.Xml.ReaderWriter": "4.0.11-rc2-24027",
+        "System.Private.Uri": "4.0.1-rc2-24027",
+        "System.Collections.Specialized": "4.0.1-rc2-24027",
+        "Microsoft.DotNet.ProjectModel": "1.0.0-rc2-002702",
+        "Microsoft.Extensions.DependencyModel": "1.0.0-rc2-final",
+        "Microsoft.DotNet.InternalAbstractions": "1.0.0-rc2-002702",
+        "System.AppContext": "4.1.0-rc2-24027"
+      },
+
+      "buildOptions": {
+        "allowUnsafe": true,
+        "compile": {
+          "include": [
+            "dotnetcore/*.cs",
+            "../../common/*.cs"
+          ],
+          "exclude": "dotnet/*.cs"
+        }
+      }
+    }
+  },
+
+  "buildOptions": {
+    "outputName": "EdgeJs"
+  },
+
+  "packOptions": {
+    "licenseUrl": "https://raw.githubusercontent.com/tjanczuk/edge/master/LICENSE.txt",
+    "owners": [
+      "Tomasz Janczuk"
+    ],
+    "tags": [
+      "node.js",
+      "node",
+      ".net",
+      "edge",
+      "edge.js",
+      "v8",
+      "clr",
+      "coreclr",
+      "mono",
+      "interop",
+      "javascript"
+    ],
+    "files": {
+      "mappings": {
+        "tools/": "../../../tools/nuget/install.ps1",
+        "content/edge/": "../../../lib/*.js",
+        "content/edge/x86/": "../../../tools/build/nuget/content/edge/x86/*",
+        "content/edge/x64/": "../../../tools/build/nuget/content/edge/x64/*"
+      }
+    }
+  }
+}

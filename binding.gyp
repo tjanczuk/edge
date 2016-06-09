@@ -294,35 +294,6 @@
         [
           'OS=="win"',
           {
-            'conditions': [
-              [
-                '"<!(node -e "var whereis = require(\'./tools/whereis\'); console.log(whereis(\'dotnet.exe\'));")"!=""',
-                {
-                  'actions+': [
-                    {
-                      'action_name': 'compile_coreclr_embed',
-                      'inputs': [
-                        'src/CoreCLREmbedding/project.json'
-                      ],
-                      'outputs': [
-                        'src/CoreCLREmbedding/bin/$(Configuration)/netstandard1.5/CoreCLREmbedding.dll'
-                      ],                        
-                      'action': [
-                        'cd "<(module_root_dir)\\src\\CoreCLREmbedding" & dotnet restore & cd "<(module_root_dir)\\src\\CoreCLREmbedding" & dotnet build --configuration $(Configuration) & copy "<(module_root_dir)\\src\\CoreCLREmbedding\\bin\\$(Configuration)\\netstandard1.5\\CoreCLREmbedding.dll" "<(module_root_dir)\\build\\$(Configuration)"'
-                      ]
-                    }
-                  ],
-                  'copies+': [
-                    {
-                      'destination': '<(module_root_dir)\\build\\$(Configuration)',
-                      'files': [
-                        '<(module_root_dir)\\src\\CoreCLREmbedding\\bin\\$(Configuration)\\netstandard1.5\\CoreCLREmbedding.dll'
-                      ]
-                    }
-                  ]
-                }
-              ]
-            ]
           },
           {
             'conditions': [

@@ -7,8 +7,10 @@ if "%1" equ "" (
 )
 
 mkdir "%SELF%\build\nuget\content\edge" > nul 2>&1
-mkdir "%SELF%\build\nuget\lib" > nul 2>&1
+mkdir "%SELF%\build\nuget\lib\net40" > nul 2>&1
+mkdir "%SELF%\build\nuget\lib\netstandard1.5" > nul 2>&1
 mkdir "%SELF%\build\nuget\tools" > nul 2>&1
+mkdir "%SELF%\..\src\double\Edge.js\bin\Release\net40" > nul 2>&1
 
 if not exist "%SELF%\build\download.exe" (
 	csc /out:"%SELF%\build\download.exe" "%SELF%\download.cs"
@@ -55,23 +57,22 @@ if %ERRORLEVEL% neq 0 exit /b -1
 call :build_edge %1 x64
 if %ERRORLEVEL% neq 0 exit /b -1
 
-csc /out:"%SELF%\build\nuget\lib\EdgeJs.dll" /target:library "%SELF%\..\src\double\dotnet\EdgeJs.cs"
+csc /out:"%SELF%\..\src\double\Edge.js\bin\Release\net40\EdgeJs.dll" /target:library "%SELF%\..\src\double\Edge.js\dotnet\EdgeJs.cs"
 if %ERRORLEVEL% neq 0 exit /b -1
 
-copy /y "%SELF%\..\lib\edge.js" "%SELF%\build\nuget\content\edge"
-copy /y "%SELF%\..\lib\double_edge.js" "%SELF%\build\nuget\content\edge"
-copy /y "%SELF%\nuget\install.ps1" "%SELF%\build\nuget\tools"
-copy /y "%SELF%\nuget\edge.nuspec" "%SELF%\build\nuget"
+cd "%SELF%\..\src\double\Edge.js"
+dotnet restore
+dotnet build --configuration Release --framework netstandard1.5
+dotnet pack --configuration Release --no-build
 
-pushd "%SELF%\build\nuget"
-"%SELF%\build\nuget.exe" pack edge.nuspec
 if %ERRORLEVEL% neq 0 (
 	echo Failure building Nuget package
-	popd
+	cd "%SELF%"
 	exit /b -1
 )
-popd
 
+cd "%SELF%"
+copy /y "%SELF%\..\src\double\Edge.js\bin\Release\*.nupkg" "%SELF%\build\nuget"
 echo SUCCESS. Nuget package at %SELF%\build\nuget
 
 exit /b 0
