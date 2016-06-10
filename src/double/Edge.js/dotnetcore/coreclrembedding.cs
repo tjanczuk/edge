@@ -145,7 +145,6 @@ public class CoreCLREmbedding
         private readonly Dictionary<string, string> _libraries = new Dictionary<string, string>();
         private readonly Dictionary<string, string> _nativeLibraries = new Dictionary<string, string>();
         private readonly string _packagesPath;
-        private static string _targetFrameworkString = ".NETStandard,Version=v1.5";
         private static NuGetFramework _targetFramework = new NuGetFramework(".NETStandard,Version=v1.5");
 
         public EdgeAssemblyLoadContext(string bootstrapAssemblies)
@@ -330,20 +329,21 @@ public class CoreCLREmbedding
             }
         }
 
-        internal void AddCompiler(string compilerDirectory)
+        internal void AddCompiler(string bootstrapDependencyManifest)
         {
-            DebugMessage("EdgeAssemblyLoadContext::AddCompiler (CLR) - Adding the compiler in {0}", compilerDirectory);
-            
-            LockFile compilerProjectJsonLockFile = LockFileReader.Read(Path.Combine(compilerDirectory, "project.lock.json"), false);
-            ProjectContext compilerProjectContext = new ProjectContextBuilder().WithLockFile(compilerProjectJsonLockFile).WithTargetFramework(_targetFrameworkString).Build();
-            LibraryExporter compilerProjectExporter = compilerProjectContext.CreateExporter("Release");
-            DependencyContext compilerDependencyContext = new DependencyContextBuilder().Build(null, compilerProjectExporter.GetAllExports(), compilerProjectExporter.GetAllExports(), true, _targetFramework,
-                String.Empty);
+            DebugMessage("EdgeAssemblyLoadContext::AddCompiler (CLR) - Adding the compiler from dependency manifest file {0}", bootstrapDependencyManifest);
 
-            DebugMessage("EdgeAssemblyLoadContext::AddCompiler (CLR) - Adding dependencies for the compiler");
-            AddDependencies(compilerDependencyContext, false);
+            DependencyContextJsonReader dependencyContextReader = new DependencyContextJsonReader();
 
-            DebugMessage("EdgeAssemblyLoadContext::AddCompiler (CLR) - Finished");
+            using (FileStream bootstrapDependencyManifestStream = new FileStream(bootstrapDependencyManifest, FileMode.Open, FileAccess.Read))
+            {
+                DependencyContext compilerDependencyContext = dependencyContextReader.Read(bootstrapDependencyManifestStream);
+
+                DebugMessage("EdgeAssemblyLoadContext::AddCompiler (CLR) - Adding dependencies for the compiler");
+                AddDependencies(compilerDependencyContext, false);
+
+                DebugMessage("EdgeAssemblyLoadContext::AddCompiler (CLR) - Finished");
+            }
         }
 
         [SecuritySafeCritical]
@@ -544,19 +544,24 @@ public class CoreCLREmbedding
             IDictionary<string, object> options = (IDictionary<string, object>)MarshalV8ToCLR(v8Options, (V8Type)payloadType);
             string compiler = (string)options["compiler"];
 
-            if (!Path.IsPathRooted(compiler))
-            {
-                compiler = Path.Combine(Directory.GetCurrentDirectory(), compiler);
-            }
-
             MethodInfo compileMethod;
             Type compilerType;
 
             if (!Compilers.ContainsKey(compiler))
             {
-                LoadContext.AddCompiler(Directory.GetParent(compiler).FullName);
+                if (!DependencyContext.Default.RuntimeLibraries.Any(l => l.Name == compiler))
+                {
+                    if (!File.Exists(options["bootstrapDependencyManifest"].ToString()))
+                    {
+                        throw new Exception(
+                            String.Format(
+                                "Compiler package {0} was not found in the application dependency manifest and no bootstrap dependency manifest was found for the compiler.  Make sure that you either have {0} in your project.json or, if you do not have a project.json, that you have the .NET Core SDK installed.", compiler));
+                    }
 
-                Assembly compilerAssembly = LoadContext.LoadFromFile(compiler);
+                    LoadContext.AddCompiler(options["bootstrapDependencyManifest"].ToString());
+                }
+                
+                Assembly compilerAssembly = AssemblyLoadContext.Default.LoadFromAssemblyName(new AssemblyName(compiler));
                 DebugMessage("CoreCLREmbedding::CompileFunc (CLR) - Compiler assembly {0} loaded successfully", compiler);
 
                 compilerType = compilerAssembly.GetType("EdgeCompiler");
