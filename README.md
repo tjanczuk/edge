@@ -371,7 +371,7 @@ var add7 = edge.func({
         }
     */},
     references: [ 'System.Data.dll' ]
-);
+});
 ```
 
 If you are using CoreCLR, you must have a `project.json` file (specification [here](https://github.com/aspnet/Home/wiki/Project.json-file)) that specifies the dependencies for the application and you must have run the `dnu restore` command in that project's directory to generate a `project.lock.json` file.  This file must either be in the current working directory that `node` is executed in or you must specify its directory by setting the `EDGE_APP_ROOT` environment variable.  For example, if the `project.json` file is in the `c:\DotNet\MyProject` directory, you would run something like:
