@@ -56,18 +56,12 @@ if (process.platform === 'win32') {
 	var dotnetPath = whereis('dotnet', 'dotnet.exe');
 
 	if (dotnetPath) {
-		spawn(dotnetPath, ['restore'], { stdio: 'inherit', cwd: path.resolve(__dirname, '..', 'src', 'CoreCLREmbedding') })
+		spawn(dotnetPath, ['restore'], { stdio: 'inherit', cwd: path.resolve(__dirname, '..', 'lib', 'bootstrap') })
 			.on('close', function() {
-				var projectJsonPath = path.resolve(__dirname, '..', 'src', 'CoreCLREmbedding', 'project.json');
-				var projectLockJsonPath = path.resolve(__dirname, '..', 'src', 'CoreCLREmbedding', 'project.lock.json');
-
-				dest32dirs.forEach(copyFile(projectJsonPath, 'project.json'));
-				dest32dirs.forEach(copyFile(projectLockJsonPath, 'project.lock.json'));
-
-				dest64dirs.forEach(copyFile(projectJsonPath, 'project.json'));
-				dest64dirs.forEach(copyFile(projectLockJsonPath, 'project.lock.json'));
-
-				require('./checkplatform');
+				spawn(dotnetPath, ['build', '--configuration', 'Release'], { stdio: 'inherit', cwd: path.resolve(__dirname, '..', 'lib', 'bootstrap') })
+					.on('close', function() {
+						require('./checkplatform');
+					});
 			});
 	}
 

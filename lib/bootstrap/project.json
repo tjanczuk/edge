@@ -1,0 +1,21 @@
+{
+  "frameworks": {
+    "netstandard1.5": {
+      "imports": [
+        "portable-net45+wp80+win8+wpa81+dnxcore50",
+        "portable-dnxcore50+net45+win8+wp8+wpa81"
+      ],
+      "dependencies": {
+        "Microsoft.NETCore.App": {
+          "type": "platform",
+          "version": "1.0.0-rc2-3002702"
+        },
+        "Edge.js": "5.9.1-rc2"
+      }
+    }
+  },
+
+  "buildOptions": {
+    "preserveCompilationContext": true
+  }
+}

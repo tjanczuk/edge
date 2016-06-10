@@ -326,42 +326,31 @@
                 {
                   'actions+': [
                     {
-                      'action_name': 'restore_packages',
+                      'action_name': 'restore_bootstrap_packages',
                       'inputs': [
-                        'src/CoreCLREmbedding/project.json'
+                        'lib/bootstrap/project.json'
                       ],
                       'outputs': [
-                        'src/CoreCLREmbedding/project.lock.json'
+                        'lib/bootstrap/project.lock.json'
                       ],
                       'action': [
                         'bash',
                         '-c',
-                        'cd src/CoreCLREmbedding && dotnet restore'
+                        'cd lib/bootstrap && dotnet restore'
                       ]
                     },
                     {
-                      'action_name': 'compile_coreclr_embed',
+                      'action_name': 'compile_bootstrap',
                       'inputs': [
-                        'src/CoreCLREmbedding/*.cs',
-                        'src/common/*.cs'
+                        'lib/bootstrap/*.cs'
                       ],
                       'outputs': [
-                        'src/CoreCLREmbedding/bin/$(BUILDTYPE)/netstandard1.5/CoreCLREmbedding.dll'
+                        'lib/bootstrap/bin/$(BUILDTYPE)/netstandard1.5/bootstrap.dll'
                       ],                        
                       'action': [
                         'bash',
                         '-c',
-                        'cd src/CoreCLREmbedding && dotnet build --configuration $(BUILDTYPE)'
-                      ]
-                    }
-                  ],
-                  'copies+': [
-                    {
-                      'destination': '<(module_root_dir)/build/$(BUILDTYPE)',
-                      'files': [
-                        '<(module_root_dir)/src/CoreCLREmbedding/bin/$(BUILDTYPE)/netstandard1.5/CoreCLREmbedding.dll',
-                        '<(module_root_dir)/src/CoreCLREmbedding/project.json',
-                        '<(module_root_dir)/src/CoreCLREmbedding/project.lock.json'
+                        'cd lib/bootstrap && dotnet build --configuration $(BUILDTYPE)'
                       ]
                     }
                   ]

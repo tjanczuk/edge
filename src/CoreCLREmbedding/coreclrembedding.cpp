@@ -249,7 +249,23 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 	pal::string_t edgeAppDir;
 	pal::getenv(_X("EDGE_APP_ROOT"), &edgeAppDir);
 
-	edgeAppDir = edgeAppDir.length() > 0 ? edgeAppDir : currentDirectory;
+	pal::string_t edgeBootstrapDir;
+	pal::getenv(_X("EDGE_BOOTSTRAP_DIR"), &edgeBootstrapDir);
+
+	if (edgeAppDir.length() == 0)
+	{
+		if (edgeBootstrapDir.length() != 0)
+		{
+			trace::info(_X("CoreClrEmbedding::Initialize - No EDGE_APP_ROOT environment variable present, using the Edge bootstrapper directory at %s"), edgeBootstrapDir.c_str());
+			edgeAppDir = edgeBootstrapDir;
+		}
+
+		else
+		{
+			trace::info(_X("CoreClrEmbedding::Initialize - No EDGE_APP_ROOT environment variable present, using the current directory at %s"), currentDirectory.c_str());
+			edgeAppDir = currentDirectory;
+		}
+	}
 
 	pal::string_t coreClrDirectory;
 	pal::string_t coreClrEnvironmentVariable;
@@ -668,12 +684,13 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 	CoreClrGcHandle exception = NULL;
 	BootstrapperContext context;
 
-	std::vector<char> coreClrDirectoryCstr, currentDirectoryCstr;
+	std::vector<char> coreClrDirectoryCstr, currentDirectoryCstr, edgeAppDirCstr;
 	pal::pal_clrstring(coreClrDirectory, &coreClrDirectoryCstr);
 	pal::pal_clrstring(currentDirectory, &currentDirectoryCstr);
+	pal::pal_clrstring(edgeAppDir, &edgeAppDirCstr);
 
 	context.runtimeDirectory = coreClrDirectoryCstr.data();
-	context.applicationDirectory = getenv("EDGE_APP_ROOT");
+	context.applicationDirectory = edgeAppDirCstr.data();
 	context.edgeNodePath = edgeNodePathCstr.data();
 	context.dependencyManifestFile = dependencyManifestFileCstr.data();
 
