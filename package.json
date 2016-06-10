@@ -1,5 +1,5 @@
 {
-  "name": "edge",
+  "name": "electron-edge",
   "author": {
     "name": "Tomasz Janczuk <tomasz@janczuk.org>",
     "url": "http://tomasz.janczuk.org",
@@ -39,7 +39,7 @@
   "homepage": "https://github.com/tjanczuk/edge",
   "repository": {
     "type": "git",
-    "url": "git@github.com:tjanczuk/edge.git"
+    "url": "git@github.com:kexplo/electron-edge.git"
   },
   "bugs": {
     "url": "http://github.com/tjanczuk/edge/issues"

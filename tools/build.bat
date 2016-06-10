@@ -56,7 +56,7 @@ if not exist "%GYP%" (
 
 if exist ".\src\CoreCLREmbedding\bin" rmdir /s /q ".\src\CoreCLREmbedding\bin"
 
-"%NODEEXE%" "%GYP%" configure build --msvs_version=2013 -%FLAVOR%
+"%NODEEXE%" "%GYP%" configure build --target=0.36.2 --dist-url=https://atom.io/download/atom-shell --msvs_version=2013 -%FLAVOR%
 if %ERRORLEVEL% neq 0 (
     echo Error building edge.node %FLAVOR% for node.js %2 v%3
     exit /b -1
