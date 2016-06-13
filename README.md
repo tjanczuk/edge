@@ -1350,7 +1350,7 @@ export EDGE_NATIVE=/home/tomek/edge/build/Debug/edge_nativeclr.node
 
 ### Using .NET Core
 
-If you have only .NET Core installed on your system and not Mono, you can run Edge with no changes.  However, if you have both runtimes installed, Edge will automatically use Mono unless directed otherwise.  To use .NET Core in a dual-runtime entironment, set the `EDGE_USE_CORECLR=1` environment variable when starting node, i.e.
+If you have only .NET Core installed on your system and not Mono, you can run Edge with no changes.  However, if you have both runtimes installed, Edge will automatically use Mono unless directed otherwise.  To use .NET Core in a dual-runtime environment, set the `EDGE_USE_CORECLR=1` environment variable when starting node, i.e.
 
 ```bash
 EDGE_USE_CORECLR=1 node sample.js
@@ -1361,13 +1361,16 @@ Edge will try to find the .NET Core runtime in the following locations:
  * The path in the `CORECLR_DIR` environment variable, if provided
  * The current directory
  * The directory containing `edge_*.node`
- * Directories in the `PATH` environment variable
+ * Directories in the `PATH` environment variable.  Once a directory containing the `dotnet` executable is located, we then do the following to decide which version of the framework (you can have several installed at once) to load
+	 * If the `CORECLR_VERSION` environment variable was specified, we try to load that version
+	 * Else, if the project.json/*.deps.json has a reference to `Microsoft.NETCore.App`, indicating that it was built for a specific framework version, we try to load that version
+	 * Otherwise, we pick the maximum installed version
   
-If you've used `dnvm install` and `dnvm use` to set your preferred version of the CLR, you don't have to supply any additional parameters or environment variables when starting node.  However, if the CLR is another location or you want to use a version of the CLR other than the default that you've set, the best way to specify that is through the `CORECLR_DIR` environment variable, i.e.
+So, if the CLR is another location or you want to use a version of the CLR other than the default that you've set, the best way to specify that is through the `CORECLR_DIR` or `CORECLR_VERSION` environment variables, i.e.
 
 ```bash
 EDGE_USE_CORECLR=1 \
-CORECLR_DIR=/home/user/.dnx/runtimes/dnx-coreclr-linux-x64.1.0.0-beta6-11944/bin \
+CORECLR_DIR=/usr/share/dotnet/dnx-coreclr-linux-x64.1.0.0-beta6-11944 \
 node sample.js
 ```
 
