@@ -41,77 +41,39 @@
         'CLANG_CXX_LIBRARY': 'libc++',
         'MACOSX_DEPLOYMENT_TARGET': '10.7'
       },
+      'sources+': [
+        'src/common/v8synchronizationcontext.cpp',
+        'src/common/edge.cpp',
+        'src/CoreCLREmbedding/coreclrembedding.cpp',
+        'src/CoreCLREmbedding/coreclrfunc.cpp',
+        'src/CoreCLREmbedding/coreclrnodejsfunc.cpp',
+        'src/CoreCLREmbedding/coreclrfuncinvokecontext.cpp',
+        'src/CoreCLREmbedding/coreclrnodejsfuncinvokecontext.cpp',
+        'src/common/utils.cpp',
+        'src/CoreCLREmbedding/pal/pal_utils.cpp',
+        'src/CoreCLREmbedding/pal/trace.cpp',
+        'src/CoreCLREmbedding/fxr/fx_ver.cpp',
+        'src/CoreCLREmbedding/json/casablanca/src/json/json.cpp',
+        'src/CoreCLREmbedding/json/casablanca/src/json/json_parsing.cpp',
+        'src/CoreCLREmbedding/json/casablanca/src/json/json_serialization.cpp',
+        'src/CoreCLREmbedding/json/casablanca/src/utilities/asyncrt_utils.cpp',
+        'src/CoreCLREmbedding/deps/deps_format.cpp',
+        'src/CoreCLREmbedding/deps/deps_entry.cpp'
+      ],
+      'include_dirs+': [
+        'src/CoreCLREmbedding/json/casablanca/include'
+      ],
       'conditions': [
         [
           'OS=="win"',
           {
-            'conditions': [
-              [
-                '"<!(node -e "var whereis = require(\'./tools/whereis\'); console.log(whereis(\'dotnet.exe\'));")"!=""',
-                {
-                  'sources+': [
-                    'src/common/v8synchronizationcontext.cpp',
-                    'src/common/edge.cpp',
-                    'src/CoreCLREmbedding/coreclrembedding.cpp',
-                    'src/CoreCLREmbedding/coreclrfunc.cpp',
-                    'src/CoreCLREmbedding/coreclrnodejsfunc.cpp',
-                    'src/CoreCLREmbedding/coreclrfuncinvokecontext.cpp',
-                    'src/CoreCLREmbedding/coreclrnodejsfuncinvokecontext.cpp',
-                    'src/common/utils.cpp',
-                    'src/CoreCLREmbedding/pal/pal.windows.cpp',
-                    'src/CoreCLREmbedding/pal/pal_utils.cpp',
-                    'src/CoreCLREmbedding/pal/trace.cpp',
-                    'src/CoreCLREmbedding/fxr/fx_ver.cpp',
-                    'src/CoreCLREmbedding/json/casablanca/src/json/json.cpp',
-                    'src/CoreCLREmbedding/json/casablanca/src/json/json_parsing.cpp',
-                    'src/CoreCLREmbedding/json/casablanca/src/json/json_serialization.cpp',
-                    'src/CoreCLREmbedding/json/casablanca/src/utilities/asyncrt_utils.cpp',
-                    'src/CoreCLREmbedding/deps/deps_format.cpp',
-                    'src/CoreCLREmbedding/deps/deps_entry.cpp'
-                  ],
-                  'include_dirs+': [
-                    'src/CoreCLREmbedding/json/casablanca/include'
-                  ]
-                },
-                {
-                  'type': 'none'
-                }
-              ]
+            'sources+': [
+              'src/CoreCLREmbedding/pal/pal.windows.cpp',
             ]
           },
           {
-            'conditions': [
-              [
-                '"<!((which dotnet) || echo not_found)"!="not_found"',
-                {
-                  'sources+': [
-                    'src/common/v8synchronizationcontext.cpp',
-                    'src/common/edge.cpp',
-                    'src/CoreCLREmbedding/coreclrembedding.cpp',
-                    'src/CoreCLREmbedding/coreclrfunc.cpp',
-                    'src/CoreCLREmbedding/coreclrnodejsfunc.cpp',
-                    'src/CoreCLREmbedding/coreclrfuncinvokecontext.cpp',
-                    'src/CoreCLREmbedding/coreclrnodejsfuncinvokecontext.cpp',
-                    'src/common/utils.cpp',
-                    'src/CoreCLREmbedding/pal/pal.unix.cpp',
-                    'src/CoreCLREmbedding/pal/pal_utils.cpp',
-                    'src/CoreCLREmbedding/pal/trace.cpp',
-                    'src/CoreCLREmbedding/fxr/fx_ver.cpp',
-                    'src/CoreCLREmbedding/json/casablanca/src/json/json.cpp',
-                    'src/CoreCLREmbedding/json/casablanca/src/json/json_parsing.cpp',
-                    'src/CoreCLREmbedding/json/casablanca/src/json/json_serialization.cpp',
-                    'src/CoreCLREmbedding/json/casablanca/src/utilities/asyncrt_utils.cpp',
-                    'src/CoreCLREmbedding/deps/deps_format.cpp',
-                    'src/CoreCLREmbedding/deps/deps_entry.cpp'
-                  ],
-                  'include_dirs+': [
-                    'src/CoreCLREmbedding/json/casablanca/include'
-                  ]
-                },
-                {
-                  'type': 'none'
-                }
-              ]
+            'sources+': [
+              'src/CoreCLREmbedding/pal/pal.unix.cpp'
             ]
           }
         ]
