@@ -374,10 +374,10 @@ var add7 = edge.func({
 });
 ```
 
-If you are using .NET Core and are using the .NET Core SDK and CLI, you must have a `project.json` file (specification [here](https://github.com/aspnet/Home/wiki/Project.json-file)) that specifies the dependencies for the application.  This list of dependencies must also include the [Edge.js runtime package](https://www.nuget.org/packages/Edge.js/) and, if you need to be able to dynamically compile your code, the package(s) for the compilers that you plan to use, like [Edge.js.CSharp](https://www.nuget.org/packages/Edge.js.CSharp/).  You must have run the `dotnet restore` (to restore the dependencies) and `dotnet build` (to build your project and generate the dependency manifest) commands in that project's directory to generate a `.deps.json` file under `bin/[configuration]/[framework]`, i.e. `bin/Release/netstandard1.5/MyProject.deps.json`.  This `.deps.json` file must either be in the current working directory that `node` is executed in or you must specify its directory by setting the `EDGE_APP_ROOT` environment variable.  For example, if for a `netstandard1.5` project in the `c:\DotNet\MyProject` directory, you would run something like:
+If you are using .NET Core and are using the .NET Core SDK and CLI, you must have a `project.json` file (specification [here](https://github.com/aspnet/Home/wiki/Project.json-file)) that specifies the dependencies for the application.  This list of dependencies must also include the [Edge.js runtime package](https://www.nuget.org/packages/Edge.js/) and, if you need to be able to dynamically compile your code, the package(s) for the compilers that you plan to use, like [Edge.js.CSharp](https://www.nuget.org/packages/Edge.js.CSharp/).  You must have run the `dotnet restore` (to restore the dependencies) and `dotnet build` (to build your project and generate the dependency manifest) commands in that project's directory to generate a `.deps.json` file under `bin/[configuration]/[framework]`, i.e. `bin/Release/netstandard1.6/MyProject.deps.json`.  This `.deps.json` file must either be in the current working directory that `node` is executed in or you must specify its directory by setting the `EDGE_APP_ROOT` environment variable.  For example, if for a `netstandard1.6` project in the `c:\DotNet\MyProject` directory, you would run something like:
 
 ```
-set EDGE_APP_ROOT=c:\DotNet\MyProject\bin\Release\netstandard1.5
+set EDGE_APP_ROOT=c:\DotNet\MyProject\bin\Release\netstandard1.6
 node app.js
 ```
 

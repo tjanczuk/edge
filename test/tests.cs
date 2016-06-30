@@ -19,13 +19,13 @@ using System.Collections.Generic;
 using System.Dynamic;
 using System.Text;
 using System.Threading.Tasks;
-#if NETSTANDARD1_5
+#if NETCOREAPP1_0
 using Newtonsoft.Json;
 using System.Reflection;
 using Microsoft.Extensions.DependencyModel;
 using System.Linq;
 using System.Net;
-using Microsoft.AspNetCore.Server.Kestrel.Networking;
+using Microsoft.AspNetCore.Server.Kestrel.Internal.Networking;
 #endif
 
 #pragma warning disable 1998
@@ -34,6 +34,11 @@ namespace Edge.Tests
 {
     public class Startup
     {
+        static void Main(string[] args)
+        {
+            
+        }
+
         string ValidateMarshalNodeJsToNet(dynamic input, bool expectFunction)
         {
             string result = "yes"; 
@@ -380,7 +385,7 @@ namespace Edge.Tests
             return new BadPerson();
         }
 
-#if NETSTANDARD1_5
+#if NETCOREAPP1_0
         public async Task<object> CorrectVersionOfNewtonsoftJsonUsed(object input)
         {
             return typeof(JsonConvert).GetTypeInfo().Assembly.GetName().Version.ToString();

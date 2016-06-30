@@ -214,7 +214,7 @@ describe('call patterns', function () {
     });
 
     if (process.env.EDGE_USE_CORECLR) {
-        it('project can override version of bootstrap assembly', function (done) {
+        it('merged dependencies choose correct version', function (done) {
             var func = edge.func({
                 assemblyFile: edgeTestDll,
                 typeName: 'Edge.Tests.Startup',
@@ -222,7 +222,7 @@ describe('call patterns', function () {
             });
 
             func(null, function (error, result) {
-                assert.equal(result, "8.0.0.0");
+                assert.equal(result, "9.0.0.0");
                 done();
             });
         });
@@ -235,7 +235,7 @@ describe('call patterns', function () {
             });
 
             func(null, function (error, result) {
-                assert.equal(result, "8.0.3");
+                assert.equal(result, "9.0.1");
                 done();
             });
         });

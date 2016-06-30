@@ -1,38 +1,46 @@
 {
   "frameworks": {
-    "netstandard1.5": {
+    "netcoreapp1.0": {
       "imports": [
         "portable-net45+wp80+win8+wpa81+dnxcore50",
         "portable-dnxcore50+net45+win8+wp8+wpa81"
       ],
       "dependencies": {
-        "System.Runtime": "4.1.0-rc2-24027",
-        "System.Dynamic.Runtime": "4.0.11-rc2-24027",
-        "System.Linq": "4.1.0-rc2-24027",
-        "System.Linq.Expressions": "4.0.11-rc2-24027",
-        "Microsoft.CSharp": "4.0.1-rc2-24027",
-        "System.Data.Common": "4.0.1-rc2-24027",
-        "System.Runtime.Loader": "4.0.0-rc2-24027",
-        "System.Reflection": "4.1.0-rc2-24027",
-        "System.Console": "4.0.0-rc2-24027",
-        "Newtonsoft.Json": "8.0.3",
-        "System.Reflection.TypeExtensions": "4.1.0-rc2-24027",
-        "Microsoft.Extensions.DependencyModel": "1.0.0-rc2-final",
-        "Microsoft.AspNetCore.Server.Kestrel": "1.0.0-rc2-final",
+        "System.Runtime": "4.1.0",
+        "System.Dynamic.Runtime": "4.0.11",
+        "System.Linq": "4.1.0",
+        "System.Linq.Expressions": "4.1.0",
+        "Microsoft.CSharp": "4.0.1",
+        "System.Data.Common": "4.1.0",
+        "System.Runtime.Loader": "4.0.0",
+        "System.Reflection": "4.1.0",
+        "System.Console": "4.0.0",
+        "Newtonsoft.Json": "9.0.1",
+        "System.Reflection.TypeExtensions": "4.1.0",
+        "Microsoft.Extensions.DependencyModel": "1.0.0",
+        "Microsoft.AspNetCore.Server.Kestrel": "1.0.0",
         "Microsoft.NETCore.App": {
           "type": "platform",
-          "version": "1.0.0-rc2-3002702"
+          "version": "1.0.0"
         },
-        "Edge.js": "5.9.1-rc2",
-        "Edge.js.CSharp": "0.3.1-pre"
+        "Edge.js": "6.2.2",
+        "Edge.js.CSharp": "1.0.0"
       }
     }
   },
 
   "buildOptions": {
+    "emitEntryPoint": true,
     "preserveCompilationContext": true,
     "compile": {
       "exclude": ["double/**/*.cs", "hello_class.cs"]
     }
+  },
+
+  "runtimes": {
+    "win7-x64": { },
+    "debian-x64": { },
+    "rhel-x64": { },
+    "ubuntu.14.04-x64": { }
   }
 }

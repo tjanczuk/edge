@@ -4,7 +4,7 @@ if [ -n "$(which dotnet 2>/dev/null)" ]
 then
 	dotnet restore
 	dotnet build
-	cp bin/Debug/netstandard1.5/test.dll Edge.Tests.CoreClr.dll
+	cp bin/Debug/netcoreapp1.0/test.dll Edge.Tests.CoreClr.dll
 fi
 
 if [ -n "$(which mono 2>/dev/null)" ]
