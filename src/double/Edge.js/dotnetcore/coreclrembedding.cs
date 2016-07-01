@@ -145,7 +145,7 @@ public class CoreCLREmbedding
         private readonly Dictionary<string, string> _libraries = new Dictionary<string, string>();
         private readonly Dictionary<string, string> _nativeLibraries = new Dictionary<string, string>();
         private readonly string _packagesPath;
-        private static NuGetFramework _targetFramework = new NuGetFramework(".NETStandard,Version=v1.5");
+        private static NuGetFramework _targetFramework = new NuGetFramework(".NETStandard,Version=v1.6");
 
         public EdgeAssemblyLoadContext(string bootstrapAssemblies)
         {
@@ -198,7 +198,7 @@ public class CoreCLREmbedding
                 DebugMessage("EdgeAssemblyLoadContext::LoadDependencyManifest (CLR) - Reading dependency manifest file and merging in dependencies from the shared runtime");
                 DependencyContext dependencyContext = dependencyContextReader.Read(dependencyManifestStream);
 
-                string runtimeDependencyManifestFile = (string) AppContext.GetData("FX_DEPS_FILE");
+                string runtimeDependencyManifestFile = (string)AppContext.GetData("FX_DEPS_FILE");
 
                 if (!String.IsNullOrEmpty(runtimeDependencyManifestFile) && runtimeDependencyManifestFile != dependencyManifestFile)
                 {
@@ -219,7 +219,7 @@ public class CoreCLREmbedding
 
             if (File.Exists(entryAssemblyPath))
             {
-                Assembly entryAssembly = Load(new AssemblyName(Path.GetFileNameWithoutExtension(entryAssemblyPath)));
+                Assembly entryAssembly = LoadFromAssemblyName(new AssemblyName(Path.GetFileNameWithoutExtension(entryAssemblyPath)));
                 Lazy<DependencyContext> defaultDependencyContext = new Lazy<DependencyContext>(() => DependencyContext.Load(entryAssembly));
 
                 // I really don't like doing it this way, but it's the easiest way to give the running code access to the default 
@@ -266,9 +266,16 @@ public class CoreCLREmbedding
             {
                 DebugMessage("EdgeAssemblyLoadContext::AddDependencies (CLR) - Processing runtime dependency {1} {0}", runtimeLibrary.Name, runtimeLibrary.Type);
 
-                if (runtimeLibrary.RuntimeAssemblyGroups != null && runtimeLibrary.RuntimeAssemblyGroups.Any() && runtimeLibrary.RuntimeAssemblyGroups[0].AssetPaths.Any())
+                List<string> assets = runtimeLibrary.RuntimeAssemblyGroups.GetRuntimeAssets(DotNetRuntimeEnvironment.GetRuntimeIdentifier()).ToList();
+
+                if (!assets.Any())
                 {
-                    string assetPath = runtimeLibrary.RuntimeAssemblyGroups[0].AssetPaths[0];
+                    assets = runtimeLibrary.RuntimeAssemblyGroups.GetDefaultAssets().ToList();
+                }
+
+                if (assets.Any())
+                {
+                    string assetPath = assets[0];
                     string assemblyPath = runtimeLibrary.Type == "project"
                         ? Path.Combine(RuntimeEnvironment.ApplicationDirectory, assetPath)
                         : standalone
@@ -290,7 +297,9 @@ public class CoreCLREmbedding
                     if (runtimeLibrary.Name != libraryNameFromPath && !_libraries.ContainsKey(libraryNameFromPath))
                     {
                         _libraries[libraryNameFromPath] = assemblyPath;
-                        DebugMessage("EdgeAssemblyLoadContext::AddDependencies (CLR) - Filename in the dependency context did not match the package/project name, added additional resolver for {0}", libraryNameFromPath);
+                        DebugMessage(
+                            "EdgeAssemblyLoadContext::AddDependencies (CLR) - Filename in the dependency context did not match the package/project name, added additional resolver for {0}",
+                            libraryNameFromPath);
                     }
 
                     if (!CompileAssemblies.ContainsKey(runtimeLibrary.Name))
@@ -307,7 +316,9 @@ public class CoreCLREmbedding
                     if (runtimeLibrary.Name != libraryNameFromPath && !CompileAssemblies.ContainsKey(libraryNameFromPath))
                     {
                         CompileAssemblies[libraryNameFromPath] = assemblyPath;
-                        DebugMessage("EdgeAssemblyLoadContext::AddCompileDependencies (CLR) - Filename in the dependency context did not match the package/project name, added additional resolver for {0}", libraryNameFromPath);
+                        DebugMessage(
+                            "EdgeAssemblyLoadContext::AddCompileDependencies (CLR) - Filename in the dependency context did not match the package/project name, added additional resolver for {0}",
+                            libraryNameFromPath);
                     }
                 }
 
@@ -329,6 +340,11 @@ public class CoreCLREmbedding
             }
         }
 
+        internal string GetAssemblyPath(string assemblyName)
+        {
+            return _libraries[assemblyName];
+        }
+
         internal void AddCompiler(string bootstrapDependencyManifest)
         {
             DebugMessage("EdgeAssemblyLoadContext::AddCompiler (CLR) - Adding the compiler from dependency manifest file {0}", bootstrapDependencyManifest);
@@ -345,8 +361,7 @@ public class CoreCLREmbedding
                 DebugMessage("EdgeAssemblyLoadContext::AddCompiler (CLR) - Finished");
             }
         }
-
-        [SecuritySafeCritical]
+        
         protected override Assembly Load(AssemblyName assemblyName)
         {
             DebugMessage("EdgeAssemblyLoadContext::Load (CLR) - Trying to load {0}", assemblyName.Name);
@@ -362,7 +377,7 @@ public class CoreCLREmbedding
                 try
                 {
                     DebugMessage("EdgeAssemblyLoadContext::Load (CLR) - Trying to load from {0}", _libraries[assemblyName.Name]);
-                    Assembly assembly = LoadFromFile(_libraries[assemblyName.Name]);
+                    Assembly assembly = LoadFromAssemblyPath(_libraries[assemblyName.Name]);
 
                     if (assembly != null)
                     {
@@ -465,6 +480,12 @@ public class CoreCLREmbedding
 
             AssemblyLoadContext.Default.Resolving += Assembly_Resolving;
 
+            // If we don't pre-load these assemblies prior to calling LoadDependencyManifest, an EngineExecutionException is
+            // thrown during the assembly resolution process (no idea why)
+            AssemblyLoadContext.Default.LoadFromAssemblyPath(LoadContext.GetAssemblyPath("Microsoft.Extensions.DependencyModel"));
+            AssemblyLoadContext.Default.LoadFromAssemblyPath(LoadContext.GetAssemblyPath("Newtonsoft.Json"));
+            AssemblyLoadContext.Default.LoadFromAssemblyPath(LoadContext.GetAssemblyPath("Microsoft.DotNet.InternalAbstractions"));
+
             if (!String.IsNullOrEmpty(RuntimeEnvironment.DependencyManifestFile))
             {
                 LoadContext.LoadDependencyManifest(RuntimeEnvironment.DependencyManifestFile);
@@ -484,7 +505,7 @@ public class CoreCLREmbedding
 
     private static Assembly Assembly_Resolving(AssemblyLoadContext arg1, AssemblyName arg2)
     {
-        DebugMessage("CoreCLREmbedding::Initialize (CLR) - Starting resolve process");
+        DebugMessage("CoreCLREmbedding::Initialize (CLR) - Starting resolve process for {0}", arg2.Name);
         return LoadContext.LoadFromAssemblyName(arg2);
     }
 
