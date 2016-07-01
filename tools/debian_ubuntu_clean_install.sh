@@ -20,7 +20,7 @@ then
     apt-get update
 fi
 
-apt-get -y install curl g++ pkg-config libgdiplus libunwind8 libssl-dev unzip make mono-complete git gettext libssl-dev libcurl4-openssl-dev zlib1g libicu-dev uuid-dev dotnet-dev-1.0.0-preview1-003121
+apt-get -y install curl g++ pkg-config libgdiplus libunwind8 libssl-dev unzip make mono-complete= git gettext libssl-dev libcurl4-openssl-dev zlib1g libicu-dev uuid-dev dotnet-dev-1.0.0-preview2-003121
 
 # download and build Node.js
 command -v node || result=$?
