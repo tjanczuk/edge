@@ -16,7 +16,7 @@ var helloWorld = edge.func(function () {/*
     async (input) => { 
         return ".NET Welcomes " + input.ToString(); 
     }
-*/});F
+*/});
 
 helloWorld('JavaScript', function (error, result) {
     if (error) throw error;
