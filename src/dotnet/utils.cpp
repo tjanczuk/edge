@@ -1,13 +1,13 @@
 #include "edge.h"
+#include <msclr\marshal_cppstd.h>
 
 v8::Local<v8::String> stringCLR2V8(System::String^ text)
 {
     Nan::EscapableHandleScope scope;
     if (text->Length > 0)
     {
-        array<unsigned char>^ utf8 = System::Text::Encoding::UTF8->GetBytes(text);
-        pin_ptr<unsigned char> ch = &utf8[0];
-        return scope.Escape(Nan::New<v8::String>((char*)ch).ToLocalChecked());
+        std::string converted = msclr::interop::marshal_as<std::string>(text);
+        return scope.Escape(Nan::New<v8::String>(converted).ToLocalChecked());
     }
     else
     {
