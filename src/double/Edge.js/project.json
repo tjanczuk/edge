@@ -11,10 +11,6 @@
     },
 
     "netstandard1.6": {
-      "imports": [
-        "portable-dnxcore50+net45+win8+wp8+wpa81"
-      ],
-
       "dependencies": {
         "NETStandard.Library": "1.6.0",
         "System.Console": "4.0.0",
@@ -31,7 +27,6 @@
         "System.Xml.ReaderWriter": "4.0.11",
         "System.Private.Uri": "4.0.1",
         "System.Collections.Specialized": "4.0.1",
-        "Microsoft.DotNet.ProjectModel": "1.0.0-rc3-003121",
         "Microsoft.Extensions.DependencyModel": "1.0.0",
         "Microsoft.DotNet.InternalAbstractions": "1.0.0",
         "System.AppContext": "4.1.0"
