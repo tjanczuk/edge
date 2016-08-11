@@ -480,6 +480,7 @@ public class CoreCLREmbedding
             AssemblyLoadContext.Default.LoadFromAssemblyPath(LoadContext.GetAssemblyPath("Microsoft.Extensions.DependencyModel"));
             AssemblyLoadContext.Default.LoadFromAssemblyPath(LoadContext.GetAssemblyPath("Newtonsoft.Json"));
             AssemblyLoadContext.Default.LoadFromAssemblyPath(LoadContext.GetAssemblyPath("Microsoft.DotNet.InternalAbstractions"));
+            AssemblyLoadContext.Default.LoadFromAssemblyPath(LoadContext.GetAssemblyPath("System.Runtime.Serialization.Primitives"));
 
             if (!String.IsNullOrEmpty(RuntimeEnvironment.DependencyManifestFile))
             {
@@ -500,7 +501,7 @@ public class CoreCLREmbedding
 
     private static Assembly Assembly_Resolving(AssemblyLoadContext arg1, AssemblyName arg2)
     {
-        DebugMessage("CoreCLREmbedding::Initialize (CLR) - Starting resolve process for {0}", arg2.Name);
+        DebugMessage("CoreCLREmbedding::Assembly_Resolving (CLR) - Starting resolve process for {0}", arg2.Name);
         return LoadContext.LoadFromAssemblyName(arg2);
     }
 
