@@ -86,7 +86,8 @@ rem takes 2 parameters: 1 - node version, 2 - x86 or x64
 if exist "%SELF%\build\nuget\content\edge\%2\edge_nativeclr.node" exit /b 0
 
 set NODEEXE=%SELF%\build\node-%1-%2\node.exe
-set GYP=%APPDATA%\npm\node_modules\node-gyp\bin\node-gyp.js
+for /f "delims=" %%a in ('node "%SELF%\resolvenpm.js"') do @set npmloc=%%a
+set GYP=%npmloc%
 
 pushd "%SELF%\.."
 
