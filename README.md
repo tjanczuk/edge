@@ -9,6 +9,7 @@ An edge connects two nodes. This edge connects Node.js and .NET. V8 and CLR/.NET
 
 You can script C# from a Node.js process:
 
+**ES5**
 ```javascript
 var edge = require('edge');
 
@@ -23,7 +24,23 @@ helloWorld('JavaScript', function (error, result) {
     console.log(result);
 });
 ```
+**ES6**
 
+In ES6 you can use [template strings](https://developer.mozilla.org/de/docs/Web/JavaScript/Reference/template_strings) to write multiline C# code.
+```javascript
+var edge = require('edge');
+
+var helloWorld = edge.func(`
+    async (input) => { 
+        return ".NET Welcomes " + input.ToString(); 
+    }
+`);
+
+helloWorld('JavaScript', function (error, result) {
+    if (error) throw error;
+    console.log(result);
+});
+```
 You can also script Node.js from C#:
 
 ```c#
@@ -141,9 +158,9 @@ Edge.js runs on Windows, Linux, and OSX and requires Node.js 5.x, 4.x, 0.12.x, 0
 #### Windows
 
 * Node.js 5.x, 4.x, 0.12.x, 0.10.x, or 0.8.x 
-* [.NET 4.5](http://www.microsoft.com/en-us/download/details.aspx?id=30653) and/or [.NET Core](http://dotnet.github.io/core/getting-started/)
+* [.NET 4.5](http://www.microsoft.com/en-us/download/details.aspx?id=30653) and/or [.NET Core](https://www.microsoft.com/net/core)
 * to use Python, you also need [IronPython 2.7.3 or later](http://ironpython.codeplex.com/releases/view/81726)  
-* to use F#, read [Dave Thomas blog post](http://7sharpnine.com/posts/i-node-something/)
+* to use F#, read [Dave Thomas blog post](http://7sharpnine.com/blog/2013-05-05-i-node-something/)
 
 If you have both desktop CLR and .NET Core installed, read [using .NET Core](#using-net-core) for how to configure Edge to use one or the other. 
 
@@ -276,6 +293,16 @@ var add7 = edge.func(function() {/*
         return (int)input + 7;
     }
 */});
+```
+
+Or if you use ES6 you can use [template strings](https://developer.mozilla.org/de/docs/Web/JavaScript/Reference/template_strings) to define a multiline string:
+
+```javascript
+var add7 = edge.func(`
+    async (input) => {
+        return (int)input + 7;
+    }
+`);
 ```
 
 If your C# code is more involved than a simple lambda, you can specify entire class definition. By convention, the class must be named `Startup` and it must have an `Invoke` method that matches the `Func<object,Task<object>>` delegate signature. This method is useful if you need to factor your code into multiple methods:
@@ -1066,7 +1093,7 @@ var edge = require('edge');
 
 var multiplyBy2 = edge.func(function () {/*
     async (dynamic input) => {
-        var aFunctionThatThrows = (Func<object, Task<object>>)payload.aFunctionThatThrows;
+        var aFunctionThatThrows = (Func<object, Task<object>>)input.aFunctionThatThrows;
         try {
             var aResult = await aFunctionThatThrows(null);
         }
@@ -1278,7 +1305,7 @@ npm install edge
 
 ```bash
 PKG_CONFIG_PATH=/Library/Frameworks/Mono.framework/Versions/Current/lib/pkgconfig \
-  npm install egde
+  npm install edge
 ```
 
 If you installed both Mono and .NET Core, by default Edge will use Mono. You opt in to using .NET Core with the `EDGE_USE_CORECLR` environment variable: 

@@ -47,9 +47,11 @@ namespace EdgeJs
             return Task<object>.FromResult((object)null);
         }
 
-        // Find the entry point with `dumpbin /exports node.exe`, look for Start@node
-        [DllImport("node.dll", EntryPoint = "#995", CallingConvention = CallingConvention.Cdecl)]
-        static extern int NodeStart(int argc, string[] argv);
+        [DllImport("node.dll", EntryPoint = "?Start@node@@YAHHQAPAD@Z", CallingConvention = CallingConvention.Cdecl)]
+        static extern int NodeStartx86(int argc, string[] argv);
+
+        [DllImport("node.dll", EntryPoint = "?Start@node@@YAHHQEAPEAD@Z", CallingConvention = CallingConvention.Cdecl)]
+        static extern int NodeStartx64(int argc, string[] argv);
 
         [DllImport("kernel32.dll", EntryPoint = "LoadLibrary")]
         static extern int LoadLibrary([MarshalAs(UnmanagedType.LPStr)] string lpLibFileName);
@@ -62,13 +64,16 @@ namespace EdgeJs
                 {
                     if (!initialized)
                     {
+                        Func<int, string[], int> nodeStart;
                         if (IntPtr.Size == 4)
                         {
                             LoadLibrary(AssemblyDirectory + @"\edge\x86\node.dll");
+                            nodeStart = NodeStartx86;
                         }
                         else if (IntPtr.Size == 8)
                         {
                             LoadLibrary(AssemblyDirectory + @"\edge\x64\node.dll");
+                            nodeStart = NodeStartx64;
                         }
                         else
                         {
@@ -89,7 +94,7 @@ namespace EdgeJs
                                 }
                             }
                             argv.Add(AssemblyDirectory + "\\edge\\double_edge.js");
-                            NodeStart(argv.Count, argv.ToArray());
+                            nodeStart(argv.Count, argv.ToArray());
                             waitHandle.Set();
                         });
 
