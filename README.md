@@ -9,6 +9,7 @@ An edge connects two nodes. This edge connects Node.js and .NET. V8 and CLR/.NET
 
 You can script C# from a Node.js process:
 
+**ES5**
 ```javascript
 var edge = require('edge');
 
@@ -23,7 +24,23 @@ helloWorld('JavaScript', function (error, result) {
     console.log(result);
 });
 ```
+**ES6**
 
+In ES6 you can use [template strings](https://developer.mozilla.org/de/docs/Web/JavaScript/Reference/template_strings) to write multiline C# code.
+```javascript
+var edge = require('edge');
+
+var helloWorld = edge.func(`
+    async (input) => { 
+        return ".NET Welcomes " + input.ToString(); 
+    }
+`);
+
+helloWorld('JavaScript', function (error, result) {
+    if (error) throw error;
+    console.log(result);
+});
+```
 You can also script Node.js from C#:
 
 ```c#
@@ -276,6 +293,16 @@ var add7 = edge.func(function() {/*
         return (int)input + 7;
     }
 */});
+```
+
+Or if you use ES6 you can use [template strings](https://developer.mozilla.org/de/docs/Web/JavaScript/Reference/template_strings) to define a multiline string:
+
+```javascript
+var add7 = edge.func(`
+    async (input) => {
+        return (int)input + 7;
+    }
+`);
 ```
 
 If your C# code is more involved than a simple lambda, you can specify entire class definition. By convention, the class must be named `Startup` and it must have an `Invoke` method that matches the `Func<object,Task<object>>` delegate signature. This method is useful if you need to factor your code into multiple methods:
