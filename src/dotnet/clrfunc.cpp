@@ -178,13 +178,21 @@ v8::Local<v8::Value> ClrFunc::MarshalCLRToV8(System::Object^ netdata)
     {
         jsdata = stringCLR2V8(netdata->ToString());
     }
-    else if (type == int::typeid)
+    else if (type == System::Int16::typeid)
+    {
+        jsdata = Nan::New<v8::Integer>((short)netdata);
+    }
+    else if (type == System::UInt16::typeid)
+    {
+        jsdata = Nan::New<v8::Integer>((unsigned short)netdata);
+    }
+    else if (type == System::Int32::typeid)
     {
         jsdata = Nan::New<v8::Integer>((int)netdata);
     }
-    else if (type == System::Int16::typeid)
+    else if (type == System::UInt32::typeid)
     {
-        jsdata = Nan::New<v8::Integer>((int)netdata);
+        jsdata = Nan::New<v8::Integer>((unsigned int)netdata);
     }
     else if (type == System::Int64::typeid)
     {
