@@ -17,6 +17,7 @@
 
 BOOL debugMode;
 BOOL enableScriptIgnoreAttribute;
+BOOL enableMarshalEnumAsInt;
 
 NAN_METHOD(initializeClrFunc)
 {
@@ -57,6 +58,7 @@ NAN_MODULE_INIT(init)
 #endif
 
     enableScriptIgnoreAttribute = HasEnvironmentVariable("EDGE_ENABLE_SCRIPTIGNOREATTRIBUTE");
+    enableMarshalEnumAsInt = HasEnvironmentVariable("EDGE_MARSHAL_ENUM_AS_INT");
     Nan::Set(target,
         Nan::New<v8::String>("initializeClrFunc").ToLocalChecked(),
         Nan::New<v8::FunctionTemplate>(initializeClrFunc)->GetFunction());

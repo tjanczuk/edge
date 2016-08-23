@@ -241,9 +241,16 @@ v8::Local<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata, MonoException*
     }
     else if (mono_class_is_enum(klass))
     {
-        MonoString* str = MonoEmbedding::ToString(netdata, exc);
-        if (!*exc)
-            jsdata = stringCLR2V8(str);
+        if(enableMarshalEnumAsInt)
+        {
+            jsdata = NanNew<v8::Integer>(*(int32_t*)mono_object_unbox(netdata));
+        }
+        else
+        {
+            MonoString* str = MonoEmbedding::ToString(netdata, exc);
+            if (!*exc)
+                jsdata = stringCLR2V8(str);
+        }
     }
     else if (mono_class_get_rank(klass) > 0 && mono_class_get_element_class(klass) == mono_get_byte_class())
     {
