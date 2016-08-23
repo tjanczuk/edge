@@ -7,7 +7,7 @@ v8::Local<v8::String> stringCLR2V8(System::String^ text)
     {
         array<unsigned char>^ utf8 = System::Text::Encoding::UTF8->GetBytes(text);
         pin_ptr<unsigned char> ch = &utf8[0];
-        return scope.Escape(Nan::New<v8::String>((char*)ch).ToLocalChecked());
+        return scope.Escape(Nan::New<v8::String>((char*)ch, utf8->Length).ToLocalChecked());
     }
     else
     {
