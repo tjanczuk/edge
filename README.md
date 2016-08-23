@@ -26,7 +26,7 @@ helloWorld('JavaScript', function (error, result) {
 ```
 **ES6**
 
-In ES6 you can use [template strings](https://developer.mozilla.org/de/docs/Web/JavaScript/Reference/template_strings) to write multiline C# code.
+In ES6 you can use [template strings](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals) to write multiline C# code.
 ```javascript
 var edge = require('edge');
 
@@ -295,7 +295,7 @@ var add7 = edge.func(function() {/*
 */});
 ```
 
-Or if you use ES6 you can use [template strings](https://developer.mozilla.org/de/docs/Web/JavaScript/Reference/template_strings) to define a multiline string:
+Or if you use ES6 you can use [template strings](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals) to define a multiline string:
 
 ```javascript
 var add7 = edge.func(`
