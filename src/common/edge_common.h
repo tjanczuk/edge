@@ -60,6 +60,7 @@ typedef int BOOL;
 
 extern BOOL debugMode;
 extern BOOL enableScriptIgnoreAttribute;
+extern BOOL enableMarshalEnumAsInt;
 
 #define DBG(...) if (debugMode) { printf(__VA_ARGS__); printf("\n"); }
 
