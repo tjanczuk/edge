@@ -165,7 +165,7 @@
           {
             'conditions': [
               [
-                '"<!((which mono) || echo not_found)"!="not_found"',
+                '"<!((which mono 2>/dev/null) || echo not_found)"!="not_found"',
                 {
                   'sources+': [
                     'src/mono/clractioncontext.cpp',
@@ -260,7 +260,7 @@
           {
             'conditions': [
               [
-                '"<!((which mono) || echo not_found)"!="not_found"',
+                '"<!((which mono 2>/dev/null) || echo not_found)"!="not_found"',
                 {
                   'actions+': [
                     {
@@ -284,7 +284,7 @@
                 }
               ],
               [
-                '"<!((which dotnet) || echo not_found)"!="not_found"',
+                '"<!((which dotnet 2>/dev/null) || echo not_found)"!="not_found"',
                 {
                   'actions+': [
                     {
