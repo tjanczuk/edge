@@ -11,11 +11,7 @@ using System.Collections;
 using System.Threading.Tasks;
 using System.IO;
 using System.Diagnostics;
-using Microsoft.DotNet.ProjectModel;
-using Microsoft.DotNet.ProjectModel.Compilation;
-using Microsoft.DotNet.ProjectModel.Graph;
 using Microsoft.Extensions.DependencyModel;
-using NuGet.Frameworks;
 using DotNetRuntimeEnvironment = Microsoft.DotNet.InternalAbstractions.RuntimeEnvironment;
 using Semver;
 
@@ -145,7 +141,6 @@ public class CoreCLREmbedding
         private readonly Dictionary<string, string> _libraries = new Dictionary<string, string>();
         private readonly Dictionary<string, string> _nativeLibraries = new Dictionary<string, string>();
         private readonly string _packagesPath;
-        private static NuGetFramework _targetFramework = new NuGetFramework(".NETStandard,Version=v1.6");
 
         public EdgeAssemblyLoadContext(string bootstrapAssemblies)
         {
