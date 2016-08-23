@@ -1278,7 +1278,7 @@ npm install edge
 
 ```bash
 PKG_CONFIG_PATH=/Library/Frameworks/Mono.framework/Versions/Current/lib/pkgconfig \
-  npm install egde
+  npm install edge
 ```
 
 If you installed both Mono and .NET Core, by default Edge will use Mono. You opt in to using .NET Core with the `EDGE_USE_CORECLR` environment variable: 
