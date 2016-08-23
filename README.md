@@ -1066,7 +1066,7 @@ var edge = require('edge');
 
 var multiplyBy2 = edge.func(function () {/*
     async (dynamic input) => {
-        var aFunctionThatThrows = (Func<object, Task<object>>)payload.aFunctionThatThrows;
+        var aFunctionThatThrows = (Func<object, Task<object>>)input.aFunctionThatThrows;
         try {
             var aResult = await aFunctionThatThrows(null);
         }
