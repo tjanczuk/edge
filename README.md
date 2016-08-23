@@ -141,7 +141,7 @@ Edge.js runs on Windows, Linux, and OSX and requires Node.js 5.x, 4.x, 0.12.x, 0
 #### Windows
 
 * Node.js 5.x, 4.x, 0.12.x, 0.10.x, or 0.8.x 
-* [.NET 4.5](http://www.microsoft.com/en-us/download/details.aspx?id=30653) and/or [.NET Core](http://dotnet.github.io/core/getting-started/)
+* [.NET 4.5](http://www.microsoft.com/en-us/download/details.aspx?id=30653) and/or [.NET Core](https://www.microsoft.com/net/core)
 * to use Python, you also need [IronPython 2.7.3 or later](http://ironpython.codeplex.com/releases/view/81726)  
 * to use F#, read [Dave Thomas blog post](http://7sharpnine.com/posts/i-node-something/)
 
