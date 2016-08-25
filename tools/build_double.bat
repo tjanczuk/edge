@@ -108,6 +108,7 @@ rem takes 2 parameters: 1 - node version, 2 - x86 or x64
 if exist "%SELF%\build\node-%1-%2\node.lib" exit /b 0
 
 pushd "%SELF%\build\node-%1"
+rmdir /s /q Release
 
 ..\repl.exe node.gyp "'executable'" "'shared_library'"
 if %ERRORLEVEL% neq 0 (

@@ -222,7 +222,7 @@ v8::Local<v8::Value> ClrFunc::MarshalCLRToV8(System::Object^ netdata)
     {
         if (enableMarshalEnumAsInt)
         {
-            jsdata = NanNew<v8::Integer>((int)netdata);
+            jsdata = Nan::New<v8::Integer>((int)netdata);
         }
         else
         {
