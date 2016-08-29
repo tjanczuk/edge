@@ -29,7 +29,7 @@
     }
   ],
   "dependencies": {
-    "edge-cs": "1.2.0",
+    "edge-cs": "1.2.1",
     "nan": "^2.0.9"
   },
   "devDependencies": {
