@@ -243,7 +243,7 @@ v8::Local<v8::Value> ClrFunc::MarshalCLRToV8(MonoObject* netdata, MonoException*
     {
         if(enableMarshalEnumAsInt)
         {
-            jsdata = NanNew<v8::Integer>(*(int32_t*)mono_object_unbox(netdata));
+            jsdata = Nan::New<v8::Integer>(*(int32_t*)mono_object_unbox(netdata));
         }
         else
         {
