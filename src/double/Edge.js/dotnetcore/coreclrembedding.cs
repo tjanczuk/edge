@@ -182,17 +182,10 @@ public class CoreCLREmbedding
                     {
                         DebugMessage("EdgeAssemblyLoadContext::Load (CLR) - Inner exception: {0}{1}{2}", e.InnerException.Message, Environment.NewLine, e.InnerException.StackTrace);
                     }
-
-                    throw;
                 }
             }
 
-            DebugMessage("EdgeAssemblyLoadContext::Load (CLR) - Unable to resolve assembly from manifest list");
-            
-            throw new Exception(
-                String.Format(
-                    "Could not load file or assembly '{0}'.  You will need to add a reference to this package to your project.json.",
-                    assemblyName.Name));
+            return null;
         }
     }
 
@@ -448,7 +441,7 @@ public class CoreCLREmbedding
     // ReSharper disable InconsistentNaming
     private static EdgeRuntimeEnvironment RuntimeEnvironment;
     private static EdgeAssemblyResolver Resolver;
-    private static EdgeAssemblyLoadContext LoadContext = new EdgeAssemblyLoadContext();
+    private static AssemblyLoadContext LoadContext = new EdgeAssemblyLoadContext();
     // ReSharper enable InconsistentNaming
 
     private static readonly bool DebugMode = Environment.GetEnvironmentVariable("EDGE_DEBUG") == "1";
@@ -509,8 +502,9 @@ public class CoreCLREmbedding
         catch (Exception e)
         {
             DebugMessage("CoreCLREmbedding::Assembly_Resolving (CLR) - Error trying to load assembly from path: {0}{1}{2}", e.Message, Environment.NewLine, e.StackTrace);
-            throw;
         }
+
+        return null;
     }
 
     [SecurityCritical]

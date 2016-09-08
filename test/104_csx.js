@@ -526,7 +526,7 @@ describe('edge-cs', function () {
                 func("JavaScript");
             },
             function (error) {
-                if ((error instanceof Error) && error.message.match(/Could not load file or assembly 'Package\.Doesnt\.Exist/)) {
+                if ((error instanceof Error) && error.message.match(/Could not load the specified file/)) {
                     return true;
                 }
                 return false;
