@@ -53,12 +53,18 @@
         'src/CoreCLREmbedding/pal/pal_utils.cpp',
         'src/CoreCLREmbedding/pal/trace.cpp',
         'src/CoreCLREmbedding/fxr/fx_ver.cpp',
+        'src/CoreCLREmbedding/fxr/fx_muxer.cpp',
         'src/CoreCLREmbedding/json/casablanca/src/json/json.cpp',
         'src/CoreCLREmbedding/json/casablanca/src/json/json_parsing.cpp',
         'src/CoreCLREmbedding/json/casablanca/src/json/json_serialization.cpp',
         'src/CoreCLREmbedding/json/casablanca/src/utilities/asyncrt_utils.cpp',
         'src/CoreCLREmbedding/deps/deps_format.cpp',
-        'src/CoreCLREmbedding/deps/deps_entry.cpp'
+        'src/CoreCLREmbedding/deps/deps_entry.cpp',
+        'src/CoreCLREmbedding/deps/deps_resolver.cpp',
+        'src/CoreCLREmbedding/host/args.cpp',
+        'src/CoreCLREmbedding/host/coreclr.cpp',
+        'src/CoreCLREmbedding/host/libhost.cpp',
+        'src/CoreCLREmbedding/host/runtime_config.cpp'
       ],
       'include_dirs+': [
         'src/CoreCLREmbedding/json/casablanca/include'

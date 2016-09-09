@@ -12,6 +12,8 @@
 #include "deps_entry.h"
 #include "cpprest/json.h"
 
+void set_own_rid(pal::string_t set_rid);
+
 class deps_json_t
 {
     typedef web::json::value json_value;
@@ -28,25 +30,18 @@ class deps_json_t
 public:
     deps_json_t()
         : m_valid(false)
-        , m_coreclr_index(-1)
-        , m_hostpolicy_index(-1)
+        , m_file_exists(false)
     {
     }
-
-	deps_json_t(bool portable, const pal::string_t& deps_path, const pal::string_t& rid)
-		: deps_json_t(portable, deps_path, m_rid_fallback_graph /* dummy */, rid)
-	{
-	}
 
     deps_json_t(bool portable, const pal::string_t& deps_path)
-        : deps_json_t(portable, deps_path, m_rid_fallback_graph /* dummy */, _X(""))
+        : deps_json_t(portable, deps_path, m_rid_fallback_graph /* dummy */)
     {
     }
 
-    deps_json_t(bool portable, const pal::string_t& deps_path, const rid_fallback_graph_t& graph, const pal::string_t& rid)
+    deps_json_t(bool portable, const pal::string_t& deps_path, const rid_fallback_graph_t& graph)
         : deps_json_t()
     {
-		m_rid = rid;
         m_valid = load(portable, deps_path, graph);
     }
 
@@ -58,26 +53,9 @@ public:
 
     bool has_package(const pal::string_t& name, const pal::string_t& ver) const;
 
-    bool has_coreclr_entry()
+    bool exists()
     {
-        return m_coreclr_index >= 0;
-    }
-
-    bool has_hostpolicy_entry()
-    {
-        return m_hostpolicy_index >= 0;
-    }
-
-    const deps_entry_t& get_coreclr_entry()
-    {
-        assert(has_coreclr_entry());
-        return m_deps_entries[deps_entry_t::asset_types::native][m_coreclr_index];
-    }
-
-    const deps_entry_t& get_hostpolicy_entry()
-    {
-        assert(has_hostpolicy_entry());
-        return m_deps_entries[deps_entry_t::asset_types::native][m_hostpolicy_index];
+        return m_file_exists;
     }
 
     bool is_valid()
@@ -91,10 +69,6 @@ public:
     }
 
 	const deps_entry_t& try_ni(const deps_entry_t& entry) const;
-
-	void set_own_rid(const pal::string_t rid);
-
-	const pal::string_t get_own_rid();
 
 private:
     bool load_standalone(const json_value& json, const pal::string_t& target_name);
@@ -117,10 +91,8 @@ private:
 
 	std::unordered_map<pal::string_t, int> m_ni_entries;
     rid_fallback_graph_t m_rid_fallback_graph;
-	bool m_valid;
-    int m_coreclr_index;
-    int m_hostpolicy_index;
-	pal::string_t m_rid;
+    bool m_file_exists;
+    bool m_valid;
 };
 
 #endif // __DEPS_FORMAT_H_

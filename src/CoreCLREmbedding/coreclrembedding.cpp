@@ -8,6 +8,10 @@
 #include "cpprest/json.h"
 #include "deps/deps_format.h"
 #include "deps/deps_entry.h"
+#include "deps/deps_resolver.h"
+#include "fxr/fx_muxer.h"
+#include "host/coreclr.h"
+#include "host/error_codes.h"
 
 #ifndef EDGE_PLATFORM_WINDOWS
 #include <dlfcn.h>
@@ -27,24 +31,22 @@
 #include <libproc.h>
 #endif
 
-typedef pal::hresult_t (STDMETHODCALLTYPE *coreclr_create_delegate)(
-		void* hostHandle,
-		unsigned int domainId,
-		const char* assemblyName,
-		const char* typeName,
-		const char* methodName,
-		void** delegate);
-typedef pal::hresult_t (STDMETHODCALLTYPE *coreclr_initialize)(
-		const char *exePath,
-		const char *appDomainFriendlyName,
-		int propertyCount,
-		const char** propertyKeys,
-		const char** propertyValues,
-		void** hostHandle,
-		unsigned int* domainId);
+//typedef pal::hresult_t (STDMETHODCALLTYPE *coreclr_create_delegate)(
+//		void* hostHandle,
+//		unsigned int domainId,
+//		const char* assemblyName,
+//		const char* typeName,
+//		const char* methodName,
+//		void** delegate);
+//typedef pal::hresult_t (STDMETHODCALLTYPE *coreclr_initialize)(
+//		const char *exePath,
+//		const char *appDomainFriendlyName,
+//		int propertyCount,
+//		const char** propertyKeys,
+//		const char** propertyValues,
+//		void** hostHandle,
+//		unsigned int* domainId);
 
-unsigned int appDomainId;
-void* hostHandle;
 GetFuncFunction getFunc;
 CallFuncFunction callFunc;
 ContinueTaskFunction continueTask;
@@ -54,9 +56,9 @@ CompileFuncFunction compileFunc;
 InitializeFunction initialize;
 
 #define CREATE_DELEGATE(functionName, functionPointer)\
-	result = createDelegate(\
-			hostHandle,\
-			appDomainId,\
+	result = coreclr::create_delegate(\
+			host_handle,\
+			domain_id,\
 			"EdgeJs",\
 			"CoreCLREmbedding",\
 			functionName,\
@@ -207,6 +209,8 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 	pal::string_t functionNameString;
 	pal::string_t currentDirectory;
 
+	set_own_rid(GetOSName() + GetOSVersion() + _X("-") + GetOSArchitecture());
+
     if (!pal::getcwd(&currentDirectory))
     {
 		throwV8Exception("Unable to get the current directory.");
@@ -294,190 +298,439 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 		trace::info(_X("CoreClrEmbedding::Initialize - Exactly one (%s) dependency manifest file found in the Edge app directory, using it"), dependencyManifestFile.c_str());
 	}
 
-	pal::getenv(_X("CORECLR_DIR"), &coreClrEnvironmentVariable);
+	pal::string_t entryPointAssembly(dependencyManifestFile);
+	entryPointAssembly = strip_file_ext(strip_file_ext(entryPointAssembly));
+	entryPointAssembly.append(_X(".dll"));
 
-    if (coreClrEnvironmentVariable.length() > 0)
-    {
-        trace::info(_X("CoreClrEmbedding::Initialize - Trying to load %s from the path specified in the CORECLR_DIR environment variable: %s"), LIBCORECLR_NAME, coreClrDirectory.c_str());
-        LoadCoreClrAtPath(coreClrDirectory, &libCoreClr);
+	pal::string_t pathEnvironmentVariable;
+	pal::getenv(_X("PATH"), &pathEnvironmentVariable);
 
-		if (!libCoreClr)
+	trace::info(_X("CoreClrEmbedding::Initialize - Path is %s"), pathEnvironmentVariable.c_str());
+
+	pal::string_t dotnetExecutablePath, dotnetDirectory;
+
+	size_t previousIndex = 0;
+	size_t currentIndex = pathEnvironmentVariable.find(PATH_SEPARATOR);
+
+	while (dotnetExecutablePath.length() == 0 && previousIndex != std::string::npos)
+	{
+		if (currentIndex != std::string::npos)
 		{
-			std::vector<char> coreClrEnvironmentVariableCstr;
-			pal::pal_clrstring(coreClrEnvironmentVariable, &coreClrEnvironmentVariableCstr);
-
-			throwV8Exception("Unable to load the CLR from the directory (%s) specified in the CORECLR_DIR environment variable.", coreClrEnvironmentVariableCstr.data());
-			return E_FAIL;
+			dotnetExecutablePath = pathEnvironmentVariable.substr(previousIndex, currentIndex - previousIndex);
 		}
-    }
 
-	if (!libCoreClr)
+		else
+		{
+			dotnetExecutablePath = pathEnvironmentVariable.substr(previousIndex);
+		}
+
+		append_path(&dotnetExecutablePath, _X("dotnet"));
+		dotnetExecutablePath.append(pal::exe_suffix());
+
+		trace::info(_X("CoreClrEmbedding::Initialize - Checking for dotnet at %s"), dotnetExecutablePath.c_str());
+
+		if (pal::file_exists(dotnetExecutablePath))
+		{
+			pal::realpath(&dotnetExecutablePath);
+			dotnetDirectory = get_directory(dotnetExecutablePath);
+			trace::info(_X("CoreClrEmbedding::Initialize - Found dotnet at %s"), dotnetExecutablePath.c_str());
+
+			break;
+		}
+
+		else
+		{
+			dotnetExecutablePath = _X("");
+			previousIndex = currentIndex == std::string::npos ? currentIndex : currentIndex + 1;
+
+			if (previousIndex != std::string::npos)
+			{
+				currentIndex = pathEnvironmentVariable.find(PATH_SEPARATOR, previousIndex);
+			}
+		}
+	}
+
+	host_mode_t mode = coreclr_exists_in_dir(edgeAppDir) ? host_mode_t::standalone : host_mode_t::muxer;
+
+	if (mode == host_mode_t::standalone && dotnetExecutablePath.empty())
+	{
+		throwV8Exception("This is not a published, standalone application and we are unable to locate the .NET Core SDK.  Please make sure that it is installed; see http://microsoft.com/net/core for more details.");
+	}
+
+	pal::string_t configFile, devConfigFile, sdkPath;
+
+	if (mode != host_mode_t::standalone)
+	{
+		pal::string_t sdkDirectory;
+
+		fx_muxer_t::resolve_sdk_dotnet_path(dotnetDirectory, &sdkDirectory);
+		
+		pal::string_t dotnetAssemblyPath(sdkDirectory);
+		append_path(&dotnetAssemblyPath, _X("dotnet.dll"));
+
+		get_runtime_config_paths_from_app(dotnetAssemblyPath, &configFile, &devConfigFile);
+	}
+
+	else
+	{
+		get_runtime_config_paths_from_app(entryPointAssembly, &configFile, &devConfigFile);
+	}
+
+	pal::string_t packagesPath;
+	pal::string_t packagesEnvironmentVariable;
+	pal::getenv(_X("NUGET_PACKAGES"), &packagesEnvironmentVariable);
+
+	if (packagesEnvironmentVariable.length() == 0)
+	{
+		pal::string_t profileDirectory;
+		pal::getenv(_X("USERPROFILE"), &profileDirectory);
+
+		if (profileDirectory.length() == 0)
+		{
+			pal::getenv(_X("HOME"), &profileDirectory);
+		}
+
+		packagesPath = profileDirectory;
+
+		append_path(&packagesPath, _X(".nuget"));
+		append_path(&packagesPath, _X("packages"));
+	}
+
+	else
+	{
+		packagesPath = packagesEnvironmentVariable;
+	}
+
+	runtime_config_t config(configFile, devConfigFile);
+	std::vector<pal::string_t> probePaths;
+
+	for (pal::string_t path : config.get_probe_paths())
+	{
+		if (!path.empty())
+		{
+			pal::string_t modifiedPath(path);
+			pal::realpath(&modifiedPath);
+			probePaths.push_back(modifiedPath);
+		}
+	}
+
+	pal::string_t coreClrVersion;
+	pal::getenv(_X("CORECLR_VERSION"), &coreClrVersion);
+
+	pal::string_t frameworkDirectory = config.get_portable() ? fx_muxer_t::resolve_fx_dir(mode, dotnetDirectory, config, coreClrVersion) : _X("");
+	corehost_init_t init(dependencyManifestFile, probePaths, frameworkDirectory, mode, config);
+	host_interface_t hostInterface = init.get_host_init_data();
+	hostpolicy_init_t g_init;
+	arguments_t args;
+
+	args.probe_paths = probePaths;
+	args.app_dir = edgeAppDir;
+	args.app_argc = 0;
+	args.app_argv = NULL;
+	args.deps_path = dependencyManifestFile;
+	args.own_path = dotnetExecutablePath;
+	args.dotnet_packages_cache = packagesPath;
+	args.managed_application = entryPointAssembly;
+
+	hostpolicy_init_t::init(&hostInterface, &g_init);
+
+	// Below copied from https://github.com/dotnet/core-setup/blob/master/src/corehost/cli/hostpolicy.cpp#L18
+	// *********************************************************************************************************************
+
+	// Load the deps resolver
+	deps_resolver_t resolver(g_init, args);
+
+	pal::string_t resolver_errors;
+	if (!resolver.valid(&resolver_errors))
+	{
+		trace::error(_X("CoreClrEmbedding::Initialize - Error initializing the dependency resolver: %s"), resolver_errors.c_str());
+		return StatusCode::ResolverInitFailure;
+	}
+
+	// Setup breadcrumbs
+	//pal::string_t policy_name = _STRINGIFY(HOST_POLICY_PKG_NAME);
+	//pal::string_t policy_version = _STRINGIFY(HOST_POLICY_PKG_VER);
+
+	// Always insert the hostpolicy that the code is running on.
+	std::unordered_set<pal::string_t> breadcrumbs;
+	//breadcrumbs.insert(policy_name);
+	//breadcrumbs.insert(policy_name + _X(",") + policy_version);
+
+	probe_paths_t probe_paths;
+	if (!resolver.resolve_probe_paths(&probe_paths, &breadcrumbs))
+	{
+		return StatusCode::ResolverResolveFailure;
+	}
+
+	pal::string_t clr_path = probe_paths.coreclr;
+	if (clr_path.empty() || !pal::realpath(&clr_path))
+	{
+		trace::error(_X("Could not resolve CoreCLR path. For more details, enable tracing by setting COREHOST_TRACE environment variable to 1"));;
+		return StatusCode::CoreClrResolveFailure;
+	}
+
+	pal::string_t clrjit_path = probe_paths.clrjit;
+	if (clrjit_path.empty())
+	{
+		trace::warning(_X("Could not resolve CLRJit path"));
+	}
+	else if (pal::realpath(&clrjit_path))
+	{
+		trace::verbose(_X("The resolved JIT path is '%s'"), clrjit_path.c_str());
+	}
+	else
+	{
+		clrjit_path.clear();
+		trace::warning(_X("Could not resolve symlink to CLRJit path '%s'"), probe_paths.clrjit.c_str());
+	}
+
+	// Build CoreCLR properties
+	std::vector<const char*> property_keys = {
+		"TRUSTED_PLATFORM_ASSEMBLIES",
+		"APP_PATHS",
+		"APP_NI_PATHS",
+		"NATIVE_DLL_SEARCH_DIRECTORIES",
+		"PLATFORM_RESOURCE_ROOTS",
+		"AppDomainCompatSwitch",
+		// Workaround: mscorlib does not resolve symlinks for AppContext.BaseDirectory dotnet/coreclr/issues/2128
+		"APP_CONTEXT_BASE_DIRECTORY",
+		"APP_CONTEXT_DEPS_FILES",
+		"FX_DEPS_FILE"
+	};
+
+	// Note: these variables' lifetime should be longer than coreclr_initialize.
+	std::vector<char> tpa_paths_cstr, app_base_cstr, native_dirs_cstr, resources_dirs_cstr, fx_deps, deps, clrjit_path_cstr;
+	pal::pal_clrstring(probe_paths.tpa, &tpa_paths_cstr);
+	pal::pal_clrstring(args.app_dir, &app_base_cstr);
+	pal::pal_clrstring(probe_paths.native, &native_dirs_cstr);
+	pal::pal_clrstring(probe_paths.resources, &resources_dirs_cstr);
+
+	pal::pal_clrstring(resolver.get_fx_deps_file(), &fx_deps);
+	pal::pal_clrstring(resolver.get_deps_file() + _X(";") + resolver.get_fx_deps_file(), &deps);
+
+	std::vector<const char*> property_values = {
+		// TRUSTED_PLATFORM_ASSEMBLIES
+		tpa_paths_cstr.data(),
+		// APP_PATHS
+		app_base_cstr.data(),
+		// APP_NI_PATHS
+		app_base_cstr.data(),
+		// NATIVE_DLL_SEARCH_DIRECTORIES
+		native_dirs_cstr.data(),
+		// PLATFORM_RESOURCE_ROOTS
+		resources_dirs_cstr.data(),
+		// AppDomainCompatSwitch
+		"UseLatestBehaviorWhenTFMNotSpecified",
+		// APP_CONTEXT_BASE_DIRECTORY
+		app_base_cstr.data(),
+		// APP_CONTEXT_DEPS_FILES,
+		deps.data(),
+		// FX_DEPS_FILE
+		fx_deps.data()
+	};
+
+	if (!clrjit_path.empty())
+	{
+		pal::pal_clrstring(clrjit_path, &clrjit_path_cstr);
+		property_keys.push_back("JIT_PATH");
+		property_values.push_back(clrjit_path_cstr.data());
+	}
+
+	for (int i = 0; i < g_init.cfg_keys.size(); ++i)
+	{
+		property_keys.push_back(g_init.cfg_keys[i].data());
+		property_values.push_back(g_init.cfg_values[i].data());
+	}
+
+	size_t property_size = property_keys.size();
+	assert(property_keys.size() == property_values.size());
+
+	// Add API sets to the process DLL search
+	pal::setup_api_sets(resolver.get_api_sets());
+
+	// Bind CoreCLR
+	pal::string_t clr_dir = get_directory(clr_path);
+	trace::verbose(_X("CoreCLR path = '%s', CoreCLR dir = '%s'"), clr_path.c_str(), clr_dir.c_str());
+	if (!coreclr::bind(clr_dir))
+	{
+		trace::error(_X("Failed to bind to CoreCLR at '%s'"), clr_path.c_str());
+		return StatusCode::CoreClrBindFailure;
+	}
+
+	// Verbose logging
+	if (trace::is_enabled())
+	{
+		for (size_t i = 0; i < property_size; ++i)
+		{
+			pal::string_t key, val;
+			pal::clr_palstring(property_keys[i], &key);
+			pal::clr_palstring(property_values[i], &val);
+			trace::verbose(_X("Property %s = %s"), key.c_str(), val.c_str());
+		}
+	}
+
+	std::vector<char> own_path, bootstrapperCstr;
+	pal::pal_clrstring(args.own_path, &own_path);
+	pal::pal_clrstring(bootstrapper, &bootstrapperCstr);
+
+	// Initialize CoreCLR
+	coreclr::host_handle_t host_handle;
+	coreclr::domain_id_t domain_id;
+	auto hr = coreclr::initialize(
+		bootstrapperCstr.data(),
+		"Edge",
+		property_keys.data(),
+		property_values.data(),
+		property_size,
+		&host_handle,
+		&domain_id);
+	if (!SUCCEEDED(hr))
+	{
+		trace::error(_X("Failed to initialize CoreCLR, HRESULT: 0x%X"), hr);
+		return StatusCode::CoreClrInitFailure;
+	}
+
+	// *********************************************************************************************************************
+	// End of copying from hostpolicy.cpp
+
+	trace::info(_X("CoreClrEmbedding::Initialize - CoreCLR initialized successfully"));
+	trace::info(_X("CoreClrEmbedding::Initialize - App domain created successfully (app domain ID: %d)"), domain_id);
+
+	//coreclr_create_delegate createDelegate = (coreclr_create_delegate)pal::get_symbol(coreclr::g_coreclr, "coreclr_create_delegate");
+
+	//if (!createDelegate)
+	//{
+	//	throwV8Exception("Error loading the coreclr_create_delegate function:  %s.", GetLoadError());
+	//	return E_FAIL;
+	//}
+
+	//trace::info(_X("CoreClrEmbedding::Initialize - coreclr_create_delegate loaded successfully"));
+	
+	/*if (!libCoreClr)
 	{
 		coreClrDirectory = edgeAppDir.length() > 0 ? edgeAppDir : currentDirectory;
 		LoadCoreClrAtPath(coreClrDirectory, &libCoreClr);
 	}
 
-    if (!libCoreClr)
+	// TODO: use the FX muxer for this
+    if (!libCoreClr && dotnetExecutablePath.length() > 0)
     {
-		pal::string_t pathEnvironmentVariable;
-		pal::getenv(_X("PATH"), &pathEnvironmentVariable);
+		coreClrDirectory = get_directory(dotnetExecutablePath);
+		trace::info(_X("CoreClrEmbedding::Initialize - Loading CLR from the dotnet executable directory"), coreClrDirectory.c_str());
 
-        trace::info(_X("CoreClrEmbedding::Initialize - Path is %s"), pathEnvironmentVariable.c_str());
+		append_path(&coreClrDirectory, _X("shared"));
+		append_path(&coreClrDirectory, _X("Microsoft.NETCore.App"));
 
-		pal::string_t dotnetExecutablePath;
+		pal::string_t coreClrVersion;
+		pal::getenv(_X("CORECLR_VERSION"), &coreClrVersion);
 
-    	size_t previousIndex = 0;
-    	size_t currentIndex = pathEnvironmentVariable.find(PATH_SEPARATOR);
+		if (coreClrVersion.length() > 0)
+		{
+			trace::info(_X("CoreClrEmbedding::Initialize - CORECLR_VERSION environment variable provided (%s)"), coreClrVersion.c_str());
 
-    	while (!libCoreClr && previousIndex != std::string::npos)
-    	{
-    		if (currentIndex != std::string::npos)
-    		{
-				dotnetExecutablePath = pathEnvironmentVariable.substr(previousIndex, currentIndex - previousIndex);
+			append_path(&coreClrDirectory, coreClrVersion.c_str());
+			LoadCoreClrAtPath(coreClrDirectory, &libCoreClr);
+
+			if (!libCoreClr)
+			{
+				std::vector<char> coreClrVersionCstr;
+				pal::pal_clrstring(coreClrVersion, &coreClrVersionCstr);
+
+				throwV8Exception("The targeted CLR version (%s) specified in the CORECLR_VERSION environment variable was not found.", coreClrVersionCstr.data());
+				return E_FAIL;
+			}
+		}
+
+		else if (dependencyManifestFile.length() > 0)
+		{
+			trace::info(_X("CoreClrEmbedding::Initialize - Checking for a framework version in the application dependency manifest"));
+
+			pal::ifstream_t dependencyManifestStream(dependencyManifestFile);
+
+			if (!dependencyManifestStream.good())
+			{
+				std::vector<char> manifestFileCstr;
+				pal::pal_clrstring(dependencyManifestFile, &manifestFileCstr);
+
+				throwV8Exception("Unable to open the application dependency manifest file at %s", manifestFileCstr.data());
+				return E_FAIL;
 			}
 
-			else
+			const web::json::value manifestRoot = web::json::value::parse(dependencyManifestStream);
+			const web::json::object& rootJson = manifestRoot.as_object();
+			const web::json::object& libraries = rootJson.at(_X("libraries")).as_object();
+
+			for (const auto& library : libraries)
 			{
-				dotnetExecutablePath = pathEnvironmentVariable.substr(previousIndex);
-			}
+				size_t pos = library.first.find(_X("/"));
+				pal::string_t libraryName = library.first.substr(0, pos);
+				pal::string_t libraryVersion = library.first.substr(pos + 1);
 
-			append_path(&dotnetExecutablePath, _X("dotnet"));
-			dotnetExecutablePath.append(pal::exe_suffix());
-
-			trace::info(_X("CoreClrEmbedding::Initialize - Checking for dotnet at %s"), dotnetExecutablePath.c_str());
-
-			if (pal::file_exists(dotnetExecutablePath))
-			{
-				pal::realpath(&dotnetExecutablePath);
-
-				coreClrDirectory = get_directory(dotnetExecutablePath);
-				trace::info(_X("CoreClrEmbedding::Initialize - Found dotnet directory at %s"), coreClrDirectory.c_str());
-
-				append_path(&coreClrDirectory, _X("shared"));
-				append_path(&coreClrDirectory, _X("Microsoft.NETCore.App"));
-
-				pal::string_t coreClrVersion;
-				pal::getenv(_X("CORECLR_VERSION"), &coreClrVersion);
-
-				if (coreClrVersion.length() > 0)
+				if (libraryName == _X("Microsoft.NETCore.App"))
 				{
-					trace::info(_X("CoreClrEmbedding::Initialize - CORECLR_VERSION environment variable provided (%s)"), coreClrVersion.c_str());
+					trace::info(_X("CoreClrEmbedding::Initialize - Found a framework version (%s) in the application dependency manifest, trying to load it"), libraryVersion.c_str());
 
-					append_path(&coreClrDirectory, coreClrVersion.c_str());
+					append_path(&coreClrDirectory, libraryVersion.c_str());
 					LoadCoreClrAtPath(coreClrDirectory, &libCoreClr);
 
 					if (!libCoreClr)
 					{
 						std::vector<char> coreClrVersionCstr;
-						pal::pal_clrstring(coreClrVersion, &coreClrVersionCstr);
+						pal::pal_clrstring(libraryVersion, &coreClrVersionCstr);
 
-						throwV8Exception("The targeted CLR version (%s) specified in the CORECLR_VERSION environment variable was not found.", coreClrVersionCstr.data());
-						return E_FAIL;
-					}
-				}
-
-				else if (dependencyManifestFile.length() > 0)
-				{
-					trace::info(_X("CoreClrEmbedding::Initialize - Checking for a framework version in the application dependency manifest"));
-
-					pal::ifstream_t dependencyManifestStream(dependencyManifestFile);
-
-					if (!dependencyManifestStream.good())
-					{
-						std::vector<char> manifestFileCstr;
-						pal::pal_clrstring(dependencyManifestFile, &manifestFileCstr);
-
-						throwV8Exception("Unable to open the application dependency manifest file at %s", manifestFileCstr.data());
+						throwV8Exception("The targeted CLR version (%s) specified in application dependency manifest was not found.", coreClrVersionCstr.data());
 						return E_FAIL;
 					}
 
-					const web::json::value manifestRoot = web::json::value::parse(dependencyManifestStream);
-					const web::json::object& rootJson = manifestRoot.as_object();
-					const web::json::object& libraries = rootJson.at(_X("libraries")).as_object();
-
-					for (const auto& library : libraries)
-					{
-						size_t pos = library.first.find(_X("/"));
-						pal::string_t libraryName = library.first.substr(0, pos);
-						pal::string_t libraryVersion = library.first.substr(pos + 1);
-
-						if (libraryName == _X("Microsoft.NETCore.App"))
-						{
-							trace::info(_X("CoreClrEmbedding::Initialize - Found a framework version (%s) in the application dependency manifest, trying to load it"), libraryVersion.c_str());
-
-							append_path(&coreClrDirectory, libraryVersion.c_str());
-							LoadCoreClrAtPath(coreClrDirectory, &libCoreClr);
-
-							if (!libCoreClr)
-							{
-								std::vector<char> coreClrVersionCstr;
-								pal::pal_clrstring(libraryVersion, &coreClrVersionCstr);
-
-								throwV8Exception("The targeted CLR version (%s) specified in application dependency manifest was not found.", coreClrVersionCstr.data());
-								return E_FAIL;
-							}
-
-							break;
-						}
-					}
+					break;
 				}
+			}
+		}
 
-				if (!libCoreClr)
+		if (!libCoreClr)
+		{
+			trace::info(_X("CoreClrEmbedding::Initialize - No CORECLR_VERSION environment variable provided and no framework version provided in the application dependency manifest, getting the max installed framework version"));
+
+			std::vector<pal::string_t> frameworkVersions;
+			pal::readdir(coreClrDirectory, &frameworkVersions);
+			fx_ver_t maxVersion(-1, -1, -1);
+			fx_ver_t currentVersion(-1, -1, -1);
+
+			for (u_int versionIndex = 0; versionIndex < frameworkVersions.size(); versionIndex++)
+			{
+				if (fx_ver_t::parse(frameworkVersions[versionIndex], &currentVersion))
 				{
-					trace::info(_X("CoreClrEmbedding::Initialize - No CORECLR_VERSION environment variable provided and no framework version provided in the application dependency manifest, getting the max installed framework version"));
-
-					std::vector<pal::string_t> frameworkVersions;
-					pal::readdir(coreClrDirectory, &frameworkVersions);
-					fx_ver_t maxVersion(-1, -1, -1);
-					fx_ver_t currentVersion(-1, -1, -1);
-
-					for (u_int versionIndex = 0; versionIndex < frameworkVersions.size(); versionIndex++)
+					if (currentVersion > maxVersion)
 					{
-						if (fx_ver_t::parse(frameworkVersions[versionIndex], &currentVersion))
-						{
-							if (currentVersion > maxVersion)
-							{
-								maxVersion = currentVersion;
-							}
-						}
-					}
-
-					if (maxVersion.get_major() > 0)
-					{
-						trace::info(_X("CoreClrEmbedding::Initialize - Max framework version was %s"), maxVersion.as_str().c_str());
-
-						append_path(&coreClrDirectory, maxVersion.as_str().c_str());
-						LoadCoreClrAtPath(coreClrDirectory, &libCoreClr);
-					}
-
-					else
-					{
-						trace::info(_X("CoreClrEmbedding::Initialize - None of the subdirectories of %s were valid framework versions"), coreClrDirectory.c_str());
-					}
-				}
-
-				if (libCoreClr)
-				{
-					frameworkDependencyManifestFile = pal::string_t(coreClrDirectory);
-					append_path(&frameworkDependencyManifestFile, _X("Microsoft.NETCore.App.deps.json"));
-
-					if (!pal::file_exists(frameworkDependencyManifestFile))
-					{
-						frameworkDependencyManifestFile = dependencyManifestFile.length() > 0 ? pal::string_t(dependencyManifestFile) : _X("");
+						maxVersion = currentVersion;
 					}
 				}
 			}
 
-    		if (!libCoreClr)
-    		{
-				previousIndex = currentIndex == std::string::npos ? currentIndex : currentIndex + 1;
+			if (maxVersion.get_major() > 0)
+			{
+				trace::info(_X("CoreClrEmbedding::Initialize - Max framework version was %s"), maxVersion.as_str().c_str());
 
-				if (previousIndex != std::string::npos)
-				{
-					currentIndex = pathEnvironmentVariable.find(PATH_SEPARATOR, previousIndex);
-				}
-    		}
-    	}
+				append_path(&coreClrDirectory, maxVersion.as_str().c_str());
+				LoadCoreClrAtPath(coreClrDirectory, &libCoreClr);
+			}
+
+			else
+			{
+				trace::info(_X("CoreClrEmbedding::Initialize - None of the subdirectories of %s were valid framework versions"), coreClrDirectory.c_str());
+			}
+		}
+
+		if (libCoreClr)
+		{
+			frameworkDependencyManifestFile = pal::string_t(coreClrDirectory);
+			append_path(&frameworkDependencyManifestFile, _X("Microsoft.NETCore.App.deps.json"));
+
+			if (!pal::file_exists(frameworkDependencyManifestFile))
+			{
+				frameworkDependencyManifestFile = dependencyManifestFile.length() > 0 ? pal::string_t(dependencyManifestFile) : _X("");
+			}
+		}
     }
 
     if (!libCoreClr)
@@ -618,6 +871,8 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
     pal::string_t tpaList;
     AddToTpaList(frameworkDependencyManifestFile.length() > 0 ? frameworkDependencyManifestFile : dependencyManifestFile, coreClrDirectory, &tpaList);
 
+    trace::info(_X("CoreClrEmbedding::Initialize - TPA list is %s"), tpaList.c_str());
+
 	pal::string_t appBase = edgeJsAssemblyPath;
     trace::info(_X("CoreClrEmbedding::Initialize - Using %s as the app path value"), appBase.c_str());
 
@@ -666,7 +921,7 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 	}
 
 	trace::info(_X("CoreClrEmbedding::Initialize - CoreCLR initialized successfully"));
-    trace::info(_X("CoreClrEmbedding::Initialize - App domain created successfully (app domain ID: %d)"), appDomainId);
+    trace::info(_X("CoreClrEmbedding::Initialize - App domain created successfully (app domain ID: %d)"), appDomainId);*/
 
     SetCallV8FunctionDelegateFunction setCallV8Function;
 
@@ -684,14 +939,14 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 	CoreClrGcHandle exception = NULL;
 	BootstrapperContext context;
 
-	std::vector<char> coreClrDirectoryCstr, currentDirectoryCstr, edgeAppDirCstr;
-	pal::pal_clrstring(coreClrDirectory, &coreClrDirectoryCstr);
+	std::vector<char> coreClrDirectoryCstr, currentDirectoryCstr, edgeAppDirCstr, dependencyManifestFileCstr;
+	pal::pal_clrstring(clr_path, &coreClrDirectoryCstr);
 	pal::pal_clrstring(currentDirectory, &currentDirectoryCstr);
 	pal::pal_clrstring(edgeAppDir, &edgeAppDirCstr);
+	pal::pal_clrstring(dependencyManifestFile, &dependencyManifestFileCstr);
 
 	context.runtimeDirectory = coreClrDirectoryCstr.data();
 	context.applicationDirectory = edgeAppDirCstr.data();
-	context.edgeNodePath = edgeNodePathCstr.data();
 	context.dependencyManifestFile = dependencyManifestFileCstr.data();
 
 	if (!context.applicationDirectory)
@@ -701,12 +956,12 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 	
 	trace::info(_X("CoreClrEmbedding::Initialize - Runtime directory: %s"), coreClrDirectory.c_str());
 	trace::info(_X("CoreClrEmbedding::Initialize - Application directory: %s"), edgeAppDir.c_str());
-	trace::info(_X("CoreClrEmbedding::Initialize - Bootstrapper assemblies: %s"), bootstrapAssemblies.c_str());
+	//trace::info(_X("CoreClrEmbedding::Initialize - Bootstrapper assemblies: %s"), bootstrapAssemblies.c_str());
 
-	std::vector<char> bootstrapAssembliesCstr;
-	pal::pal_clrstring(bootstrapAssemblies, &bootstrapAssembliesCstr);
+	//std::vector<char> bootstrapAssembliesCstr;
+	//pal::pal_clrstring(bootstrapAssemblies, &bootstrapAssembliesCstr);
 
-	context.bootstrapAssemblies = bootstrapAssembliesCstr.data();
+	//context.bootstrapAssemblies = bootstrapAssembliesCstr.data();
 
 	trace::info(_X("CoreClrEmbedding::Initialize - Calling CLR Initialize() function"));
 	initialize(&context, &exception);
