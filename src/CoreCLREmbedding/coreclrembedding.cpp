@@ -465,23 +465,23 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 	pal::string_t clr_path = probe_paths.coreclr;
 	if (clr_path.empty() || !pal::realpath(&clr_path))
 	{
-		trace::error(_X("Could not resolve CoreCLR path. For more details, enable tracing by setting COREHOST_TRACE environment variable to 1"));;
+		trace::error(_X("CoreClrEmbedding::Initialize - Could not resolve CoreCLR path. For more details, enable tracing by setting COREHOST_TRACE environment variable to 1"));;
 		return StatusCode::CoreClrResolveFailure;
 	}
 
 	pal::string_t clrjit_path = probe_paths.clrjit;
 	if (clrjit_path.empty())
 	{
-		trace::warning(_X("Could not resolve CLRJit path"));
+		trace::warning(_X("CoreClrEmbedding::Initialize - Could not resolve CLRJit path"));
 	}
 	else if (pal::realpath(&clrjit_path))
 	{
-		trace::verbose(_X("The resolved JIT path is '%s'"), clrjit_path.c_str());
+		trace::verbose(_X("CoreClrEmbedding::Initialize - The resolved JIT path is '%s'"), clrjit_path.c_str());
 	}
 	else
 	{
 		clrjit_path.clear();
-		trace::warning(_X("Could not resolve symlink to CLRJit path '%s'"), probe_paths.clrjit.c_str());
+		trace::warning(_X("CoreClrEmbedding::Initialize - Could not resolve symlink to CLRJit path '%s'"), probe_paths.clrjit.c_str());
 	}
 
 	// Build CoreCLR properties
@@ -550,10 +550,10 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 
 	// Bind CoreCLR
 	pal::string_t clr_dir = get_directory(clr_path);
-	trace::verbose(_X("CoreCLR path = '%s', CoreCLR dir = '%s'"), clr_path.c_str(), clr_dir.c_str());
+	trace::verbose(_X("CoreClrEmbedding::Initialize - CoreCLR path = '%s', CoreCLR dir = '%s'"), clr_path.c_str(), clr_dir.c_str());
 	if (!coreclr::bind(clr_dir))
 	{
-		trace::error(_X("Failed to bind to CoreCLR at '%s'"), clr_path.c_str());
+		trace::error(_X("CoreClrEmbedding::Initialize - Failed to bind to CoreCLR at '%s'"), clr_path.c_str());
 		return StatusCode::CoreClrBindFailure;
 	}
 
@@ -565,7 +565,7 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 			pal::string_t key, val;
 			pal::clr_palstring(property_keys[i], &key);
 			pal::clr_palstring(property_values[i], &val);
-			trace::verbose(_X("Property %s = %s"), key.c_str(), val.c_str());
+			trace::verbose(_X("CoreClrEmbedding::Initialize - Property %s = %s"), key.c_str(), val.c_str());
 		}
 	}
 
@@ -586,7 +586,7 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 		&domain_id);
 	if (!SUCCEEDED(hr))
 	{
-		trace::error(_X("Failed to initialize CoreCLR, HRESULT: 0x%X"), hr);
+		trace::error(_X("CoreClrEmbedding::Initialize - Failed to initialize CoreCLR, HRESULT: 0x%X"), hr);
 		return StatusCode::CoreClrInitFailure;
 	}
 
@@ -595,6 +595,23 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 
 	trace::info(_X("CoreClrEmbedding::Initialize - CoreCLR initialized successfully"));
 	trace::info(_X("CoreClrEmbedding::Initialize - App domain created successfully (app domain ID: %d)"), domain_id);
+
+	bool foundEdgeJs = false;
+
+	for (deps_entry_t entry : resolver.m_deps->get_entries(deps_entry_t::asset_types::runtime))
+	{
+		if (entry.library_name == _X("Edge.js"))
+		{
+			foundEdgeJs = true;
+			break;
+		}
+	}
+
+	if (!foundEdgeJs)
+	{
+		throwV8Exception("Failed to find the Edge.js runtime assembly in the dependency manifest list.  Make sure that your project.json file has a reference to the Edge.js NuGet package.");
+		return E_FAIL;
+	}
 
 	//coreclr_create_delegate createDelegate = (coreclr_create_delegate)pal::get_symbol(coreclr::g_coreclr, "coreclr_create_delegate");
 

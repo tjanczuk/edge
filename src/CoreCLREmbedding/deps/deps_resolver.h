@@ -102,6 +102,9 @@ public:
     {
         return m_api_set_paths;
     }
+
+	// Deps files for the app
+	std::unique_ptr<deps_json_t>  m_deps;
 private:
 
     static pal::string_t get_fx_deps(const pal::string_t& fx_dir, const pal::string_t& fx_name)
@@ -185,9 +188,6 @@ private:
 
     // Deps files for the fx
     std::unique_ptr<deps_json_t> m_fx_deps;
-
-    // Deps files for the app
-    std::unique_ptr<deps_json_t>  m_deps;
 
     // Various probe configurations.
     std::vector<probe_config_t> m_probes;
