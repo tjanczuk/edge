@@ -434,37 +434,6 @@ public class CoreCLREmbedding
             RuntimeEnvironment = new EdgeRuntimeEnvironment(bootstrapperContext);
             Resolver = new EdgeAssemblyResolver();
 
-            // If we don't pre-load these assemblies prior to calling LoadDependencyManifest, an EngineExecutionException is
-            // thrown during the assembly resolution process (no idea why)
-            //AssemblyLoadContext.Default.LoadFromAssemblyPath(Resolver.GetAssemblyPath("Microsoft.Extensions.DependencyModel"));
-            //AssemblyLoadContext.Default.LoadFromAssemblyPath(Resolver.GetAssemblyPath("Newtonsoft.Json"));
-            //AssemblyLoadContext.Default.LoadFromAssemblyPath(Resolver.GetAssemblyPath("Microsoft.DotNet.InternalAbstractions"));
-            //AssemblyLoadContext.Default.LoadFromAssemblyPath(Resolver.GetAssemblyPath("System.Runtime.Serialization.Primitives"));
-
-            /*DebugMessage("CoreCLREmbedding::Initialize (CLR) - DependencyManifestFile is {0}", RuntimeEnvironment.DependencyManifestFile);
-            string entryAssemblyPath = RuntimeEnvironment.DependencyManifestFile.Replace(".deps.json", ".dll");
-
-            if (File.Exists(entryAssemblyPath))
-            {
-                DebugMessage("CoreCLREmbedding::Initialize (CLR) - Loading {0}", entryAssemblyPath);
-
-                try
-                {
-                    Assembly entryAssembly = AssemblyLoadContext.Default.LoadFromAssemblyPath(entryAssemblyPath);
-                    Lazy<DependencyContext> defaultDependencyContext = new Lazy<DependencyContext>(() => DependencyContext.Load(entryAssembly));                
-
-                    // I really don't like doing it this way, but it's the easiest way to give the running code access to the default 
-                    // dependency context data
-                    //typeof(DependencyContext).GetField("_defaultContext", BindingFlags.Static | BindingFlags.NonPublic).SetValue(null, defaultDependencyContext);
-                }
-
-                catch (Exception e)
-                {
-                    DebugMessage("CoreCLREmbedding::Assembly_Resolving (CLR) - Error trying to load assembly from path: {0}{1}{2}", e.Message, Environment.NewLine, e.StackTrace);
-                    //throw;
-                }
-            }*/
-
             AssemblyLoadContext.Default.Resolving += Assembly_Resolving;
 
             if (!String.IsNullOrEmpty(RuntimeEnvironment.DependencyManifestFile))
