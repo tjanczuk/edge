@@ -23,7 +23,7 @@
         "<!(node -e \"require('nan')\")"
       ],
       'cflags+': [
-        '-DHAVE_CORECLR -D_NO_ASYNCRTIMP -std=c++11'
+        '-DHAVE_CORECLR -D_NO_ASYNCRTIMP -std=c++11 -Wno-reorder -Wno-sign-compare -Wno-mismatched-tags -Wno-missing-braces -Wno-redundant-move -Wno-deprecated-declarations -Wno-unused-private-field'
       ],
       'cflags!': [
         '-fno-exceptions'
@@ -33,7 +33,7 @@
       ],
       'xcode_settings': {
         'OTHER_CFLAGS': [
-          '-DHAVE_CORECLR -D_NO_ASYNCRTIMP'
+          '-DHAVE_CORECLR -D_NO_ASYNCRTIMP -Wno-reorder -Wno-sign-compare -Wno-mismatched-tags -Wno-missing-braces -Wno-redundant-move -Wno-deprecated-declarations -Wno-unused-private-field'
         ],
         'GCC_ENABLE_CPP_EXCEPTIONS': 'YES',
         'GCC_ENABLE_CPP_RTTI': 'YES',

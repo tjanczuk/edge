@@ -225,9 +225,7 @@ HRESULT CoreClrEmbedding::Initialize(BOOL debugMode)
 
     trace::info(_X("CoreClrEmbedding::Initialize - edge.node path is %s"), edgeNodePath.c_str());
 
-    pal::dll_t libCoreClr = NULL;
     pal::string_t bootstrapper;
-
     pal::get_own_executable_path(&bootstrapper);
 	trace::info(_X("CoreClrEmbedding::Initialize - Bootstrapper is %s"), bootstrapper.c_str());
 
