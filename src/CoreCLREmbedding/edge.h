@@ -99,10 +99,6 @@ class CoreClrEmbedding
 {
     private:
 		CoreClrEmbedding();
-        static void FreeCoreClr(pal::dll_t pLibCoreClr);
-        static bool LoadCoreClrAtPath(pal::string_t loadPath, pal::dll_t* ppLibCoreClr);
-        static void AddToTpaList(pal::string_t dependencyManifestFile, pal::string_t frameworkDirectory, pal::string_t* tpaList);
-        static char* GetLoadError();
 
     public:
         static CoreClrGcHandle GetClrFuncReflectionWrapFunc(const char* assemblyFile, const char* typeName, const char* methodName, v8::Local<v8::Value>* exception);
