@@ -153,11 +153,13 @@ If you are writing a Node.js application, this section explains how you include 
 
 ### What you need
 
-Edge.js runs on Windows, Linux, and OSX and requires Node.js 5.x, 4.x, 0.12.x, 0.10.x, or 0.8.x, as well as .NET Framework 4.5 (Windows), Mono 4.0.4.1 (OSX, Linux), or .NET Core (Windows, OSX, Linux). 
+Edge.js runs on Windows, Linux, and OSX and requires Node.js 6.x, 5.x, 4.x, 0.12.x, 0.10.x, or 0.8.x, as well as .NET Framework 4.5 (Windows), Mono 4.2.4 (OSX, Linux), or .NET Core 1.0.0 Preview 2 (Windows, OSX, Linux). 
+
+**NOTE** there is a known issue with Mono after 4.2.4 that will be addressed in Mono 4.6.
 
 #### Windows
 
-* Node.js 5.x, 4.x, 0.12.x, 0.10.x, or 0.8.x 
+* Node.js 6.x, 5.x, 4.x, 0.12.x, 0.10.x, or 0.8.x 
 * [.NET 4.5](http://www.microsoft.com/en-us/download/details.aspx?id=30653) and/or [.NET Core](https://www.microsoft.com/net/core)
 * to use Python, you also need [IronPython 2.7.3 or later](http://ironpython.codeplex.com/releases/view/81726)  
 * to use F#, read [Dave Thomas blog post](http://7sharpnine.com/blog/2013-05-05-i-node-something/)
@@ -168,28 +170,28 @@ If you have both desktop CLR and .NET Core installed, read [using .NET Core](#us
 
 #### Linux
 
-* Node.js 5.x, 4.x, 0.12.x, 0.10.x, or 0.8.x
-* Mono 4.x x64 and/or .NET Core
+* Node.js 6.x, 5.x, 4.x, 0.12.x, 0.10.x, or 0.8.x
+* Mono 4.2.4 x64 and/or .NET Core
 * Follow [Linux setup instructions](#building-on-linux)
 
 ![image](https://cloud.githubusercontent.com/assets/822369/2808077/03f92874-cd0e-11e3-88ea-79f67b8b1d49.png)
 
 #### OSX  
 
-* Node.js 5.x, 4.x, 0.12.x, 0.10.x, or 0.8.x  
-* Mono 4.0.4.1 x64 and/or .NET Core
+* Node.js 6.x, 5.x, 4.x, 0.12.x, 0.10.x, or 0.8.x  
+* Mono 4.2.4 x64 and/or .NET Core
 * Follow [OSX setup instructions](#building-on-osx)  
 
 ![image](https://cloud.githubusercontent.com/assets/822369/2808046/8f4ce378-cd0b-11e3-95dc-ef0842c28821.png)
 
 #### Docker
 
-Edge.js is available as a Docker image on the [tjanczuk/edgejs repository on Docker Hub](https://registry.hub.docker.com/u/tjanczuk/edgejs/). The image is based on Debian Jessie, and contains Node.js 4.2.3 x64, Mono 4.2.1 x64, .NET Core 1.0.0 RC2 x64, and Edge.js:
+Edge.js is available as a Docker image on the [tjanczuk/edgejs repository on Docker Hub](https://registry.hub.docker.com/u/tjanczuk/edgejs/). The image is based on Debian Trusty, and contains Node.js 6.3.0 x64, Mono 4.2.4 x64, .NET Core 1.0.0 Preview 2 x64 (dotnet-dev-1.0.0-preview2-003121), and Edge.js 6.5.1:
 
 By default Edge uses Mono to execute CLR code: 
 
 ```
-> docker run -it tjanczuk/edgejs:5.0.0
+> docker run -it tjanczuk/edgejs:6.5.1
 > cd samples
 > node 101_hello_lambda.js
 .NET welcomes Node.js
@@ -198,7 +200,7 @@ By default Edge uses Mono to execute CLR code:
 Specify the `EDGE_USE_CORECLR=1` environment variable to use .NET Core instead: 
 
 ```
-> docker run -it tjanczuk/edgejs:5.0.0
+> docker run -it tjanczuk/edgejs:6.5.1
 > cd samples
 > EDGE_USE_CORECLR=1 node 101_hello_lambda.js
 .NET welcomes Node.js
@@ -207,7 +209,7 @@ Specify the `EDGE_USE_CORECLR=1` environment variable to use .NET Core instead:
 Alternatively, you can also specify `EDGE_USE_CORECLR` when starting the container: 
 
 ```
-> docker run -it -e EDGE_USE_CORECLR=1 tjanczuk/edgejs:5.0.0
+> docker run -it -e EDGE_USE_CORECLR=1 tjanczuk/edgejs:6.5.1
 ```
 
 ### How to: C# hello, world
@@ -1201,7 +1203,7 @@ Read more about [performance of Edge.js on the wiki](https://github.com/tjanczuk
 
 ### Building on Windows
 
-You must have Visual Studio 2013 toolset, Python 2.7.x, and node-gyp installed for building.
+You must have Visual Studio 2015 toolset, Python 2.7.x, and node-gyp installed for building.
 
 To build and test the project against all supported versions of Node.js in x86 and x64 flavors, run the following:
 
@@ -1215,7 +1217,7 @@ To build one of the versions of Node.js officially released by [Node.js](http://
 
 ```
 cd tools
-build.bat release 0.10.0
+build.bat release 6.4.0
 ```
 
 Note: the Node.js version number you provide must be version number corresponding to one of the subdirectories of http://nodejs.org/dist. The command will build both x32 and x64 architectures (assuming you use x64 machine). The command will also copy the edge\_\*.node executables to appropriate locations under lib\native directory where they are looked up from at runtime. The `npm install` step copies the C standard library shared DLL to the location of the edge\_\*.node files for the component to be ready to go.
@@ -1224,7 +1226,7 @@ To build the C++\CLI native extension using the version of Node.js installed on 
 
 ```
 npm install -g node-gyp
-node-gyp configure --msvs_version=2013
+node-gyp configure --msvs_version=2015
 node-gyp build -debug
 ```
 
@@ -1331,49 +1333,7 @@ export EDGE_NATIVE=/Users/tomek/edge/build/Debug/edge_nativeclr.node
 
 ### Building on Linux 
 
-These instructions were tested on Ubuntu 14.04 x64 and Debian Wheezy x64. High level, you must have Node.js x64 and either Mono x64 or Microsoft's .NET Core (or both) installed on the machine before you can install Edge.js. There are two ways of getting there.
-
-### Debian or Ubuntu, starting from a clean VM (i.e. taking the high road)
-
-If you have a fresh Debian Wheezy or Ubuntu 14.04 x64 installation, the most convenient way of installing Edge.js with all prerequisites is by running:
-
-```bash
-export USERNAME=YourUserNameHere
-sudo bash -c 'bash <(wget -qO- https://raw.githubusercontent.com/tjanczuk/edge/master/tools/debian_ubuntu_clean_install.sh)'
-```
-
-This will do the following:
-
-* Download Node.js v4.2.3 sources, build, and install Node.js x64
-* Install Mono x64
-* Install latest .NET Core SDK
-* Download and install node-gyp and mocha
-* Download Edge.js sources and build x64 release
-* Run Edge.js tests using both Mono and .NET Core
-
-If successful, your machine will have all the prerequisites to `npm install edge`.
-
-As you installed both Mono and .NET Core, by default Edge will use Mono. You can opt in to using .NET Core with the `EDGE_USE_CORECLR` environment variable: 
-
-```bash
-EDGE_USE_CORECLR=1 node myapp.js
-```
-
-#### Building on Ubuntu (advanced)
-
-This method is adequate if you already have a Mono x64, .NET Core, and/or Node.js x64 install on the machine and need to incrementally add Edge to it. 
-
-Read through the [install script](https://raw.githubusercontent.com/tjanczuk/edge/mono/tools/debian_ubuntu_clean_install.sh) and cherry pick the steps you need. Here are some gotchas:
-
-* If you need to build Mono, make sure to run `ldconfig` afterwards, otherwise the garbage collection libraries may not load.  
-* To make sure Mono can load the standard C library, run `sudo ln -s -f /lib/x86_64-linux-gnu/libc.so.6 /lib/x86_64-linux-gnu/libc.so`. For background on that step, see how [Mono loads native libraries](http://www.mono-project.com/Interop_with_Native_Libraries) or just [cut to the chase](http://stackoverflow.com/questions/14359981/mono-and-unmanaged-code-in-ubuntu).  
-
-To build a debug build instead of release, you need to:
-
-```bash
-node-gyp configure build -debug
-export EDGE_NATIVE=/home/tomek/edge/build/Debug/edge_nativeclr.node
-```
+For a normative set of steps to set up Edge.js on Linux with both Mono and CoreCLR please refer to the [Dockerfile](https://github.com/tjanczuk/edge/blob/master/Dockerfile). You can also use the ready-made [Docker image](#docker). 
 
 ### Using .NET Core
 
@@ -1413,7 +1373,7 @@ You need Windows with:
 * [Edge.js NuGet package](https://www.nuget.org/packages/Edge.js)  
 * [Node.js](http://nodejs.org) (optional, if you want to use additional NPM packages)
 
-Edge.js support for scripting Node.js ships as a NuGet Package called `Edge.js`. It comes with everything you need to get started writing applications for x86 and x64 architectures. However, if you want to use additional Node.js packages from NPM, you must separately install Node.js runtime to access the NPM package manager. Edge.js NuGet package has been developed and tested with Node.js v4.1.1. Older Edge.js packages exist for prior versions of Node.js. If you choose a different version of Node.js to install NPM packages, your mileage can vary. 
+Edge.js support for scripting Node.js ships as a NuGet Package called `Edge.js`. It comes with everything you need to get started writing applications for x86 and x64 architectures. However, if you want to use additional Node.js packages from NPM, you must separately install Node.js runtime to access the NPM package manager. Edge.js NuGet package has been developed and tested with Node.js v6.5.0. Older Edge.js packages exist for prior versions of Node.js. If you choose a different version of Node.js to install NPM packages, your mileage can vary. 
 
 **NOTE** you cannot use native Node.js extensions when scripting Node.js from CLR using Edge. 
 
@@ -1727,18 +1687,18 @@ These are unstructions for building the Edge.js NuGet package on Windows. The pa
 
 Preprequisties:
 
-* Visual Studio 2013 Update 5  
-* Node.js (tested with v4.1.1)  
+* Visual Studio 2015   
+* Node.js (tested with v6.5.0)  
 * Python 2.7.x  
 * node-gyp (tested with 3.0.1)  
 
 To buid the NuGet package, open the Visual Studio 2013 Developer Command Prompt and call:
 
 ```
-tools\build_double.bat 4.1.1
+tools\build_double.bat 6.5.0
 ```
 
-(you can substitite another version of Node.js, but no other than 0.10.28 were tested).
+(you can substitite another version of Node.js).
 
 The script takes several minutes to complete and does the following:
 
