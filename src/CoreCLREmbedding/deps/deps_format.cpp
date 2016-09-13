@@ -11,6 +11,8 @@
 #include <cassert>
 #include <functional>
 
+static pal::string_t rid;
+
 const std::array<const pal::char_t*, deps_entry_t::asset_types::count> deps_entry_t::s_known_asset_types = {
     _X("runtime"), _X("resources"), _X("native")
 };
@@ -51,7 +53,7 @@ void deps_json_t::reconcile_libraries_with_targets(
         const pal::string_t& hash = properties.at(_X("sha512")).as_string();
         bool serviceable = properties.at(_X("serviceable")).as_bool();
 
-        for (size_t i = 0; i < deps_entry_t::s_known_asset_types.size(); ++i)
+        for (int i = 0; i < deps_entry_t::s_known_asset_types.size(); ++i)
         {
             bool rid_specific = false;
             for (const auto& rel_path : get_rel_paths_by_asset_type_fn(library.first, i, &rid_specific))
@@ -89,45 +91,19 @@ void deps_json_t::reconcile_libraries_with_targets(
 
                 trace::info(_X("Added %s %s deps entry [%d] [%s, %s, %s]"), deps_entry_t::s_known_asset_types[i], entry.asset_name.c_str(), m_deps_entries[i].size() - 1, entry.library_name.c_str(), entry.library_version.c_str(), entry.relative_path.c_str());
                 
-                if (i == deps_entry_t::asset_types::native &&
-                    entry.asset_name == LIBCORECLR_FILENAME)
-                {
-                    m_coreclr_index = m_deps_entries[i].size() - 1;
-                    trace::verbose(_X("Found CoreCLR from deps %d [%s, %s, %s]"),
-                        m_coreclr_index,
-                        entry.library_name.c_str(),
-                        entry.library_version.c_str(),
-                        entry.relative_path.c_str());
-                }
-
-                if (i == deps_entry_t::asset_types::native &&
-                        entry.asset_name == LIBHOSTPOLICY_FILENAME)
-                {
-                    m_hostpolicy_index = m_deps_entries[i].size() - 1;
-                    trace::verbose(_X("Found hostpolicy from deps %d [%s, %s, %s]"),
-                        m_hostpolicy_index,
-                        entry.library_name.c_str(),
-                        entry.library_version.c_str(),
-                        entry.relative_path.c_str());
-                }
             }
         }
     }
 }
 
-void deps_json_t::set_own_rid(const pal::string_t rid)
+pal::string_t get_own_rid()
 {
-	m_rid = rid;
+	return rid;
 }
 
-const pal::string_t deps_json_t::get_own_rid()
+void set_own_rid(pal::string_t set_rid)
 {
-	if (m_rid.length() > 0)
-	{
-		return m_rid;
-	}
-
-	return _X("");
+	rid = pal::string_t(set_rid);
 }
 
 bool deps_json_t::perform_rid_fallback(rid_specific_assets_t* portable_assets, const rid_fallback_graph_t& rid_fallback_graph)
@@ -193,7 +169,7 @@ bool deps_json_t::process_runtime_targets(const json_value& json, const pal::str
         for (const auto& file : files)
         {
             const auto& type = file.second.at(_X("assetType")).as_string();
-            for (size_t i = 0; i < deps_entry_t::s_known_asset_types.size(); ++i)
+            for (int i = 0; i < deps_entry_t::s_known_asset_types.size(); ++i)
             {
                 if (pal::strcasecmp(type.c_str(), deps_entry_t::s_known_asset_types[i]) == 0)
                 {
@@ -219,7 +195,7 @@ bool deps_json_t::process_targets(const json_value& json, const pal::string_t& t
     {
         // if (package.second.at(_X("type")).as_string() != _X("package")) continue;
         const auto& asset_types = package.second.as_object();
-        for (size_t i = 0; i < deps_entry_t::s_known_asset_types.size(); ++i)
+        for (int i = 0; i < deps_entry_t::s_known_asset_types.size(); ++i)
         {
             auto iter = asset_types.find(deps_entry_t::s_known_asset_types[i]);
             if (iter != asset_types.end())
@@ -355,8 +331,10 @@ bool deps_json_t::has_package(const pal::string_t& name, const pal::string_t& ve
 //
 bool deps_json_t::load(bool portable, const pal::string_t& deps_path, const rid_fallback_graph_t& rid_fallback_graph)
 {
+    m_file_exists = pal::file_exists(deps_path);
+
     // If file doesn't exist, then assume parsed.
-    if (!pal::file_exists(deps_path))
+    if (!m_file_exists)
     {
         trace::verbose(_X("Could not locate the dependencies manifest file [%s]. Some libraries may fail to resolve."), deps_path.c_str());
         return true;

@@ -17,8 +17,11 @@
 using System;
 using System.Collections.Generic;
 using System.Dynamic;
+using System.IO;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Serialization;
+using System.Xml;
 #if NETCOREAPP1_0
 using Newtonsoft.Json;
 using System.Reflection;
@@ -385,6 +388,12 @@ namespace Edge.Tests
             return new BadPerson();
         }
 
+        public async Task<object> DeserializeObject(dynamic input)
+        {
+            XmlSerializer serializer = new XmlSerializer(typeof(SerializationTest));
+            return serializer.Deserialize(new StringReader(@"<SerializationTest AttributeValue=""My attribute value""><ElementValue>This is an element value</ElementValue></SerializationTest>"));
+        }
+
 #if NETCOREAPP1_0
         public async Task<object> CorrectVersionOfNewtonsoftJsonUsed(object input)
         {
@@ -424,6 +433,24 @@ namespace Edge.Tests
         {
             public string B_field;
             public string B_prop { get; set; }
+        }
+
+        [XmlRoot]
+        public class SerializationTest
+        {
+            [XmlAttribute]
+            public string AttributeValue
+            {
+                get;
+                set;
+            }
+
+            [XmlElement]
+            public string ElementValue
+            {
+                get;
+                set;
+            }
         }
     }
 }

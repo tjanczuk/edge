@@ -23,17 +23,33 @@
         "<!(node -e \"require('nan')\")"
       ],
       'cflags+': [
-        '-DHAVE_CORECLR -D_NO_ASYNCRTIMP -std=c++11'
+        '-DHAVE_CORECLR -D_NO_ASYNCRTIMP -std=c++11 -Wno-reorder -Wno-sign-compare -Wno-mismatched-tags -Wno-missing-braces -Wno-redundant-move -Wno-deprecated-declarations -Wno-unused-private-field -Wno-unused-variable'
       ],
       'cflags!': [
-        '-fno-exceptions'
+        '-fno-exceptions',
+        '-Wsign-compare',
+        '-Wreorder',
+        '-Wmismatched-tags',
+        '-Wmissing-braces',
+        '-Wredundant-move',
+        '-Wdeprecated-declarations',
+        '-Wunused-private-field',
+        '-Wunused-variable'
       ],
       'cflags_cc!': [
-        '-fno-exceptions'
+        '-fno-exceptions',
+        '-Wsign-compare',
+        '-Wreorder',
+        '-Wmismatched-tags',
+        '-Wmissing-braces',
+        '-Wredundant-move',
+        '-Wdeprecated-declarations',
+        '-Wunused-private-field',
+        '-Wunused-variable'
       ],
       'xcode_settings': {
         'OTHER_CFLAGS': [
-          '-DHAVE_CORECLR -D_NO_ASYNCRTIMP'
+          '-DHAVE_CORECLR -D_NO_ASYNCRTIMP -Wno-reorder -Wno-sign-compare -Wno-mismatched-tags -Wno-missing-braces -Wno-redundant-move -Wno-deprecated-declarations -Wno-unused-private-field -Wno-unused-variable'
         ],
         'GCC_ENABLE_CPP_EXCEPTIONS': 'YES',
         'GCC_ENABLE_CPP_RTTI': 'YES',
@@ -53,12 +69,18 @@
         'src/CoreCLREmbedding/pal/pal_utils.cpp',
         'src/CoreCLREmbedding/pal/trace.cpp',
         'src/CoreCLREmbedding/fxr/fx_ver.cpp',
+        'src/CoreCLREmbedding/fxr/fx_muxer.cpp',
         'src/CoreCLREmbedding/json/casablanca/src/json/json.cpp',
         'src/CoreCLREmbedding/json/casablanca/src/json/json_parsing.cpp',
         'src/CoreCLREmbedding/json/casablanca/src/json/json_serialization.cpp',
         'src/CoreCLREmbedding/json/casablanca/src/utilities/asyncrt_utils.cpp',
         'src/CoreCLREmbedding/deps/deps_format.cpp',
-        'src/CoreCLREmbedding/deps/deps_entry.cpp'
+        'src/CoreCLREmbedding/deps/deps_entry.cpp',
+        'src/CoreCLREmbedding/deps/deps_resolver.cpp',
+        'src/CoreCLREmbedding/host/args.cpp',
+        'src/CoreCLREmbedding/host/coreclr.cpp',
+        'src/CoreCLREmbedding/host/libhost.cpp',
+        'src/CoreCLREmbedding/host/runtime_config.cpp'
       ],
       'include_dirs+': [
         'src/CoreCLREmbedding/json/casablanca/include'

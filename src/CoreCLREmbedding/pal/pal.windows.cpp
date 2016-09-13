@@ -275,18 +275,18 @@ bool pal::pal_clrstring(const pal::string_t& str, std::vector<char>* out)
     out->clear();
 
     // Pass -1 as we want explicit null termination in the char buffer.
-    size_t size = ::WideCharToMultiByte(CP_ACP, 0, str.c_str(), -1, nullptr, 0, nullptr, nullptr);
+    size_t size = ::WideCharToMultiByte(CP_UTF8, 0, str.c_str(), -1, nullptr, 0, nullptr, nullptr);
     if (size == 0)
     {
         return false;
     }
     out->resize(size, '\0');
-    return ::WideCharToMultiByte(CP_ACP, 0, str.c_str(), -1, out->data(), out->size(), nullptr, nullptr) != 0;
+    return ::WideCharToMultiByte(CP_UTF8, 0, str.c_str(), -1, out->data(), out->size(), nullptr, nullptr) != 0;
 }
 
 bool pal::clr_palstring(const char* cstr, pal::string_t* out)
 {
-    return wchar_convert_helper(CP_ACP, cstr, ::strlen(cstr), out);
+    return wchar_convert_helper(CP_UTF8, cstr, ::strlen(cstr), out);
 }
 
 bool pal::realpath(string_t* path)
@@ -295,7 +295,7 @@ bool pal::realpath(string_t* path)
     auto res = ::GetFullPathNameW(path->c_str(), MAX_PATH, buf, nullptr);
     if (res == 0 || res > MAX_PATH)
     {
-        trace::error(_X("Error resolving full path [%s]"), path->c_str());
+        //trace::error(_X("Error resolving full path [%s]"), path->c_str());
         return false;
     }
     path->assign(buf);
