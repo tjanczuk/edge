@@ -3,12 +3,19 @@ language: node_js
 node_js:
  - "0.12"
  - "0.10"
+ - "4.1.1"
+ - "5.1.0"
+ - "6.4.0"
 
 install:
  - sudo apt-key adv --keyserver pgp.mit.edu --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
  - sudo sh -c "echo 'deb http://download.mono-project.com/repo/debian wheezy main' >> /etc/apt/sources.list.d/mono-xamarin.list"
  - sudo sh -c "echo 'deb http://download.mono-project.com/repo/debian wheezy-libtiff-compat main' >> /etc/apt/sources.list.d/mono-xamarin.list"
+ - sudo apt-key adv --keyserver apt-mo.trafficmanager.net --recv-keys 417A0893
+ - sudo sh -c "echo 'deb [arch=amd64] https://apt-mo.trafficmanager.net/repos/dotnet-release/ trusty main' > /etc/apt/sources.list.d/dotnetdev.list"
  - sudo apt-get update
- - sudo apt-get install mono-devel
+ - sudo apt-get install mono-devel dotnet-dev-1.0.0-preview2-003131
  - npm install -g grunt-cli
  - npm install
+ - npm test
+ - EDGE_USE_CORECLR=1 npm test
