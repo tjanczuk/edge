@@ -17,8 +17,19 @@
 using System;
 using System.Collections.Generic;
 using System.Dynamic;
+using System.IO;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Serialization;
+using System.Xml;
+#if NETCOREAPP1_0
+using Newtonsoft.Json;
+using System.Reflection;
+using Microsoft.Extensions.DependencyModel;
+using System.Linq;
+using System.Net;
+using Microsoft.AspNetCore.Server.Kestrel.Internal.Networking;
+#endif
 
 #pragma warning disable 1998
 
@@ -26,6 +37,11 @@ namespace Edge.Tests
 {
     public class Startup
     {
+        static void Main(string[] args)
+        {
+            
+        }
+
         string ValidateMarshalNodeJsToNet(dynamic input, bool expectFunction)
         {
             string result = "yes"; 
@@ -145,12 +161,10 @@ namespace Edge.Tests
 
         public Task<object> NetExceptionCLRThread(dynamic input)
         {
-            Task<object> task = new Task<object>(() =>
+            Task<object> task = Task.Delay(200).ContinueWith(new Func<Task, object>((antecedant) =>
             {
                 throw new Exception("Test .NET exception");
-            });
-
-            task.Start();
+            }));
 
             return task;            
         }                   
@@ -374,6 +388,30 @@ namespace Edge.Tests
             return new BadPerson();
         }
 
+        public async Task<object> DeserializeObject(dynamic input)
+        {
+            XmlSerializer serializer = new XmlSerializer(typeof(SerializationTest));
+            return serializer.Deserialize(new StringReader(@"<SerializationTest AttributeValue=""My attribute value""><ElementValue>This is an element value</ElementValue></SerializationTest>"));
+        }
+
+#if NETCOREAPP1_0
+        public async Task<object> CorrectVersionOfNewtonsoftJsonUsed(object input)
+        {
+            return typeof(JsonConvert).GetTypeInfo().Assembly.GetName().Version.ToString();
+        }
+
+        public async Task<object> CanUseDefaultDependencyContext(object input)
+        {
+            return DependencyContext.Default.RuntimeLibraries.Single(l => l.Name == "Newtonsoft.Json").Version.ToString();
+        }
+
+        public async Task<object> CanUseNativeLibraries(object input)
+        {
+            Libuv libuv = new Libuv();
+            return libuv.loop_size();
+        }
+#endif
+
         public class BadPerson 
         {
             public string Name 
@@ -395,6 +433,24 @@ namespace Edge.Tests
         {
             public string B_field;
             public string B_prop { get; set; }
+        }
+
+        [XmlRoot]
+        public class SerializationTest
+        {
+            [XmlAttribute]
+            public string AttributeValue
+            {
+                get;
+                set;
+            }
+
+            [XmlElement]
+            public string ElementValue
+            {
+                get;
+                set;
+            }
         }
     }
 }

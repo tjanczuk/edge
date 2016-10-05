@@ -32,6 +32,7 @@ using namespace System::Web::Script::Serialization;
 
 v8::Local<v8::String> stringCLR2V8(System::String^ text);
 System::String^ stringV82CLR(v8::Local<v8::String> text);
+System::String^ stringV82CLR(v8::String::Utf8Value& utf8text);
 System::String^ exceptionV82stringCLR(v8::Local<v8::Value> exception);
 
 typedef struct clrActionContext {

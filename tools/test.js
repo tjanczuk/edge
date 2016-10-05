@@ -18,17 +18,24 @@ if (!process.env.EDGE_USE_CORECLR) {
 } 
 
 else {
-	spawn(process.platform === 'win32' ? 'dnu.cmd' : 'dnu', ['restore'], { 
+	spawn(process.platform === 'win32' ? 'dotnet.exe' : 'dotnet', ['restore'], { 
 		stdio: 'inherit', 
 		cwd: testDir 
-	}).on('close', runOnSuccess);
+	}).on('close', function(code, signal) {
+		if (code === 0) {
+			spawn(process.platform === 'win32' ? 'dotnet.exe' : 'dotnet', ['build'], { 
+				stdio: 'inherit', 
+				cwd: testDir 
+			}).on('close', runOnSuccess);
+		}
+	});
 }
 
 function runOnSuccess(code, signal) {
 	if (code === 0) {
-		process.env['EDGE_APP_ROOT'] = testDir;
+		process.env['EDGE_APP_ROOT'] = path.join(testDir, 'bin', 'Debug', 'netcoreapp1.0');
 
-		spawn('node', [mocha, testDir, '-R', 'spec', '-gc'], { 
+		spawn('node', [mocha, testDir, '-R', 'spec', '-t', '10000', '-gc'], { 
 			stdio: 'inherit' 
 		}).on('error', function(err) { 
 			console.log(err); 

@@ -31,17 +31,17 @@ v8::Local<v8::Function> ClrFunc::Initialize(System::Func<System::Object^,Task<Sy
     DBG("ClrFunc::Initialize Func<object,Task<object>> wrapper");
 
     static Nan::Persistent<v8::Function> proxyFactory;
-    static Nan::Persistent<v8::Function> proxyFunction;        
+    static Nan::Persistent<v8::Function> proxyFunction;
 
     Nan::EscapableHandleScope scope;
 
     ClrFunc^ app = gcnew ClrFunc();
     app->func = func;
     ClrFuncWrap* wrap = new ClrFuncWrap;
-    wrap->clrFunc = app;    
+    wrap->clrFunc = app;
 
     // See https://github.com/tjanczuk/edge/issues/128 for context
-    
+
     if (proxyFactory.IsEmpty())
     {
         v8::Local<v8::Function> clrFuncProxyFunction = Nan::New<v8::FunctionTemplate>(clrFuncProxy)->GetFunction();
@@ -49,14 +49,14 @@ v8::Local<v8::Function> ClrFunc::Initialize(System::Func<System::Object^,Task<Sy
         v8::Local<v8::String> code = Nan::New<v8::String>(
             "(function (f, ctx) { return function (d, cb) { return f(d, cb, ctx); }; })").ToLocalChecked();
         v8::Local<v8::Function> codeFunction = v8::Local<v8::Function>::Cast(v8::Script::Compile(code)->Run());
-        proxyFactory.Reset(codeFunction);        
+        proxyFactory.Reset(codeFunction);
     }
 
     v8::Local<v8::Value> factoryArgv[] = { Nan::New(proxyFunction), Nan::New<v8::External>((void*)wrap) };
-    v8::Local<v8::Function> funcProxy = 
+    v8::Local<v8::Function> funcProxy =
         (Nan::New(proxyFactory)->Call(Nan::GetCurrentContext()->Global(), 2, factoryArgv)).As<v8::Function>();
     Nan::Persistent<v8::Function> funcProxyPersistent(funcProxy);
-    funcProxyPersistent.SetWeak((void*)wrap, &clrFuncProxyNearDeath, Nan::WeakCallbackType::kParameter);    
+    funcProxyPersistent.SetWeak((void*)wrap, &clrFuncProxyNearDeath, Nan::WeakCallbackType::kParameter);
 
     return scope.Escape(funcProxy);
 }
@@ -71,19 +71,21 @@ NAN_METHOD(ClrFunc::Initialize)
     System::String^ typeName;
     System::String^ methodName;
 
-    try 
+    try
     {
         v8::Local<v8::Function> result;
 
         v8::Local<v8::Value> jsassemblyFile = options->Get(Nan::New<v8::String>("assemblyFile").ToLocalChecked());
         if (jsassemblyFile->IsString()) {
-            // reference .NET code through pre-compiled CLR assembly 
+            // reference .NET code through pre-compiled CLR assembly
             v8::String::Utf8Value assemblyFile(jsassemblyFile);
             v8::String::Utf8Value nativeTypeName(options->Get(Nan::New<v8::String>("typeName").ToLocalChecked()));
-            v8::String::Utf8Value nativeMethodName(options->Get(Nan::New<v8::String>("methodName").ToLocalChecked()));  
-            typeName = gcnew System::String(*nativeTypeName);
-            methodName = gcnew System::String(*nativeMethodName);      
-            assembly = Assembly::UnsafeLoadFrom(gcnew System::String(*assemblyFile));
+            v8::String::Utf8Value nativeMethodName(options->Get(Nan::New<v8::String>("methodName").ToLocalChecked()));
+
+            typeName = stringV82CLR(nativeTypeName);
+            methodName = stringV82CLR(nativeMethodName);
+            assembly = Assembly::UnsafeLoadFrom(stringV82CLR(assemblyFile));
+
             ClrFuncReflectionWrap^ wrap = ClrFuncReflectionWrap::Create(assembly, typeName, methodName);
             result = ClrFunc::Initialize(
                 gcnew System::Func<System::Object^,Task<System::Object^>^>(
@@ -102,14 +104,14 @@ NAN_METHOD(ClrFunc::Initialize)
             System::Type^ compilerType = assembly->GetType("EdgeCompiler", true, true);
             System::Object^ compilerInstance = System::Activator::CreateInstance(compilerType, false);
             MethodInfo^ compileFunc = compilerType->GetMethod("CompileFunc", BindingFlags::Instance | BindingFlags::Public);
-            if (compileFunc == nullptr) 
+            if (compileFunc == nullptr)
             {
                 throw gcnew System::InvalidOperationException(
                     "Unable to access the CompileFunc method of the EdgeCompiler class in the edge.js compiler assembly.");
             }
 
             System::Object^ parameters = ClrFunc::MarshalV8ToCLR(options);
-            System::Func<System::Object^,Task<System::Object^>^>^ func = 
+            System::Func<System::Object^,Task<System::Object^>^>^ func =
                 (System::Func<System::Object^,Task<System::Object^>^>^)compileFunc->Invoke(
                     compilerInstance, gcnew array<System::Object^> { parameters });
             result = ClrFunc::Initialize(func);
@@ -176,13 +178,21 @@ v8::Local<v8::Value> ClrFunc::MarshalCLRToV8(System::Object^ netdata)
     {
         jsdata = stringCLR2V8(netdata->ToString());
     }
-    else if (type == int::typeid)
+    else if (type == System::Int16::typeid)
+    {
+        jsdata = Nan::New<v8::Integer>((short)netdata);
+    }
+    else if (type == System::UInt16::typeid)
+    {
+        jsdata = Nan::New<v8::Integer>((unsigned short)netdata);
+    }
+    else if (type == System::Int32::typeid)
     {
         jsdata = Nan::New<v8::Integer>((int)netdata);
     }
-    else if (type == System::Int16::typeid)
+    else if (type == System::UInt32::typeid)
     {
-        jsdata = Nan::New<v8::Integer>((int)netdata);
+        jsdata = Nan::New<v8::Integer>((unsigned int)netdata);
     }
     else if (type == System::Int64::typeid)
     {
@@ -210,7 +220,14 @@ v8::Local<v8::Value> ClrFunc::MarshalCLRToV8(System::Object^ netdata)
     }
     else if (type->IsEnum)
     {
-        jsdata = stringCLR2V8(netdata->ToString());
+        if (enableMarshalEnumAsInt)
+        {
+            jsdata = Nan::New<v8::Integer>((int)netdata);
+        }
+        else
+        {
+            jsdata = stringCLR2V8(netdata->ToString());
+        }
     }
     else if (type == cli::array<byte>::typeid)
     {
@@ -220,7 +237,7 @@ v8::Local<v8::Value> ClrFunc::MarshalCLRToV8(System::Object^ netdata)
             pin_ptr<unsigned char> pinnedBuffer = &buffer[0];
             jsdata = Nan::CopyBuffer((char *)pinnedBuffer, buffer->Length).ToLocalChecked();
         }
-        else 
+        else
         {
             jsdata = Nan::NewBuffer(0).ToLocalChecked();
         }
@@ -228,14 +245,14 @@ v8::Local<v8::Value> ClrFunc::MarshalCLRToV8(System::Object^ netdata)
     else if (dynamic_cast<System::Collections::Generic::IDictionary<System::String^,System::Object^>^>(netdata) != nullptr)
     {
         v8::Local<v8::Object> result = Nan::New<v8::Object>();
-        for each (System::Collections::Generic::KeyValuePair<System::String^,System::Object^>^ pair 
+        for each (System::Collections::Generic::KeyValuePair<System::String^,System::Object^>^ pair
             in (System::Collections::Generic::IDictionary<System::String^,System::Object^>^)netdata)
         {
             result->Set(stringCLR2V8(pair->Key), ClrFunc::MarshalCLRToV8(pair->Value));
         }
 
         jsdata = result;
-    }    
+    }
     else if (dynamic_cast<System::Collections::IDictionary^>(netdata) != nullptr)
     {
         v8::Local<v8::Object> result = Nan::New<v8::Object>();
@@ -306,13 +323,13 @@ v8::Local<v8::Value> ClrFunc::MarshalCLRExceptionToV8(System::Exception^ excepti
         result = ClrFunc::MarshalCLRObjectToV8(exception);
         message = stringCLR2V8(exception->Message);
         name = stringCLR2V8(exception->GetType()->FullName);
-    }   
-        
+    }
+
     // Construct an error that is just used for the prototype - not verify efficient
     // but 'typeof Error' should work in JavaScript
     result->SetPrototype(v8::Exception::Error(message));
     result->Set(Nan::New<v8::String>("message").ToLocalChecked(), message);
-    
+
     // Recording the actual type - 'name' seems to be the common used property
     result->Set(Nan::New<v8::String>("name").ToLocalChecked(), name);
 
@@ -334,7 +351,7 @@ v8::Local<v8::Object> ClrFunc::MarshalCLRObjectToV8(System::Object^ netdata)
     for each (FieldInfo^ field in type->GetFields(BindingFlags::Public | BindingFlags::Instance))
     {
         result->Set(
-            stringCLR2V8(field->Name), 
+            stringCLR2V8(field->Name),
             ClrFunc::MarshalCLRToV8(field->GetValue(netdata)));
     }
 
@@ -349,7 +366,7 @@ v8::Local<v8::Object> ClrFunc::MarshalCLRObjectToV8(System::Object^ netdata)
 
             System::Web::Script::Serialization::ScriptIgnoreAttribute^ attr =
                 (System::Web::Script::Serialization::ScriptIgnoreAttribute^)System::Attribute::GetCustomAttribute(
-                    property, 
+                    property,
                     System::Web::Script::Serialization::ScriptIgnoreAttribute::typeid,
                     true);
 
@@ -363,7 +380,7 @@ v8::Local<v8::Object> ClrFunc::MarshalCLRObjectToV8(System::Object^ netdata)
         if (getMethod != nullptr && getMethod->GetParameters()->Length <= 0)
         {
             result->Set(
-                stringCLR2V8(property->Name), 
+                stringCLR2V8(property->Name),
                 ClrFunc::MarshalCLRToV8(getMethod->Invoke(netdata, nullptr)));
         }
     }
@@ -375,10 +392,10 @@ System::Object^ ClrFunc::MarshalV8ToCLR(v8::Local<v8::Value> jsdata)
 {
     Nan::HandleScope scope;
 
-    if (jsdata->IsFunction()) 
+    if (jsdata->IsFunction())
     {
         NodejsFunc^ functionContext = gcnew NodejsFunc(v8::Local<v8::Function>::Cast(jsdata));
-        System::Func<System::Object^,Task<System::Object^>^>^ netfunc = 
+        System::Func<System::Object^,Task<System::Object^>^>^ netfunc =
             gcnew System::Func<System::Object^,Task<System::Object^>^>(
                 functionContext, &NodejsFunc::FunctionWrapper);
 
@@ -388,7 +405,7 @@ System::Object^ ClrFunc::MarshalV8ToCLR(v8::Local<v8::Value> jsdata)
     {
         v8::Local<v8::Object> jsbuffer = jsdata->ToObject();
         cli::array<byte>^ netbuffer = gcnew cli::array<byte>((int)node::Buffer::Length(jsbuffer));
-        if (netbuffer->Length > 0) 
+        if (netbuffer->Length > 0)
         {
             pin_ptr<byte> pinnedNetbuffer = &netbuffer[0];
             memcpy(pinnedNetbuffer, node::Buffer::Data(jsbuffer), netbuffer->Length);
@@ -415,7 +432,7 @@ System::Object^ ClrFunc::MarshalV8ToCLR(v8::Local<v8::Value> jsdata)
         System::DateTime ^netobject = gcnew System::DateTime(ticks * 10000 + MinDateTimeTicks, System::DateTimeKind::Utc);
         return netobject;
     }
-    else if (jsdata->IsObject()) 
+    else if (jsdata->IsObject())
     {
         IDictionary<System::String^,System::Object^>^ netobject = gcnew System::Dynamic::ExpandoObject();
         v8::Local<v8::Object> jsobject = v8::Local<v8::Object>::Cast(jsdata);
@@ -431,7 +448,7 @@ System::Object^ ClrFunc::MarshalV8ToCLR(v8::Local<v8::Value> jsdata)
 
         return netobject;
     }
-    else if (jsdata->IsString()) 
+    else if (jsdata->IsString())
     {
         return stringV82CLR(v8::Local<v8::String>::Cast(jsdata));
     }
@@ -443,11 +460,11 @@ System::Object^ ClrFunc::MarshalV8ToCLR(v8::Local<v8::Value> jsdata)
     {
         return jsdata->Int32Value();
     }
-    else if (jsdata->IsUint32()) 
+    else if (jsdata->IsUint32())
     {
         return jsdata->Uint32Value();
     }
-    else if (jsdata->IsNumber()) 
+    else if (jsdata->IsNumber())
     {
         return jsdata->NumberValue();
     }
@@ -465,8 +482,8 @@ v8::Local<v8::Value> ClrFunc::Call(v8::Local<v8::Value> payload, v8::Local<v8::V
 {
     DBG("ClrFunc::Call instance");
     Nan::EscapableHandleScope scope;
-    
-    try 
+
+    try
     {
         ClrFuncInvokeContext^ context = gcnew ClrFuncInvokeContext(callback);
         context->Payload = ClrFunc::MarshalV8ToCLR(payload);
@@ -484,10 +501,10 @@ v8::Local<v8::Value> ClrFunc::Call(v8::Local<v8::Value> payload, v8::Local<v8::V
                 + "but the underlying CLR function returned without completing the Task. Call the "
                 + "JavaScript function asynchronously.");
         }
-        else 
+        else
         {
             // Create a GC root around the ClrFuncInvokeContext to ensure it is not garbage collected
-            // while the CLR function executes asynchronously. 
+            // while the CLR function executes asynchronously.
             context->InitializeAsyncOperation();
 
             // Will complete asynchronously. Schedule continuation to finish processing.
@@ -500,5 +517,5 @@ v8::Local<v8::Value> ClrFunc::Call(v8::Local<v8::Value> payload, v8::Local<v8::V
         Nan::ThrowError(ClrFunc::MarshalCLRExceptionToV8(e));
     }
 
-    return scope.Escape(Nan::Undefined());    
+    return scope.Escape(Nan::Undefined());
 }

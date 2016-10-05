@@ -7,32 +7,27 @@
 #include <assert.h>
 #include <string>
 #include <stdio.h>
+#include <utility>
+#include <map>
+
+#include "pal/pal.h"
 
 #ifndef EDGE_PLATFORM_WINDOWS
 typedef int BOOL;
 
-#define SUCCEEDED(status) ((HRESULT)(status) >= 0)
 #define FAILED(status) ((HRESULT)(status) < 0)
 #define HRESULT_CODE(status) ((status) & 0xFFFF)
 
 typedef int32_t HRESULT;
-
-const HRESULT S_OK = 0;
-const HRESULT E_FAIL = -1;
-
-#define STDMETHODCALLTYPE 
 #endif
 
 typedef void* CoreClrGcHandle;
 
 typedef struct bootstrapperContext
 {
-	const char* operatingSystem;
-	const char* operatingSystemVersion;
-	const char* architecture;
 	const char* runtimeDirectory;
 	const char* applicationDirectory;
-	const char* edgeNodePath;
+	const char* dependencyManifestFile;
 } BootstrapperContext;
 
 typedef void (STDMETHODCALLTYPE *CallFuncFunction)(
@@ -104,12 +99,6 @@ class CoreClrEmbedding
 {
     private:
 		CoreClrEmbedding();
-        static void FreeCoreClr(void** pLibCoreClr);
-        static bool LoadCoreClrAtPath(const char* loadPath, void** ppLibCoreClr);
-        static void GetPathToBootstrapper(char* bootstrapper, size_t bufferSize);
-        static void AddToTpaList(std::string directoryPath, std::string* tpaList);
-        static void* LoadSymbol(void* library, const char* symbolName);
-        static char* GetLoadError();
 
     public:
         static CoreClrGcHandle GetClrFuncReflectionWrapFunc(const char* assemblyFile, const char* typeName, const char* methodName, v8::Local<v8::Value>* exception);

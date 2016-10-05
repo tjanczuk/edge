@@ -111,5 +111,4 @@ describe('edge.func', function () {
 			/Unable to access the CLR method to wrap through reflection/
 		);
 	});
-
 });

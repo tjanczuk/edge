@@ -7,8 +7,10 @@ if "%1" equ "" (
 )
 
 mkdir "%SELF%\build\nuget\content\edge" > nul 2>&1
-mkdir "%SELF%\build\nuget\lib" > nul 2>&1
+mkdir "%SELF%\build\nuget\lib\net40" > nul 2>&1
+mkdir "%SELF%\build\nuget\lib\netstandard1.6" > nul 2>&1
 mkdir "%SELF%\build\nuget\tools" > nul 2>&1
+mkdir "%SELF%\..\src\double\Edge.js\bin\Release\net40" > nul 2>&1
 
 if not exist "%SELF%\build\download.exe" (
 	csc /out:"%SELF%\build\download.exe" "%SELF%\download.cs"
@@ -55,33 +57,36 @@ if %ERRORLEVEL% neq 0 exit /b -1
 call :build_edge %1 x64
 if %ERRORLEVEL% neq 0 exit /b -1
 
+
 REM Generate version information before the build
-if exist "%SELF%\build\nuget\VersionInfo.cs" del /Q /F "%SELF%\build\nuget\VersionInfo.cs"
+if exist "%SELF%\build\nuget\EdgeJs-version.cs" del /Q /F "%SELF%\build\nuget\EdgeJs-version.cs"
+copy /y "%SELF%\..\src\double\Edge.js\dotnet\EdgeJs.cs" "%SELF%\build\nuget\EdgeJs-version.cs"
 if %ERRORLEVEL% neq 0 exit /b -1
-echo using System.Reflection; > "%SELF%\build\nuget\VersionInfo.cs"
-echo [assembly: AssemblyDescription("Scripting Node.js v%~1 from CLR")]  >> "%SELF%\build\nuget\VersionInfo.cs"
-echo [assembly: AssemblyVersion("%~1.0")] >> "%SELF%\build\nuget\VersionInfo.cs"
-echo [assembly: AssemblyFileVersion("%~1.0")] >> "%SELF%\build\nuget\VersionInfo.cs"
-
-csc /out:"%SELF%\build\nuget\lib\EdgeJs.dll" /target:library "%SELF%\..\src\double\dotnet\EdgeJs.cs" "%SELF%\build\nuget\VersionInfo.cs"
+"%SELF%\build\repl.exe" "%SELF%\build\nuget\EdgeJs-version.cs" "REPL_NODE_VERSION" "%1"
+if %ERRORLEVEL% neq 0 exit /b -1
+"%SELF%\build\repl.exe" "%SELF%\build\nuget\EdgeJs-version.cs" "REPL_NODE_ARCH" "%2"
 if %ERRORLEVEL% neq 0 exit /b -1
 
-if exist "%SELF%\build\nuget\VersionInfo.cs" del /Q /F "%SELF%\build\nuget\VersionInfo.cs"
+csc /out:"%SELF%\..\src\double\Edge.js\bin\Release\net40\EdgeJs.dll" /target:library "%SELF%\build\nuget\EdgeJs-version.cs"
+if %ERRORLEVEL% neq 0 exit /b -1
 
-copy /y "%SELF%\..\lib\edge.js" "%SELF%\build\nuget\content\edge"
-copy /y "%SELF%\..\lib\double_edge.js" "%SELF%\build\nuget\content\edge"
-copy /y "%SELF%\nuget\install.ps1" "%SELF%\build\nuget\tools"
-copy /y "%SELF%\nuget\edge.nuspec" "%SELF%\build\nuget"
+if exist "%SELF%\build\nuget\EdgeJs-version.cs" del /Q /F "%SELF%\build\nuget\EdgeJs-version.cs"
 
-pushd "%SELF%\build\nuget"
-"%SELF%\build\nuget.exe" pack edge.nuspec
+cd "%SELF%\..\src\double\Edge.js"
+dotnet restore
+if %ERRORLEVEL% neq 0 exit /b -1
+dotnet build --configuration Release --framework netstandard1.6
+if %ERRORLEVEL% neq 0 exit /b -1
+dotnet pack --configuration Release --no-build
+
 if %ERRORLEVEL% neq 0 (
 	echo Failure building Nuget package
-	popd
+	cd "%SELF%"
 	exit /b -1
 )
-popd
 
+cd "%SELF%"
+copy /y "%SELF%\..\src\double\Edge.js\bin\Release\*.nupkg" "%SELF%\build\nuget"
 echo SUCCESS. Nuget package at %SELF%\build\nuget
 
 exit /b 0
@@ -115,6 +120,7 @@ rem takes 2 parameters: 1 - node version, 2 - x86 or x64
 if exist "%SELF%\build\node-%1-%2\node.lib" exit /b 0
 
 pushd "%SELF%\build\node-%1"
+rmdir /s /q Release
 
 ..\repl.exe node.gyp "'executable'" "'shared_library'"
 if %ERRORLEVEL% neq 0 (

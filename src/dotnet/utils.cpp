@@ -7,7 +7,7 @@ v8::Local<v8::String> stringCLR2V8(System::String^ text)
     {
         array<unsigned char>^ utf8 = System::Text::Encoding::UTF8->GetBytes(text);
         pin_ptr<unsigned char> ch = &utf8[0];
-        return scope.Escape(Nan::New<v8::String>((char*)ch).ToLocalChecked());
+        return scope.Escape(Nan::New<v8::String>((char*)ch, utf8->Length).ToLocalChecked());
     }
     else
     {
@@ -30,6 +30,19 @@ System::String^ stringV82CLR(v8::Local<v8::String> text)
     }
 }
 
+System::String^ stringV82CLR(v8::String::Utf8Value& utf8text)
+{
+    Nan::HandleScope scope;
+    if (*utf8text)
+    {
+        return gcnew System::String(
+            *utf8text, 0, utf8text.length(), System::Text::Encoding::UTF8);
+    }
+    else
+    {
+        return System::String::Empty;
+    }
+}
 System::String^ exceptionV82stringCLR(v8::Local<v8::Value> exception)
 {
     Nan::HandleScope scope;

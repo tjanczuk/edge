@@ -1,0 +1,22 @@
+{
+  "frameworks": {
+    "netcoreapp1.0": {
+      "imports": [
+        "portable-net45+wp80+win8+wpa81+dnxcore50",
+        "portable-dnxcore50+net45+win8+wp8+wpa81"
+      ],
+      "dependencies": {
+        "Microsoft.NETCore.App": {
+          "type": "platform",
+          "version": "1.0.0"
+        },
+        "Edge.js": "6.5.1",
+        "Edge.js.CSharp": "1.2.0"
+      }
+    }
+  },
+
+  "buildOptions": {
+    "preserveCompilationContext": true
+  }
+}

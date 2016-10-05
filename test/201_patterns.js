@@ -213,4 +213,59 @@ describe('call patterns', function () {
 
     });
 
+
+    if (process.env.EDGE_USE_CORECLR) {
+        it('merged dependencies choose correct version', function (done) {
+            var func = edge.func({
+                assemblyFile: edgeTestDll,
+                typeName: 'Edge.Tests.Startup',
+                methodName: 'CorrectVersionOfNewtonsoftJsonUsed'
+            });
+
+            func(null, function (error, result) {
+                assert.equal(result, "9.0.0.0");
+                done();
+            });
+        });
+
+        it('can use DependencyContext.Default', function (done) {
+            var func = edge.func({
+                assemblyFile: edgeTestDll,
+                typeName: 'Edge.Tests.Startup',
+                methodName: 'CanUseDefaultDependencyContext'
+            });
+
+            func(null, function (error, result) {
+                assert.equal(result, "9.0.1");
+                done();
+            });
+        });
+
+        it('can use native libraries', function (done) {
+            var func = edge.func({
+                assemblyFile: edgeTestDll,
+                typeName: 'Edge.Tests.Startup',
+                methodName: 'CanUseNativeLibraries'
+            });
+
+            func(null, function (error, result) {
+                assert.ok(result > 0);
+                done();
+            });
+        });
+
+        it('can deserialize using XmlSerializer', function (done) {
+            var func = edge.func({
+                assemblyFile: edgeTestDll,
+                typeName: 'Edge.Tests.Startup',
+                methodName: 'DeserializeObject'
+            });
+
+            func(null, function (error, result) {
+                assert.equal(result.AttributeValue, "My attribute value");
+                assert.equal(result.ElementValue, "This is an element value");
+                done();
+            });
+        });
+    }
 });

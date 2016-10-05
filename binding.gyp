@@ -23,58 +23,79 @@
         "<!(node -e \"require('nan')\")"
       ],
       'cflags+': [
-        '-DHAVE_CORECLR -std=c++11'
+        '-DHAVE_CORECLR -D_NO_ASYNCRTIMP -std=c++11 -Wno-reorder -Wno-sign-compare -Wno-mismatched-tags -Wno-missing-braces -Wno-redundant-move -Wno-deprecated-declarations -Wno-unused-private-field -Wno-unused-variable'
+      ],
+      'cflags!': [
+        '-fno-exceptions',
+        '-Wsign-compare',
+        '-Wreorder',
+        '-Wmismatched-tags',
+        '-Wmissing-braces',
+        '-Wredundant-move',
+        '-Wdeprecated-declarations',
+        '-Wunused-private-field',
+        '-Wunused-variable'
+      ],
+      'cflags_cc!': [
+        '-fno-exceptions',
+        '-Wsign-compare',
+        '-Wreorder',
+        '-Wmismatched-tags',
+        '-Wmissing-braces',
+        '-Wredundant-move',
+        '-Wdeprecated-declarations',
+        '-Wunused-private-field',
+        '-Wunused-variable'
       ],
       'xcode_settings': {
         'OTHER_CFLAGS': [
-          '-DHAVE_CORECLR'
-        ]
+          '-DHAVE_CORECLR -D_NO_ASYNCRTIMP -Wno-reorder -Wno-sign-compare -Wno-mismatched-tags -Wno-missing-braces -Wno-redundant-move -Wno-deprecated-declarations -Wno-unused-private-field -Wno-unused-variable'
+        ],
+        'GCC_ENABLE_CPP_EXCEPTIONS': 'YES',
+        'GCC_ENABLE_CPP_RTTI': 'YES',
+        'CLANG_CXX_LANGUAGE_STANDARD': 'c++11',
+        'CLANG_CXX_LIBRARY': 'libc++',
+        'MACOSX_DEPLOYMENT_TARGET': '10.7'
       },
+      'sources+': [
+        'src/common/v8synchronizationcontext.cpp',
+        'src/common/edge.cpp',
+        'src/CoreCLREmbedding/coreclrembedding.cpp',
+        'src/CoreCLREmbedding/coreclrfunc.cpp',
+        'src/CoreCLREmbedding/coreclrnodejsfunc.cpp',
+        'src/CoreCLREmbedding/coreclrfuncinvokecontext.cpp',
+        'src/CoreCLREmbedding/coreclrnodejsfuncinvokecontext.cpp',
+        'src/common/utils.cpp',
+        'src/CoreCLREmbedding/pal/pal_utils.cpp',
+        'src/CoreCLREmbedding/pal/trace.cpp',
+        'src/CoreCLREmbedding/fxr/fx_ver.cpp',
+        'src/CoreCLREmbedding/fxr/fx_muxer.cpp',
+        'src/CoreCLREmbedding/json/casablanca/src/json/json.cpp',
+        'src/CoreCLREmbedding/json/casablanca/src/json/json_parsing.cpp',
+        'src/CoreCLREmbedding/json/casablanca/src/json/json_serialization.cpp',
+        'src/CoreCLREmbedding/json/casablanca/src/utilities/asyncrt_utils.cpp',
+        'src/CoreCLREmbedding/deps/deps_format.cpp',
+        'src/CoreCLREmbedding/deps/deps_entry.cpp',
+        'src/CoreCLREmbedding/deps/deps_resolver.cpp',
+        'src/CoreCLREmbedding/host/args.cpp',
+        'src/CoreCLREmbedding/host/coreclr.cpp',
+        'src/CoreCLREmbedding/host/libhost.cpp',
+        'src/CoreCLREmbedding/host/runtime_config.cpp'
+      ],
+      'include_dirs+': [
+        'src/CoreCLREmbedding/json/casablanca/include'
+      ],
       'conditions': [
         [
           'OS=="win"',
           {
-            'conditions': [
-              [
-                '"<!(node -e "var whereis = require(\'./tools/whereis\'); console.log(whereis(\'dnx.exe\'));")"!=""',
-                {
-                  'sources+': [
-                    'src/common/v8synchronizationcontext.cpp',
-                    'src/common/edge.cpp',
-                    'src/CoreCLREmbedding/coreclrembedding.cpp',
-                    'src/CoreCLREmbedding/coreclrfunc.cpp',
-                    'src/CoreCLREmbedding/coreclrnodejsfunc.cpp',
-                    'src/CoreCLREmbedding/coreclrfuncinvokecontext.cpp',
-                    'src/CoreCLREmbedding/coreclrnodejsfuncinvokecontext.cpp',
-                    'src/common/utils.cpp'
-                  ]
-                },
-                {
-                  'type': 'none'
-                }
-              ]
+            'sources+': [
+              'src/CoreCLREmbedding/pal/pal.windows.cpp',
             ]
           },
           {
-            'conditions': [
-              [
-                '"<!((which dnx) || echo not_found)"!="not_found"',
-                {
-                  'sources+': [
-                    'src/common/v8synchronizationcontext.cpp',
-                    'src/common/edge.cpp',
-                    'src/CoreCLREmbedding/coreclrembedding.cpp',
-                    'src/CoreCLREmbedding/coreclrfunc.cpp',
-                    'src/CoreCLREmbedding/coreclrnodejsfunc.cpp',
-                    'src/CoreCLREmbedding/coreclrfuncinvokecontext.cpp',
-                    'src/CoreCLREmbedding/coreclrnodejsfuncinvokecontext.cpp',
-                    'src/common/utils.cpp'
-                  ]
-                },
-                {
-                  'type': 'none'
-                }
-              ]
+            'sources+': [
+              'src/CoreCLREmbedding/pal/pal.unix.cpp'
             ]
           }
         ]
@@ -92,7 +113,9 @@
               'AdditionalOptions': [
                 '/wd4506',
                 '/DHAVE_CORECLR',
-                '/EHsc'
+                '/EHsc',
+                '/D_NO_ASYNCRTIMP',
+                '/D_HAS_EXCEPTIONS'
               ]
             },
             'VCLinkerTool': {
@@ -115,6 +138,8 @@
               'AdditionalOptions': [
                 '/wd4506',
                 '/DHAVE_CORECLR',
+                '/D_NO_ASYNCRTIMP',
+                '/D_HAS_EXCEPTIONS'
                 '/EHsc'
               ]
             },
@@ -162,7 +187,7 @@
           {
             'conditions': [
               [
-                '"<!((which mono) || echo not_found)"!="not_found"',
+                '"<!((which mono 2>/dev/null) || echo not_found)"!="not_found"',
                 {
                   'sources+': [
                     'src/mono/clractioncontext.cpp',
@@ -253,40 +278,11 @@
         [
           'OS=="win"',
           {
-            'conditions': [
-              [
-                '"<!(node -e "var whereis = require(\'./tools/whereis\'); console.log(whereis(\'dnx.exe\'));")"!=""',
-                {
-                  'actions+': [
-                    {
-                      'action_name': 'compile_coreclr_embed',
-                      'inputs': [
-                        'src/CoreCLREmbedding/project.json'
-                      ],
-                      'outputs': [
-                        'src/CoreCLREmbedding/bin/$(BUILDTYPE)/dnxcore50/CoreCLREmbedding.dll'
-                      ],                        
-                      'action': [
-                        'cd "<(module_root_dir)\\src\\CoreCLREmbedding" & dnu restore & cd "<(module_root_dir)\\src\\CoreCLREmbedding" & dnu build --configuration $(Configuration) & copy "<(module_root_dir)\\src\\CoreCLREmbedding\\bin\\$(Configuration)\\dnxcore50\\CoreCLREmbedding.dll" "<(module_root_dir)\\build\\$(Configuration)"'
-                      ]
-                    }
-                  ],
-                  'copies+': [
-                    {
-                      'destination': '<(module_root_dir)\\build\\$(BUILDTYPE)',
-                      'files': [
-                        '<(module_root_dir)\\src\\CoreCLREmbedding\\bin\\$(BUILDTYPE)\\dnxcore50\\CoreCLREmbedding.dll'
-                      ]
-                    }
-                  ]
-                }
-              ]
-            ]
           },
           {
             'conditions': [
               [
-                '"<!((which mono) || echo not_found)"!="not_found"',
+                '"<!((which mono 2>/dev/null) || echo not_found)"!="not_found"',
                 {
                   'actions+': [
                     {
@@ -310,46 +306,35 @@
                 }
               ],
               [
-                '"<!((which dnx) || echo not_found)"!="not_found"',
+                '"<!((which dotnet 2>/dev/null) || echo not_found)"!="not_found"',
                 {
                   'actions+': [
                     {
-                      'action_name': 'restore_packages',
+                      'action_name': 'restore_bootstrap_packages',
                       'inputs': [
-                        'src/CoreCLREmbedding/project.json'
+                        'lib/bootstrap/project.json'
                       ],
                       'outputs': [
-                        'src/CoreCLREmbedding/project.lock.json'
+                        'lib/bootstrap/project.lock.json'
                       ],
                       'action': [
                         'bash',
                         '-c',
-                        'cd src/CoreCLREmbedding && dnu restore'
+                        'cd lib/bootstrap && dotnet restore'
                       ]
                     },
                     {
-                      'action_name': 'compile_coreclr_embed',
+                      'action_name': 'compile_bootstrap',
                       'inputs': [
-                        'src/CoreCLREmbedding/*.cs',
-                        'src/common/*.cs'
+                        'lib/bootstrap/*.cs'
                       ],
                       'outputs': [
-                        'src/CoreCLREmbedding/bin/$(BUILDTYPE)/dnxcore50/CoreCLREmbedding.dll'
+                        'lib/bootstrap/bin/$(BUILDTYPE)/netstandard1.6/bootstrap.dll'
                       ],                        
                       'action': [
                         'bash',
                         '-c',
-                        'cd src/CoreCLREmbedding && dnu build --configuration $(BUILDTYPE)'
-                      ]
-                    }
-                  ],
-                  'copies+': [
-                    {
-                      'destination': '<(module_root_dir)/build/$(BUILDTYPE)',
-                      'files': [
-                        '<(module_root_dir)/src/CoreCLREmbedding/bin/$(BUILDTYPE)/dnxcore50/CoreCLREmbedding.dll',
-                        '<(module_root_dir)/src/CoreCLREmbedding/project.json',
-                        '<(module_root_dir)/src/CoreCLREmbedding/project.lock.json'
+                        'cd lib/bootstrap && dotnet build --configuration $(BUILDTYPE)'
                       ]
                     }
                   ]
