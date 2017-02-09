@@ -1572,7 +1572,7 @@ connected (press CTRL+C to quit)
 < BAR
 ```
 
-A self-contained Node.js WebSocket server, even if running within a .NET application, is rather unexciting. After all, the same could be accomplished with a stand-alone Node.js process. Ideally you could extablish a WebSocket server in Node.js, but handle the messages in .NET. Let's do it - read on. 
+A self-contained Node.js WebSocket server, even if running within a .NET application, is rather unexciting. After all, the same could be accomplished with a stand-alone Node.js process. Ideally you could establish a WebSocket server in Node.js, but handle the messages in .NET. Let's do it - read on. 
 
 ### How to: handle Node.js events in .NET
 
