@@ -204,7 +204,8 @@
                     'src/common/edge.cpp'
                   ],
                   'include_dirs': [
-                    '<!@(pkg-config mono-2 --cflags-only-I | sed s/-I//g)'
+                    '<!@(pkg-config mono-2 --cflags-only-I | sed s/-I//g)',
+                    '<!@(pkg-config glib-2.0 --cflags-only-I | sed s/-I//g)',
                   ],
                   'link_settings': {
                     'libraries': [
