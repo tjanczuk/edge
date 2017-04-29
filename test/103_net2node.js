@@ -1,17 +1,17 @@
 /**
- * Portions Copyright (c) Microsoft Corporation. All rights reserved. 
- * 
+ * Portions Copyright (c) Microsoft Corporation. All rights reserved.
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *  http://www.apache.org/licenses/LICENSE-2.0  
+ *  http://www.apache.org/licenses/LICENSE-2.0
  *
  * THIS CODE IS PROVIDED *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS
- * OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION 
- * ANY IMPLIED WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR 
- * PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT. 
+ * OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION
+ * ANY IMPLIED WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR
+ * PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
  *
- * See the Apache Version 2.0 License for specific language governing 
+ * See the Apache Version 2.0 License for specific language governing
  * permissions and limitations under the License.
  */
 var edge = require('../lib/edge.js'), assert = require('assert')
@@ -122,6 +122,26 @@ describe('async call from .net to node.js', function () {
 		});
 	});
 
+	it('successfuly handles process.nextTick() in JS callback', function (done) {
+		var func = edge.func({
+			assemblyFile: edgeTestDll,
+			typeName: 'Edge.Tests.Startup',
+			methodName: 'InvokeBack'
+		});
+		var payload = {
+			hello: function (payload, callback) {
+				process.nextTick(function() {
+					callback(null, 'Node.js welcomes ' + payload);
+				});
+			}
+		};
+		func(payload, function (error, result) {
+			assert.ifError(error);
+			assert.equal(result, 'Node.js welcomes .NET');
+			done();
+		});
+	});
+
 	it('successfuly marshals v8 exception on invoking thread', function (done) {
 		var func = edge.func({
 			assemblyFile: edgeTestDll,
@@ -161,7 +181,7 @@ describe('async call from .net to node.js', function () {
 			assert.ok(result.indexOf('Sample Node.js exception') > 0);
 			done();
 		});
-	});		
+	});
 
 	it('successfuly marshals empty buffer', function (done) {
 		var func = edge.func({

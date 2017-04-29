@@ -1,17 +1,17 @@
 /**
- * Portions Copyright (c) Microsoft Corporation. All rights reserved. 
- * 
+ * Portions Copyright (c) Microsoft Corporation. All rights reserved.
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *  http://www.apache.org/licenses/LICENSE-2.0  
+ *  http://www.apache.org/licenses/LICENSE-2.0
  *
  * THIS CODE IS PROVIDED *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS
- * OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION 
- * ANY IMPLIED WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR 
- * PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT. 
+ * OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION
+ * ANY IMPLIED WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR
+ * PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
  *
- * See the Apache Version 2.0 License for specific language governing 
+ * See the Apache Version 2.0 License for specific language governing
  * permissions and limitations under the License.
  */
 #include "edge.h"
@@ -21,12 +21,10 @@ ClrFuncInvokeContext::ClrFuncInvokeContext(v8::Local<v8::Value> callbackOrSync)
     DBG("ClrFuncInvokeContext::ClrFuncInvokeContext");
     if (callbackOrSync->IsFunction())
     {
-        this->callback = new Nan::Persistent<v8::Function>;
-        v8::Local<v8::Function> callbackOrSyncFunction = v8::Local<v8::Function>::Cast(callbackOrSync);
-        (this->callback)->Reset(callbackOrSyncFunction);
+        this->callback = new Nan::Callback(v8::Local<v8::Function>::Cast(callbackOrSync));
         this->Sync = false;
     }
-    else 
+    else
     {
         this->Sync = callbackOrSync->BooleanValue();
     }
@@ -41,7 +39,7 @@ void ClrFuncInvokeContext::DisposeCallback()
         DBG("ClrFuncInvokeContext::DisposeCallback");
         this->callback->Reset();
         delete this->callback;
-        this->callback = NULL;        
+        this->callback = NULL;
     }
 }
 
@@ -54,7 +52,7 @@ void ClrFuncInvokeContext::CompleteOnCLRThread(System::Threading::Tasks::Task<Sy
 
 void ClrFuncInvokeContext::InitializeAsyncOperation()
 {
-    // Create a uv_edge_async instance representing V8 async operation that will complete 
+    // Create a uv_edge_async instance representing V8 async operation that will complete
     // when the CLR function completes. The ClrActionContext is used to ensure the ClrFuncInvokeContext
     // remains GC-rooted while the CLR function executes.
 
@@ -119,17 +117,19 @@ v8::Local<v8::Value> ClrFuncInvokeContext::CompleteOnV8Thread()
     {
         // complete the asynchronous call to C# by invoking a callback in JavaScript
         Nan::TryCatch try_catch;
-        Nan::New<v8::Function>(*(this->callback))->Call(Nan::GetCurrentContext()->Global(), argc, argv);
+        DBG("ClrFuncInvokeContext::CompleteOnV8Thread - calling JS callback");
+        this->callback->Call(argc, argv);
         this->DisposeCallback();
-        if (try_catch.HasCaught()) 
+        if (try_catch.HasCaught())
         {
+            DBG("ClrFuncInvokeContext::CompleteOnV8Thread - exception in callback");
             Nan::FatalException(try_catch);
-        }        
+        }
 
         DBG("ClrFuncInvokeContext::CompleteOnV8Thread - async with callback");
         return scope.Escape(Nan::Undefined());
     }
-    else if (1 == argc) 
+    else if (1 == argc)
     {
         DBG("ClrFuncInvokeContext::CompleteOnV8Thread - handleScope.Close(ThrowException(argv[0]))");
         // complete the synchronous call to C# by re-throwing the resulting exception

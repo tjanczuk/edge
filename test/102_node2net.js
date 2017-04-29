@@ -131,7 +131,7 @@ describe('async call from node.js to .net', function () {
             assert.equal(error.InnerException.ParamName, 'input');
             done();
         });
-    });    
+    });
 
     it('successfuly marshals empty buffer', function (done) {
         var func = edge.func({
@@ -174,6 +174,25 @@ describe('async call from node.js to .net', function () {
             assert.ifError(error);
             assert.ok(result === k);
             done();
+        })
+    });
+
+    // Note: This doesn't seem to be sufficient to force the repro of the hang,
+    // but it's a good test to make sure works.
+    it('successfuly handles process.nextTick in the callback', function (done) {
+        var func = edge.func({
+            assemblyFile: edgeTestDll,
+            typeName: 'Edge.Tests.Startup',
+            methodName: 'ReturnInput'
+        });
+
+        var k = "";
+        func(k, function (error, result) {
+            assert.ifError(error);
+            assert.ok(result === k);
+            process.nextTick(function() {
+                done();
+            });
         })
     });
 });
