@@ -90,16 +90,21 @@ void NodejsFuncInvokeContext::CallFuncOnV8Thread()
         this->wrap->context = this;
         v8::Local<v8::Value> factoryArgv[] = { Nan::New(callbackFunction), Nan::New<v8::External>((void*)this->wrap) };
         v8::Local<v8::Function> callback = v8::Local<v8::Function>::Cast(
-            Nan::MakeCallback(Nan::GetCurrentContext()->Global(), Nan::New(callbackFactory), 2, factoryArgv));
+            Nan::Call(Nan::New(callbackFactory), Nan::GetCurrentContext()->Global(), 2, factoryArgv).ToLocalChecked());
 
         v8::Local<v8::Value> argv[] = { jspayload, callback };
         Nan::TryCatch tryCatch;
-        Nan::MakeCallback(Nan::GetCurrentContext()->Global(), Nan::New(*(this->functionContext->Func)), 2, argv);
+        Nan::Call(Nan::New(*(this->functionContext->Func)), Nan::GetCurrentContext()->Global(), 2, argv);
         if (tryCatch.HasCaught())
         {
             DBG("NodejsFuncInvokeContext::CallFuncOnV8Thread caught JavaScript exception");
             this->wrap->context = nullptr;
             this->CompleteWithError(gcnew System::Exception(exceptionV82stringCLR(tryCatch.Exception())));
+        }
+        else
+        {
+            // Kick the next tick
+            CallbackHelper::KickNextTick();
         }
     }
     catch (System::Exception^ ex)
