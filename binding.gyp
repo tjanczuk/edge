@@ -247,7 +247,7 @@
           'msvs_settings': {
             'VCCLCompilerTool': {
               # this is out of range and will generate a warning and skip adding RuntimeLibrary property:
-              'RuntimeLibrary': -1,
+              'RuntimeLibrary': 3,
               # this is out of range and will generate a warning and skip adding RuntimeTypeInfo property:
               'RuntimeTypeInfo': -1,
               'BasicRuntimeChecks': -1,
