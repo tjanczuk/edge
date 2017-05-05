@@ -90,7 +90,7 @@ set GYP=%APPDATA%\npm\node_modules\node-gyp\bin\node-gyp.js
 
 pushd "%SELF%\.."
 
-"%NODEEXE%" "%GYP%" configure --msvs_version=2013
+"%NODEEXE%" "%GYP%" configure --msvs_version=2015
 "%SELF%\build\repl.exe" ./build/edge_nativeclr.vcxproj "%USERPROFILE%\.node-gyp\%1\$(Configuration)\node.lib" "%SELF%\build\node-%1-%2\node.lib"
 "%NODEEXE%" "%GYP%" build
 mkdir "%SELF%\build\nuget\content\edge\%2" > nul 2>&1
