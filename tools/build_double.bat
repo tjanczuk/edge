@@ -57,15 +57,10 @@ if %ERRORLEVEL% neq 0 exit /b -1
 call :build_edge %1 x64
 if %ERRORLEVEL% neq 0 exit /b -1
 
-csc /out:"%SELF%\..\src\double\Edge.js\bin\Release\net40\EdgeJs.dll" /target:library "%SELF%\..\src\double\Edge.js\dotnet\EdgeJs.cs"
-if %ERRORLEVEL% neq 0 exit /b -1
-
 cd "%SELF%\..\src\double\Edge.js"
 dotnet restore
 if %ERRORLEVEL% neq 0 exit /b -1
-dotnet build --configuration Release --framework netstandard1.6
-if %ERRORLEVEL% neq 0 exit /b -1
-dotnet pack --configuration Release --no-build
+dotnet pack --configuration Release
 
 if %ERRORLEVEL% neq 0 (
 	echo Failure building Nuget package

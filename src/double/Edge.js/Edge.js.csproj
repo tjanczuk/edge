@@ -1,0 +1,55 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>With Edge.js you can script Node.js in a .NET application. Edge.js allows you to run Node.js and .NET code in one process. You can call Node.js functions from .NET and .NET functions from Node.js. Edge.js takes care of marshalling data between CLR and V8. Edge.js also reconciles threading models of single threaded V8 and multi-threaded CLR. Edge.js ensures correct lifetime of objects on V8 and CLR heaps. This Edge.js NuGet package supports scripting Node.js v6.10.1.</Description>
+    <Copyright>Copyright 2015 Tomasz Janczuk</Copyright>
+    <VersionPrefix>6.10.1</VersionPrefix>
+    <TargetFrameworks>net451;netstandard1.6</TargetFrameworks>
+    <AssemblyName>EdgeJs</AssemblyName>
+    <PackageId>Edge.js</PackageId>
+    <PackageTags>node.js;node;.net;edge;edge.js;v8;clr;coreclr;mono;interop;javascript</PackageTags>
+    <PackageLicenseUrl>https://raw.githubusercontent.com/tjanczuk/edge/master/LICENSE.txt</PackageLicenseUrl>
+    <NetStandardImplicitPackageVersion Condition=" '$(TargetFramework)' == 'netstandard1.6' ">1.6.0</NetStandardImplicitPackageVersion>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="..\..\..\tools\build\nuget\content\edge\x64\*">
+      <PackagePath>content/edge/x64/</PackagePath>
+      <Pack>true</Pack>
+    </Content>
+    <Content Include="..\..\..\tools\build\nuget\content\edge\x86\*">
+      <PackagePath>content/edge/x86/</PackagePath>
+      <Pack>true</Pack>
+    </Content>
+    <Content Include="..\..\..\lib\*.js">
+      <PackagePath>content/edge/</PackagePath>
+      <Pack>true</Pack>
+    </Content>
+    <Content Include="..\..\..\tools\nuget\install.ps1">
+      <PackagePath>tools/</PackagePath>
+      <Pack>true</Pack>
+    </Content>
+  </ItemGroup>
+
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard1.6' ">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup Condition=" '$(TargetFramework)' == 'net451' ">
+    <Compile Remove="dotnetcore\*.cs" />
+    <Compile Include="dotnet\*.cs" Exclude="dotnetcore\*.cs;bin\**;obj\**;**\*.xproj;packages\**" />
+  </ItemGroup>
+
+  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.6' ">
+    <Compile Remove="dotnet\*.cs" />
+    <Compile Include="dotnetcore\*.cs;..\..\common\*.cs" Exclude="dotnet\*.cs;bin\**;obj\**;**\*.xproj;packages\**" />
+  </ItemGroup>
+
+  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.6' ">
+    <PackageReference Include="System.Runtime.Loader" Version="4.3.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyModel" Version="1.1.1" />
+    <PackageReference Include="Microsoft.DotNet.InternalAbstractions" Version="1.0.0" />
+  </ItemGroup>
+
+</Project>
