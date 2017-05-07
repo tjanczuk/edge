@@ -4,9 +4,7 @@ CoreClrFuncInvokeContext::CoreClrFuncInvokeContext(v8::Local<v8::Value> callback
 {
     DBG("CoreClrFuncInvokeContext::CoreClrFuncInvokeContext");
 
-	this->callback = new Nan::Persistent<Function>();
-	v8::Local<v8::Function> callbackFunction = v8::Local<v8::Function>::Cast(callback);
-    this->callback->Reset(callbackFunction);
+    this->callback = new Nan::Callback(v8::Local<v8::Function>::Cast(callback));
 }
 
 CoreClrFuncInvokeContext::~CoreClrFuncInvokeContext()
@@ -87,15 +85,15 @@ void CoreClrFuncInvokeContext::InvokeCallback(void* data)
 	int argc = 2;	
 
 	Nan::TryCatch tryCatch;
-	Nan::New<v8::Function>(*(context->callback))->Call(Nan::GetCurrentContext()->Global(), argc, argv);
 
-	DBG("CoreClrFuncInvokeContext::InvokeCallback - Callback function invoked");
-	delete context;
-
-	if (tryCatch.HasCaught())
-	{
-		Nan::FatalException(tryCatch);
-	}
+    DBG("CoreClrFuncInvokeContext::InvokeCallback - calling JS callback");
+    context->callback->Call(argc, argv);
+    delete context;
+    if (tryCatch.HasCaught())
+    {
+        DBG("CoreClrFuncInvokeContext::InvokeCallback - exception in callback");
+        Nan::FatalException(tryCatch);
+    }
 
 	DBG("CoreClrFuncInvokeContext::InvokeCallback - Complete");
 }
