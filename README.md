@@ -153,13 +153,13 @@ If you are writing a Node.js application, this section explains how you include 
 
 ### What you need
 
-Edge.js runs on Windows, Linux, and OSX and requires Node.js 6.x, 5.x, 4.x, 0.12.x, 0.10.x, or 0.8.x, as well as .NET Framework 4.5 (Windows), Mono 4.2.4 (OSX, Linux), or .NET Core 1.0.0 Preview 2 (Windows, OSX, Linux). 
+Edge.js runs on Windows, Linux, and OSX and requires Node.js 7.x, 6.x, 5.x, 4.x, as well as .NET Framework 4.5 (Windows), Mono 4.2.4 (OSX, Linux), or .NET Core 1.0.0 Preview 2 (Windows, OSX, Linux). 
 
 **NOTE** there is a known issue with Mono after 4.2.4 that will be addressed in Mono 4.6.
 
 #### Windows
 
-* Node.js 6.x, 5.x, 4.x, 0.12.x, 0.10.x, or 0.8.x 
+* Node.js 7.x, 6.x, 5.x, or 4.x 
 * [.NET 4.5](http://www.microsoft.com/en-us/download/details.aspx?id=30653) and/or [.NET Core](https://www.microsoft.com/net/core)
 * to use Python, you also need [IronPython 2.7.3 or later](http://ironpython.codeplex.com/releases/view/81726)  
 * to use F#, read [Dave Thomas blog post](http://7sharpnine.com/blog/2013-05-05-i-node-something/)
@@ -170,7 +170,7 @@ If you have both desktop CLR and .NET Core installed, read [using .NET Core](#us
 
 #### Linux
 
-* Node.js 6.x, 5.x, 4.x, 0.12.x, 0.10.x, or 0.8.x
+* Node.js 7.x, 6.x, 5.x, or 4.x
 * Mono 4.2.4 x64 and/or .NET Core
 * Follow [Linux setup instructions](#building-on-linux)
 
@@ -178,7 +178,7 @@ If you have both desktop CLR and .NET Core installed, read [using .NET Core](#us
 
 #### OSX  
 
-* Node.js 6.x, 5.x, 4.x, 0.12.x, 0.10.x, or 0.8.x  
+* Node.js 7.x, 6.x, 5.x, or 4.x,
 * Mono 4.2.4 x64 and/or .NET Core
 * Follow [OSX setup instructions](#building-on-osx)  
 
@@ -1217,7 +1217,7 @@ To build one of the versions of Node.js officially released by [Node.js](http://
 
 ```
 cd tools
-build.bat release 6.4.0
+build.bat release 7.10.0
 ```
 
 Note: the Node.js version number you provide must be version number corresponding to one of the subdirectories of http://nodejs.org/dist. The command will build both x32 and x64 architectures (assuming you use x64 machine). The command will also copy the edge\_\*.node executables to appropriate locations under lib\native directory where they are looked up from at runtime. The `npm install` step copies the C standard library shared DLL to the location of the edge\_\*.node files for the component to be ready to go.
@@ -1373,7 +1373,7 @@ You need Windows with:
 * [Edge.js NuGet package](https://www.nuget.org/packages/Edge.js)  
 * [Node.js](http://nodejs.org) (optional, if you want to use additional NPM packages)
 
-Edge.js support for scripting Node.js ships as a NuGet Package called `Edge.js`. It comes with everything you need to get started writing applications for x86 and x64 architectures. However, if you want to use additional Node.js packages from NPM, you must separately install Node.js runtime to access the NPM package manager. Edge.js NuGet package has been developed and tested with Node.js v6.5.0. Older Edge.js packages exist for prior versions of Node.js. If you choose a different version of Node.js to install NPM packages, your mileage can vary. 
+Edge.js support for scripting Node.js ships as a NuGet Package called `Edge.js`. It comes with everything you need to get started writing applications for x86 and x64 architectures. However, if you want to use additional Node.js packages from NPM, you must separately install Node.js runtime to access the NPM package manager. Edge.js NuGet package has been developed and tested with Node.js v7.10.0. Older Edge.js packages exist for prior versions of Node.js. If you choose a different version of Node.js to install NPM packages, your mileage can vary. 
 
 **NOTE** you cannot use native Node.js extensions when scripting Node.js from CLR using Edge. 
 
@@ -1688,14 +1688,14 @@ These are unstructions for building the Edge.js NuGet package on Windows. The pa
 Preprequisties:
 
 * Visual Studio 2015   
-* Node.js (tested with v6.5.0)  
+* Node.js (tested with v7.10.0)  
 * Python 2.7.x  
-* node-gyp (tested with 3.0.1)  
+* node-gyp (tested with 3.6.1)  
 
 To buid the NuGet package, open the Visual Studio 2013 Developer Command Prompt and call:
 
 ```
-tools\build_double.bat 6.5.0
+tools\build_double.bat 7.10.0
 ```
 
 (you can substitite another version of Node.js).
