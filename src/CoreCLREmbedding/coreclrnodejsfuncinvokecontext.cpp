@@ -96,7 +96,7 @@ void CoreClrNodejsFuncInvokeContext::InvokeCallback(void* data)
 	TryCatch tryCatch;
 
 	DBG("CoreClrNodejsFuncInvokeContext::InvokeCallback - Calling JavaScript function");
-	Nan::New(*(context->FunctionContext->Func))->Call(Nan::GetCurrentContext()->Global(), 2, argv);
+	Nan::Call(Nan::New(*(context->FunctionContext->Func)), Nan::GetCurrentContext()->Global(), 2, argv);
 	DBG("CoreClrNodejsFuncInvokeContext::InvokeCallback - Called JavaScript function");
 
 	if (tryCatch.HasCaught())
@@ -110,4 +110,9 @@ void CoreClrNodejsFuncInvokeContext::InvokeCallback(void* data)
 
 		context->Complete(TaskStatusFaulted, exceptionData, V8TypeException);
 	}
+    else
+    {
+        // Kick the next tick
+        CallbackHelper::KickNextTick();
+    }
 }

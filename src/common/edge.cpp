@@ -44,6 +44,7 @@ NAN_MODULE_INIT(init)
     DBG("edge::init");
 
     V8SynchronizationContext::Initialize();
+    CallbackHelper::Initialize();
 
 #ifdef HAVE_CORECLR
     if (FAILED(CoreClrEmbedding::Initialize(debugMode)))

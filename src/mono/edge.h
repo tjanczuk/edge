@@ -64,7 +64,7 @@ public:
 class ClrFuncInvokeContext {
 private:
     GCHandle _this;
-    Nan::Persistent<v8::Function>* callback;
+    Nan::Callback* callback;
     uv_edge_async_t* uv_edge_async;
 
 public:
