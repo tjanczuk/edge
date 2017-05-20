@@ -67,9 +67,9 @@ if %ERRORLEVEL% neq 0 (
     exit /b -1
 )
 
-copy /y "%DESTDIR%\..\msvcr120.dll" "%DESTDIR%"
+copy /y "%DESTDIR%\..\*.dll" "%DESTDIR%"
 if %ERRORLEVEL% neq 0 (
-    echo Error copying msvcr120.dll %FLAVOR% to %DESTDIR%
+    echo Error copying VC redist %FLAVOR% to %DESTDIR%
     exit /b -1
 )
 

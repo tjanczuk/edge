@@ -1,4 +1,5 @@
-@echo off
+
+rem @echo off
 set SELF=%~dp0
 if "%1" equ "" (
     echo Usage: build_double.bat {node_version}
@@ -16,9 +17,9 @@ if not exist "%SELF%\build\download.exe" (
 	csc /out:"%SELF%\build\download.exe" "%SELF%\download.cs"
 )
 
-rem if not exist "%SELF%\build\unzip.exe" (
-rem 	csc /out:"%SELF%\build\unzip.exe" /r:System.IO.Compression.FileSystem.dll "%SELF%\unzip.cs"
-rem )
+if not exist "%SELF%\build\unzip.exe" (
+ 	csc /out:"%SELF%\build\unzip.exe" /r:System.IO.Compression.FileSystem.dll "%SELF%\unzip.cs"
+)
 
 if not exist "%SELF%\build\repl.exe" (
 	csc /out:"%SELF%\build\repl.exe" "%SELF%\repl.cs"
@@ -109,6 +110,8 @@ if exist "%SELF%\build\node-%1-%2\node.lib" exit /b 0
 
 pushd "%SELF%\build\node-%1"
 rmdir /s /q Release
+rmdir /s /q build
+rmdir /s /q tools\icu\Release
 
 ..\repl.exe node.gyp "'executable'" "'shared_library'"
 if %ERRORLEVEL% neq 0 (
@@ -117,7 +120,13 @@ if %ERRORLEVEL% neq 0 (
     exit /b -1
 )
 
-call vcbuild.bat build release %2
+call vcbuild.bat release %2
+if not exist .\Release\node.dll (
+    echo Cannot build node.dll for %1-%2
+    popd
+    exit /b -1
+)
+
 mkdir "%SELF%\build\node-%1-%2"
 copy /y .\Release\node.* "%SELF%\build\node-%1-%2"
 echo Finished building Node shared library %1
