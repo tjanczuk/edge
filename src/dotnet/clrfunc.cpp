@@ -343,7 +343,7 @@ v8::Local<v8::Object> ClrFunc::MarshalCLRObjectToV8(System::Object^ netdata)
     v8::Local<v8::Object> result = Nan::New<v8::Object>();
     System::Type^ type = netdata->GetType();
 
-    if (0 == System::String::Compare(type->FullName, "System.Reflection.RuntimeMethodInfo")) {
+    if (type->FullName->StartsWith("System.Reflection")) {
         // Avoid stack overflow due to self-referencing reflection elements
         return scope.Escape(result);
     }
