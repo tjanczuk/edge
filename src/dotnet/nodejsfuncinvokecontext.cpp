@@ -62,12 +62,18 @@ NodejsFuncInvokeContext::!NodejsFuncInvokeContext()
     }
 }
 
+// for not default domain
+#pragma managed(push, off)
+static Nan::Persistent<v8::Function> callbackFactory;
+static Nan::Persistent<v8::Function> callbackFunction;
+#pragma managed(push, pop)
+
 void NodejsFuncInvokeContext::CallFuncOnV8Thread()
 {
     DBG("NodejsFuncInvokeContext::CallFuncOnV8Thread");
 
-    static Nan::Persistent<v8::Function> callbackFactory;
-    static Nan::Persistent<v8::Function> callbackFunction;
+    //static Nan::Persistent<v8::Function> callbackFactory;
+    //static Nan::Persistent<v8::Function> callbackFunction;
 
     Nan::HandleScope scope;
     try

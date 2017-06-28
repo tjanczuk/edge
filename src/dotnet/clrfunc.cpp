@@ -26,14 +26,20 @@ void clrFuncProxyNearDeath(const Nan::WeakCallbackInfo<T> &data)
     delete wrap;
 }
 
+// for not default domain
+#pragma managed(push, off)
+static Nan::Persistent<v8::Function> proxyFactory;
+static Nan::Persistent<v8::Function> proxyFunction;
+#pragma managed(push, pop)
+
 v8::Local<v8::Function> ClrFunc::Initialize(System::Func<System::Object^,Task<System::Object^>^>^ func)
 {
     DBG("ClrFunc::Initialize Func<object,Task<object>> wrapper");
 
-    static Nan::Persistent<v8::Function> proxyFactory;
-    static Nan::Persistent<v8::Function> proxyFunction;
-
-    Nan::EscapableHandleScope scope;
+	//static Nan::Persistent<v8::Function> proxyFactory;
+	//static Nan::Persistent<v8::Function> proxyFunction;
+	
+	Nan::EscapableHandleScope scope;
 
     ClrFunc^ app = gcnew ClrFunc();
     app->func = func;
@@ -253,6 +259,28 @@ v8::Local<v8::Value> ClrFunc::MarshalCLRToV8(System::Object^ netdata)
 
         jsdata = result;
     }
+	else if (dynamic_cast<System::Collections::Generic::IDictionary<System::Int32, System::String^>^>(netdata) != nullptr)
+	{
+		v8::Local<v8::Object> result = Nan::New<v8::Object>();
+		for each (System::Collections::Generic::KeyValuePair<System::Int32, System::String^>^ pair
+			in (System::Collections::Generic::IDictionary<System::Int32, System::String^>^)netdata)
+		{
+			result->Set(pair->Key, stringCLR2V8(pair->Value));
+		}
+
+		jsdata = result;
+	}
+	else if (dynamic_cast<System::Collections::Generic::IDictionary<System::Int32, System::Object^>^>(netdata) != nullptr)
+	{
+		v8::Local<v8::Object> result = Nan::New<v8::Object>();
+		for each (System::Collections::Generic::KeyValuePair<System::Int32, System::Object^>^ pair
+			in (System::Collections::Generic::IDictionary<System::Int32, System::Object^>^)netdata)
+		{
+			result->Set(pair->Key, ClrFunc::MarshalCLRToV8(pair->Value));
+		}
+
+		jsdata = result;
+	}
     else if (dynamic_cast<System::Collections::IDictionary^>(netdata) != nullptr)
     {
         v8::Local<v8::Object> result = Nan::New<v8::Object>();
