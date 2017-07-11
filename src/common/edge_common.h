@@ -81,14 +81,14 @@ private:
 
 public:
 
-    // The node process will not exit until ExecuteAction or CancelAction had been called for all actions 
-    // registered by calling RegisterAction on V8 thread. Actions registered by calling RegisterAction 
+    // The node process will not exit until ExecuteAction or CancelAction had been called for all actions
+    // registered by calling RegisterAction on V8 thread. Actions registered by calling RegisterAction
     // on CLR thread do not prevent the process from exiting.
     // Calls from JavaScript to .NET always call RegisterAction on V8 thread before invoking .NET code.
     // Calls from .NET to JavaScript call RegisterAction either on CLR or V8 thread, depending on
     // whether .NET code executes synchronously on V8 thread it strarted running on.
     // This means that if any call of a .NET function from JavaScript is in progress, the process won't exit.
-    // It also means that existence of .NET proxies to JavaScript functions in the CLR does not prevent the 
+    // It also means that existence of .NET proxies to JavaScript functions in the CLR does not prevent the
     // process from exiting.
     // In this model, JavaScript owns the lifetime of the process.
 
@@ -100,6 +100,15 @@ public:
     static void ExecuteAction(uv_edge_async_t* uv_edge_async);
     static void CancelAction(uv_edge_async_t* uv_edge_async);
     static void Unref(uv_edge_async_t* uv_edge_async);
+};
+
+class CallbackHelper {
+private:
+    static Nan::Callback* tickCallback;
+
+public:
+    static void Initialize();
+    static void KickNextTick();
 };
 
 typedef enum taskStatus

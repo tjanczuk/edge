@@ -70,13 +70,18 @@ void NodejsFuncInvokeContext::CallFuncOnV8Thread(MonoObject* _this, NodejsFunc* 
         v8::Local<v8::Value> argv[] = { jspayload, callback };
         Nan::TryCatch tryCatch;
         DBG("NodejsFuncInvokeContext::CallFuncOnV8Thread calling JavaScript function");
-        Nan::New(*(nativeNodejsFunc->Func))->Call(Nan::GetCurrentContext()->Global(), 2, argv);
+        Nan::Call(Nan::New(*(nativeNodejsFunc->Func)), Nan::GetCurrentContext()->Global(), 2, argv);
         DBG("NodejsFuncInvokeContext::CallFuncOnV8Thread called JavaScript function");
         if (tryCatch.HasCaught()) 
         {
             DBG("NodejsFuncInvokeContext::CallFuncOnV8Thread caught JavaScript exception");
             ctx->Complete((MonoObject*)exceptionV82stringCLR(tryCatch.Exception()), NULL);
             // ctx deleted in Complete
+        }
+        else
+        {
+            // Kick the next tick
+            CallbackHelper::KickNextTick();
         }
 
         // In the absence of exception, processing resumes in v8FuncCallback

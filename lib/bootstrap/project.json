@@ -10,7 +10,7 @@
           "type": "platform",
           "version": "1.0.0"
         },
-        "Edge.js": "6.5.1",
+        "Edge.js": "7.10.1",
         "Edge.js.CSharp": "1.2.0"
       }
     }

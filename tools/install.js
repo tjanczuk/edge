@@ -38,7 +38,14 @@ if (process.platform === 'win32') {
 		.filter(isDirectory)
 		.map(getPath);
 
-	['msvcr120.dll', 'msvcp120.dll'].forEach(function (dllname) {
+	var redist = [
+        'concrt140.dll',
+        'msvcp140.dll',
+        'vccorlib140.dll',
+        'vcruntime140.dll',
+	];
+
+	redist.forEach(function (dllname) {
 		var dll32bit = path.resolve(lib32bit, dllname);
 		dest32dirs.forEach(copyFile(dll32bit, dllname));
 	});
@@ -48,7 +55,7 @@ if (process.platform === 'win32') {
 		.filter(isDirectory)
 		.map(getPath);
 
-	['msvcr120.dll', 'msvcp120.dll'].forEach(function (dllname) {
+	redist.forEach(function (dllname) {
 		var dll64bit = path.resolve(lib64bit, dllname);
 		dest64dirs.forEach(copyFile(dll64bit, dllname));
 	});

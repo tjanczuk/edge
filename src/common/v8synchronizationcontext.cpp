@@ -1,17 +1,17 @@
 /**
- * Portions Copyright (c) Microsoft Corporation. All rights reserved. 
- * 
+ * Portions Copyright (c) Microsoft Corporation. All rights reserved.
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *  http://www.apache.org/licenses/LICENSE-2.0  
+ *  http://www.apache.org/licenses/LICENSE-2.0
  *
  * THIS CODE IS PROVIDED *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS
- * OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION 
- * ANY IMPLIED WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR 
- * PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT. 
+ * OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION
+ * ANY IMPLIED WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR
+ * PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
  *
- * See the Apache Version 2.0 License for specific language governing 
+ * See the Apache Version 2.0 License for specific language governing
  * permissions and limitations under the License.
  */
 #include "edge_common.h"
@@ -33,7 +33,7 @@ unsigned long V8SynchronizationContext::v8ThreadId;
 uv_sem_t* V8SynchronizationContext::funcWaitHandle;
 uv_edge_async_t* V8SynchronizationContext::uv_edge_async;
 
-void V8SynchronizationContext::Initialize() 
+void V8SynchronizationContext::Initialize()
 {
     // This executes on V8 thread
 
@@ -61,7 +61,7 @@ uv_edge_async_t* V8SynchronizationContext::RegisterAction(uv_async_edge_cb actio
     {
         // This executes on V8 thread.
         // Allocate new uv_edge_async.
-
+        DBG("V8SynchronizationContext::RegisterAction on v8 thread");
         uv_edge_async_t* uv_edge_async = new uv_edge_async_t;
         uv_edge_async->action = action;
         uv_edge_async->data = data;
@@ -69,11 +69,11 @@ uv_edge_async_t* V8SynchronizationContext::RegisterAction(uv_async_edge_cb actio
         uv_async_init(uv_default_loop(), &uv_edge_async->uv_async, (uv_async_cb)continueOnV8Thread);
         return uv_edge_async;
     }
-    else 
+    else
     {
-        // This executes on CLR thread. 
+        // This executes on CLR thread.
         // Acquire exlusive access to uv_edge_async previously initialized on V8 thread.
-
+        DBG("V8SynchronizationContext::RegisterAction on CLR thread");
         uv_sem_wait(V8SynchronizationContext::funcWaitHandle);
         V8SynchronizationContext::uv_edge_async->action = action;
         V8SynchronizationContext::uv_edge_async->data = data;
@@ -84,7 +84,7 @@ uv_edge_async_t* V8SynchronizationContext::RegisterAction(uv_async_edge_cb actio
 void V8SynchronizationContext::ExecuteAction(uv_edge_async_t* uv_edge_async)
 {
     DBG("V8SynchronizationContext::ExecuteAction");
-    // Transfer control to completeOnV8hread method executing on V8 thread
+    // Transfer control to continueOnV8Thread method executing on V8 thread
     uv_async_send(&uv_edge_async->uv_async);
 }
 

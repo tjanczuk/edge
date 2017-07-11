@@ -54,7 +54,7 @@ v8::Local<v8::Function> ClrFunc::Initialize(System::Func<System::Object^,Task<Sy
 
     v8::Local<v8::Value> factoryArgv[] = { Nan::New(proxyFunction), Nan::New<v8::External>((void*)wrap) };
     v8::Local<v8::Function> funcProxy =
-        (Nan::New(proxyFactory)->Call(Nan::GetCurrentContext()->Global(), 2, factoryArgv)).As<v8::Function>();
+        (Nan::Call(Nan::New(proxyFactory), Nan::GetCurrentContext()->Global(), 2, factoryArgv)).ToLocalChecked().As<v8::Function>();
     Nan::Persistent<v8::Function> funcProxyPersistent(funcProxy);
     funcProxyPersistent.SetWeak((void*)wrap, &clrFuncProxyNearDeath, Nan::WeakCallbackType::kParameter);
 
