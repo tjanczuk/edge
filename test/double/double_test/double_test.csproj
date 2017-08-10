@@ -36,7 +36,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="EdgeJs, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>packages\Edge.js.7.10.1\lib\net40\EdgeJs.dll</HintPath>
+      <HintPath>packages\Edge.js.8.2.1\lib\net40\EdgeJs.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Microsoft.CSharp" />

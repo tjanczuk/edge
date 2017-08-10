@@ -5,7 +5,7 @@
     "url": "http://tomasz.janczuk.org",
     "twitter": "tjanczuk"
   },
-  "version": "7.10.1",
+  "version": "8.2.1",
   "description": "Edge.js: run .NET and Node.js in-process on Windows, Mac OS, and Linux",
   "tags": [
     "owin",
@@ -20,7 +20,7 @@
   ],
   "main": "./lib/edge.js",
   "engines": {
-    "node": ">= 0.8"
+    "node": ">= 6"
   },
   "licenses": [
     {
