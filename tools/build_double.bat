@@ -117,7 +117,7 @@ if %ERRORLEVEL% neq 0 (
     exit /b -1
 )
 
-call vcbuild.bat build release %2
+call vcbuild.bat release %2
 mkdir "%SELF%\build\node-%1-%2"
 copy /y .\Release\node.* "%SELF%\build\node-%1-%2"
 echo Finished building Node shared library %1

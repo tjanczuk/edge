@@ -50,6 +50,19 @@ namespace double_test
         }
 
         [TestMethod]
+        public void SucceedsCheckingNodeVersion()
+        {
+            var result = Edge.Func(@"
+                return function (data, cb) {
+                    cb(null, process.version);
+                }
+            ")(".NET").Result;
+
+            System.Console.WriteLine(result);
+            Assert.AreEqual(result, "v6.11.2");
+        }        
+
+        [TestMethod]
         public void SuccessfulyMarshalsDataFromNetToNode()
         {
             var result = Edge.Func(@"
