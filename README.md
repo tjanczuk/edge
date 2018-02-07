@@ -414,7 +414,7 @@ Edge.js also supports running published .NET Core applications on servers that d
 
  1. It should target the `netcoreapp1.0` framework moniker.
  2. It should reference `Microsoft.NETCore.DotNetHost` and `Microsoft.NETCore.DotNetHostPolicy`.  This is required so that the publish process can provide all the native libraries required to create a completely standalone version of your application.
- 3. `"emitEntryPoint": true` should be present under `buildOptions`.  You can add an empty `Main()` implementation to your project to accomodate it; this method will not be called, but is just a requirement in order for `dotnet publish` to generate a completely standalone app.
+ 3. `"emitEntryPoint": true` should be present under `buildOptions`.  You can add an empty `Main()` implementation to your project to accommodate it; this method will not be called, but is just a requirement in order for `dotnet publish` to generate a completely standalone app.
 
 On your development machine, you would run `dotnet publish -r [target runtime for your production server]` (i.e. `dotnet publish -r ubuntu.14.04-x64`) to aggregate the package assemblies and native libraries necessary to run your application.  You can copy the contents of the publish directory up to your SDK- and CLI-less server and use them directly in Edge.js by setting the  `EDGE_APP_ROOT` environment variable to the directory on the server that you copied the published application to.
 
@@ -686,7 +686,7 @@ Python welcomes Node.js
 
 #### The interop model
 
-Your Python script must evaluate to a lambda expression that accepts a single parameter. The parameter represents marshalled input from the Node.js code. The return value of the lambda expression is passed back as the result to Node.js code. The Python script can contain constructs (e.g. Python functions) that are used in the closure of the lambda expression. The instance of the script with associated state is created when `edge.func` is called in Node.js. Each call to the function referes to that instance.
+Your Python script must evaluate to a lambda expression that accepts a single parameter. The parameter represents marshalled input from the Node.js code. The return value of the lambda expression is passed back as the result to Node.js code. The Python script can contain constructs (e.g. Python functions) that are used in the closure of the lambda expression. The instance of the script with associated state is created when `edge.func` is called in Node.js. Each call to the function refers to that instance.
 
 The simplest *echo* Python script you can embed in Node.js looks like this:
 
@@ -1286,7 +1286,7 @@ npm run jshint
 
 ### Building on OSX
 
-Prerequisities:
+Prerequisites:
 
 * [Homebrew](http://brew.sh/)  
 * [Mono x64](http://www.mono-project.com/download/#download-mac) and/or [.NET Core](https://dotnet.github.io/getting-started/) - see below  
@@ -1427,7 +1427,7 @@ var func = Edge.Func(@"
 ");
 ```
 
-Edge.js creates a `Func<object,Task<object>>` delegate in CLR that allows .NET code to call the Node.js function asynchronously. You can use the standard TPL mechanisms or the async/await keywords to conveniently await completion of the asynchornous Node.js function:
+Edge.js creates a `Func<object,Task<object>>` delegate in CLR that allows .NET code to call the Node.js function asynchronously. You can use the standard TPL mechanisms or the async/await keywords to conveniently await completion of the asynchronous Node.js function:
 
 ```c#
 var result = await func(".NET");
@@ -1558,7 +1558,7 @@ This WebSocket server sends a *Hello* message to the client when a new connectio
 npm install ws -g
 ```
 
-Then start the .NET application conatining the WebSocket server and establish a connection to it with `wscat`:
+Then start the .NET application containing the WebSocket server and establish a connection to it with `wscat`:
 
 ```
 C:\projects\websockets> wscat -c ws://localhost:8080/
@@ -1572,11 +1572,11 @@ connected (press CTRL+C to quit)
 < BAR
 ```
 
-A self-contained Node.js WebSocket server, even if running within a .NET application, is rather unexciting. After all, the same could be accomplished with a stand-alone Node.js process. Ideally you could extablish a WebSocket server in Node.js, but handle the messages in .NET. Let's do it - read on. 
+A self-contained Node.js WebSocket server, even if running within a .NET application, is rather unexciting. After all, the same could be accomplished with a stand-alone Node.js process. Ideally you could establish a WebSocket server in Node.js, but handle the messages in .NET. Let's do it - read on. 
 
 ### How to: handle Node.js events in .NET
 
-It is often useful to handle certain events raised by the Node.js code within .NET. For example, you may want to establish a WebSocket server in Node.js, and handle the incoming messages in the .NET part of your application. This can be accomplished by passig a .NET callback function to Node.js when the the WebSocket server is created:
+It is often useful to handle certain events raised by the Node.js code within .NET. For example, you may want to establish a WebSocket server in Node.js, and handle the incoming messages in the .NET part of your application. This can be accomplished by passing a .NET callback function to Node.js when the the WebSocket server is created:
 
 ```c#
 class Program
@@ -1683,7 +1683,7 @@ The `EDGE_NODE_PARAMS` environment variable allows you to specify any options th
 
 **Note** This mechanism requires hardening, expect the road ahead to be bumpy. 
 
-These are unstructions for building the Edge.js NuGet package on Windows. The package will support running apps in both x86 and x64 architectures using a selected version of Node.js. The resulting NuGet package is all-inclusive with the only dependency being .NET 4.5. 
+These are instructions for building the Edge.js NuGet package on Windows. The package will support running apps in both x86 and x64 architectures using a selected version of Node.js. The resulting NuGet package is all-inclusive with the only dependency being .NET 4.5. 
 
 Preprequisties:
 
@@ -1698,7 +1698,7 @@ To buid the NuGet package, open the Visual Studio 2013 Developer Command Prompt 
 tools\build_double.bat 8.2.1
 ```
 
-(you can substitite another version of Node.js).
+(you can substitute another version of Node.js).
 
 The script takes several minutes to complete and does the following:
 
