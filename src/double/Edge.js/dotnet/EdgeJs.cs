@@ -7,6 +7,14 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
+[assembly: AssemblyCompany("Tomasz Janczuk")] 
+[assembly: AssemblyProduct("Edge.js")] 
+[assembly: AssemblyCopyright("Copyright 2015 Tomasz Janczuk")] 
+[assembly: AssemblyTrademark("Copyright 2015 Tomasz Janczuk")] 
+[assembly: AssemblyDescription("Script Node.js REPL_NODE_VERSION-REPL_NODE_ARCH in a .NET application")]
+[assembly: AssemblyVersion("REPL_NODE_VERSION.0")]
+[assembly: AssemblyFileVersion("REPL_NODE_VERSION.0")]
+
 namespace EdgeJs
 {
     public class Edge

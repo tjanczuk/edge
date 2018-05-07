@@ -58,8 +58,20 @@ if %ERRORLEVEL% neq 0 exit /b -1
 call :build_edge %1 x64
 if %ERRORLEVEL% neq 0 exit /b -1
 
-csc /out:"%SELF%\..\src\double\Edge.js\bin\Release\net40\EdgeJs.dll" /target:library "%SELF%\..\src\double\Edge.js\dotnet\EdgeJs.cs"
+
+REM Generate version information before the build
+if exist "%SELF%\build\nuget\EdgeJs-version.cs" del /Q /F "%SELF%\build\nuget\EdgeJs-version.cs"
+copy /y "%SELF%\..\src\double\Edge.js\dotnet\EdgeJs.cs" "%SELF%\build\nuget\EdgeJs-version.cs"
 if %ERRORLEVEL% neq 0 exit /b -1
+"%SELF%\build\repl.exe" "%SELF%\build\nuget\EdgeJs-version.cs" "REPL_NODE_VERSION" "%1"
+if %ERRORLEVEL% neq 0 exit /b -1
+"%SELF%\build\repl.exe" "%SELF%\build\nuget\EdgeJs-version.cs" "REPL_NODE_ARCH" "%2"
+if %ERRORLEVEL% neq 0 exit /b -1
+
+csc /out:"%SELF%\..\src\double\Edge.js\bin\Release\net40\EdgeJs.dll" /target:library "%SELF%\build\nuget\EdgeJs-version.cs"
+if %ERRORLEVEL% neq 0 exit /b -1
+
+if exist "%SELF%\build\nuget\EdgeJs-version.cs" del /Q /F "%SELF%\build\nuget\EdgeJs-version.cs"
 
 cd "%SELF%\..\src\double\Edge.js"
 dotnet restore
