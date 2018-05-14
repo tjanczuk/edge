@@ -40,7 +40,7 @@ describe('edge.func', function () {
 	it('fails with missing assemblyFile or source', function () {
 		assert.throws(
 			function () { edge.func({}); },
-			/Provide DLL or source file name or .NET script literal as a string parmeter, or specify an options object/
+			/Provide DLL or source file name or .NET script literal as a string parameter, or specify an options object/
 		);
 	});
 
