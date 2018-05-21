@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -53,6 +54,9 @@ namespace EdgeJs
         [DllImport("node.dll", EntryPoint = "?Start@node@@YAHHQEAPEAD@Z", CallingConvention = CallingConvention.Cdecl)]
         static extern int NodeStartx64(int argc, string[] argv);
 
+        [DllImport("kernel32.dll", CharSet = CharSet.Auto)]
+        private static extern int GetShortPathName(string LongPath, StringBuilder ShortPath, int BufferSize);
+
         [DllImport("kernel32.dll", EntryPoint = "LoadLibrary")]
         static extern int LoadLibrary([MarshalAs(UnmanagedType.LPStr)] string lpLibFileName);
 
@@ -93,7 +97,12 @@ namespace EdgeJs
                                     argv.Add(p);
                                 }
                             }
-                            argv.Add(AssemblyDirectory + "\\edge\\double_edge.js");
+                            // Workaround for unicode characters in path
+                            string path = AssemblyDirectory + "\\edge\\double_edge.js";
+                            StringBuilder shortPath = new StringBuilder(255);
+                            int result = GetShortPathName(path, shortPath, shortPath.Capacity);
+                            argv.Add(shortPath.ToString());
+                            // End workaround for unicode characters in path
                             nodeStart(argv.Count, argv.ToArray());
                             waitHandle.Set();
                         });
