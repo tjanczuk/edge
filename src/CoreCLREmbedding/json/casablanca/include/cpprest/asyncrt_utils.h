@@ -40,7 +40,9 @@
 
 #ifndef _WIN32
 //#include <boost/algorithm/string.hpp>
-#if !defined(ANDROID) && !defined(__ANDROID__) // CodePlex 269
+#if !defined(ANDROID) && !defined(__ANDROID__) && !defined(__GLIBC__)// CodePlex 269
+/* Systems using glibc: xlocale.h has been removed from glibc 2.26
+    Include of locale.h is sufficient*/
 #include <xlocale.h>
 #endif
 #endif
