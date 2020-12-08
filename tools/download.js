@@ -1,16 +1,16 @@
-var http = require('http');
+var http = require('https');
 
 var urls;
 if (process.argv[2] === 'x86') {
 	urls = [
-		'http://nodejs.org/dist/v' + process.argv[3] + '/node.exe',
-		'http://nodejs.org/dist/v' + process.argv[3] + '/win-x86/node.exe'
+		'https://nodejs.org/dist/v' + process.argv[3] + '/node.exe',
+		'https://nodejs.org/dist/v' + process.argv[3] + '/win-x86/node.exe'
 	];
 }
 else {
 	urls = [
-		'http://nodejs.org/dist/v' + process.argv[3] + '/x64/node.exe',
-		'http://nodejs.org/dist/v' + process.argv[3] + '/win-x64/node.exe'
+		'https://nodejs.org/dist/v' + process.argv[3] + '/x64/node.exe',
+		'https://nodejs.org/dist/v' + process.argv[3] + '/win-x64/node.exe'
 	];
 }
 
