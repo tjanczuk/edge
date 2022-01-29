@@ -140,7 +140,7 @@
                 '/wd4506',
                 '/DHAVE_CORECLR',
                 '/D_NO_ASYNCRTIMP',
-                '/D_HAS_EXCEPTIONS'
+                '/D_HAS_EXCEPTIONS',
                 '/EHsc'
               ]
             },
