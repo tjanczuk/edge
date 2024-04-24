@@ -3,6 +3,7 @@ Edge.js: .NET and Node.js in-process [![Build Status](https://travis-ci.org/tjan
 
 ## Up to date project can be found here https://github.com/agracio/edge-js
 ### NPM package is published as `edge-js`
+### Any Issues or PRs should be created in https://github.com/agracio/edge-js
 -------
 
 **NEW** Edge.js is now on Slack at https://edgejs.slack.com. Join [here](https://tjanczuk.sandbox.auth0-extend.com/edgejs-slack-invite). 
