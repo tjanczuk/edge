@@ -420,7 +420,7 @@ Edge.js also supports running published .NET Core applications on servers that d
 
  1. It should target the `netcoreapp1.0` framework moniker.
  2. It should reference `Microsoft.NETCore.DotNetHost` and `Microsoft.NETCore.DotNetHostPolicy`.  This is required so that the publish process can provide all the native libraries required to create a completely standalone version of your application.
- 3. `"emitEntryPoint": true` should be present under `buildOptions`.  You can add an empty `Main()` implementation to your project to accomodate it; this method will not be called, but is just a requirement in order for `dotnet publish` to generate a completely standalone app.
+ 3. `"emitEntryPoint": true` should be present under `buildOptions`.  You can add an empty `Main()` implementation to your project to accommodate it; this method will not be called, but is just a requirement in order for `dotnet publish` to generate a completely standalone app.
 
 On your development machine, you would run `dotnet publish -r [target runtime for your production server]` (i.e. `dotnet publish -r ubuntu.14.04-x64`) to aggregate the package assemblies and native libraries necessary to run your application.  You can copy the contents of the publish directory up to your SDK- and CLI-less server and use them directly in Edge.js by setting the  `EDGE_APP_ROOT` environment variable to the directory on the server that you copied the published application to.
 
